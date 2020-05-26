@@ -61,7 +61,7 @@ bee_ref <-
       "Non-bee"
     ),
     bee_class = c(
-      "Bumble bees",
+      "Wild bees",
       "Honey bees",
       "Wild bees",
       "Wild bees",
@@ -78,7 +78,8 @@ surveys <- wibee_in %>%
   filter(duration == "5 minutes") %>%
   mutate_at(fct_cols, as.factor) %>%
   mutate_at(bee_cols, replace_na, 0) %>%
-  mutate(date = as.Date(ended_at))
+  mutate(date = as.Date(ended_at)) %>%
+  filter(date >= "2020-01-01")
 
 # pivot longer for plotting etc
 surveys_long <- surveys %>%
@@ -106,38 +107,48 @@ filter(bee_totals, bee_class == "Wild bees")$tot_count
 # App ---------------------------------------------------------------------
 
 ui <- fluidPage(
-    titlePanel("WiBee: The Wisconsin Wild Bee App"),
-    h4("A data dashboard for a citizen science project"),
-    br(),
-    h2("Project summary"),
-    p("Unique users: ", length(unique(surveys$user_id))),
-    p("Total completed surveys: ", nrow(surveys)),
-    p("Total insect observations: ", sum(surveys_long$count)),
-    p("Most recent observation: ", max(surveys$date)),
-    tags$ul(
-      tags$li({
-        x = filter(bee_totals, bee_class == "Bumble bees")
-        paste0("Bumble bees: ",x$tot_count, " (", x$pct_count, ")")
-        }),
-      tags$li({
+  titlePanel(
+    fluidRow(
+      column(11, "WiBee Data Dashboard"),
+      column(1, img(src = "wibee-logo.png", align = "right"))
+      )
+    ),
+  h4("View and explore pollinator data collected with the WiBee app"),
+  br(),
+  sidebarLayout(
+    sidebarPanel(
+      p(strong("Project summary")),
+      p("Unique users: ", length(unique(surveys$user_id))),
+      p("Total completed surveys: ", nrow(surveys)),
+      p("Total insect observations: ", sum(surveys_long$count)),
+      p("Most recent observation: ", max(surveys$date)),
+      tags$ul(tags$li({
         x = filter(bee_totals, bee_class == "Honey bees")
         paste0("Honey bees: ", x$tot_count, " (", x$pct_count, ")")
-        }),
-      tags$li({
-        x = filter(bee_totals, bee_class == "Wild bees")
-        paste0("Wild bees: ", x$tot_count, " (", x$pct_count, ")")
       }),
-      tags$li({
-        x = filter(bee_totals, bee_class == "Non-bees")
-        paste0("Non-bees: ", x$tot_count, " (", x$pct_count, ")")
-      })
-    ),
-    br(),
+        tags$li({
+          x = filter(bee_totals, bee_class == "Wild bees")
+          paste0("Wild bees: ", x$tot_count, " (", x$pct_count, ")")
+        }),
+        tags$li({
+          x = filter(bee_totals, bee_class == "Non-bees")
+          paste0("Non-bees: ", x$tot_count, " (", x$pct_count, ")")
+        })),
+      ),
+    mainPanel(
+#      p("Spring is here and Wisconsin’s native, wild bees are about to emerge and begin foraging for pollen and nectar on blooming flowers. We invite you to use The WiBee App to survey bees on your farm or property as soon as the flowers bloom and the weather is appropriate for bee activity: about 60 degrees or warmer and sunny/partly cloudy."),
+      h3("What is the WiBee app?"),
+      p("WiBee (pronounced Wee-bee) is a new smartphone app developed by the Gratton Lab at the University of Wisconsin-Madison. We invite growers and interested citizen scientists to use the app during the growing season to collect high quality data on wild bee abundance and diversity on Wisconsin’s fruit and vegetable farms."),
+      p("With your help, we can provide growers with better pollination management recommendations specific to individual farms and share more information about the diversity, abundance and value of Wisconsin’s wild bees.")
+    )),
+  br(),
+  
     h2("Survey locations"),
     leafletOutput("surveyMap"),
     br(),
     h2("Daily bee counts across all surveys"),
-    sidebarLayout(sidebarPanel(
+    sidebarLayout(
+      sidebarPanel(
         sliderInput(
             "date_range",
             label = h4("Date range:"),
