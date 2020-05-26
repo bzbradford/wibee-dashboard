@@ -8,7 +8,7 @@ library(leaflet)
 # Script ------------------------------------------------------------------
 
 # read csv
-wibee_in <- read_csv("wibee-surveys.csv")
+wibee_in <- suppressMessages(read_csv("wibee-surveys.csv"))
 
 # which columns to convert from char to factor
 fct_cols <- c(
@@ -117,6 +117,7 @@ ui <- fixedPage(
   ),
   hr(style = "margin-top:0px"),
   br(),
+  
   sidebarLayout(
     sidebarPanel(
       p(strong("Project summary")),
@@ -144,13 +145,14 @@ ui <- fixedPage(
       p("Learn more at the ", a("Gratton lab website.", href = "https://pollinators.wisc.edu/wibee/"))
     ),
     position = "right"),
-  br(),
   
-    h2("Survey locations"),
-    leafletOutput("surveyMap"),
-    br(),
-    h2("Daily bee counts across all surveys"),
-    sidebarLayout(
+  br(),
+  h2("Survey locations"),
+  leafletOutput("surveyMap"),
+  br(),
+  h2("Daily bee counts across all surveys"),
+  
+  sidebarLayout(
       sidebarPanel(
         sliderInput(
             "date_range",
@@ -169,8 +171,11 @@ ui <- fixedPage(
     ),
     mainPanel(
         plotOutput("surveyCount"))
-    )
-    
+    ),
+  
+#  br(),
+#  h2("Average number of bee visits per minute")
+  
 )
 
 server <- function(input, output) {
