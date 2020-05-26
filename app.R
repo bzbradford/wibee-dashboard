@@ -106,14 +106,16 @@ filter(bee_totals, bee_class == "Wild bees")$tot_count
 
 # App ---------------------------------------------------------------------
 
-ui <- fluidPage(
-  titlePanel(
-    fluidRow(
-      column(11, "WiBee Data Dashboard"),
-      column(1, img(src = "wibee-logo.png", align = "right"))
-      )
-    ),
-  h4("View and explore pollinator data collected with the WiBee app"),
+ui <- fixedPage(
+  fluidRow(
+    column(1, h2(img(src = "wibee-logo.png", height = 60))),
+    column(10,
+      h2("WiBee Data Dashboard"),
+      h4("View and explore pollinator data collected with the WiBee app"),
+      align = "center"),
+    column(1, h2(img(src = "uw-crest.png", height = 60)))
+  ),
+  hr(style = "margin-top:0px"),
   br(),
   sidebarLayout(
     sidebarPanel(
@@ -136,11 +138,12 @@ ui <- fluidPage(
         })),
       ),
     mainPanel(
-#      p("Spring is here and Wisconsin’s native, wild bees are about to emerge and begin foraging for pollen and nectar on blooming flowers. We invite you to use The WiBee App to survey bees on your farm or property as soon as the flowers bloom and the weather is appropriate for bee activity: about 60 degrees or warmer and sunny/partly cloudy."),
-      h3("What is the WiBee app?"),
+      h3("What is the WiBee app?", style = "margin-top:0px"),
       p("WiBee (pronounced Wee-bee) is a new smartphone app developed by the Gratton Lab at the University of Wisconsin-Madison. We invite growers and interested citizen scientists to use the app during the growing season to collect high quality data on wild bee abundance and diversity on Wisconsin’s fruit and vegetable farms."),
-      p("With your help, we can provide growers with better pollination management recommendations specific to individual farms and share more information about the diversity, abundance and value of Wisconsin’s wild bees.")
-    )),
+      p("With your help, we can provide growers with better pollination management recommendations specific to individual farms and share more information about the diversity, abundance and value of Wisconsin’s wild bees."),
+      p("Learn more at the ", a("Gratton lab website.", href = "https://pollinators.wisc.edu/wibee/"))
+    ),
+    position = "right"),
   br(),
   
     h2("Survey locations"),
@@ -190,7 +193,7 @@ server <- function(input, output) {
     ggplot(df, aes(x = date, y = mean_count, fill = bee_name)) +
       geom_bar(stat = "identity") +
       scale_fill_manual(values = bee_palette(input$which_bees)) +
-      labs(x = "Survey date", y = "Mean insect count")
+      labs(x = "Survey date", y = "Mean insect count", fill = "")
   })
 }
 
