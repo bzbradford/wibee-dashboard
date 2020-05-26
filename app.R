@@ -21,26 +21,28 @@ fct_cols <- c(
 )
 
 # useless cols
-drop_cols <-c(
-    "picture_id",
-    "picture_url"
+drop_cols <- c(
+  "picture_id",
+  "picture_url",
+  "bumble_bee_amended",
+  "honeybee_amended",
+  "large_dark_bee_amended",
+  "small_dark_bee_amended",
+  "greenbee_amended",
+  "non_bee_amended"
 )
-bee_cols_amended <- 
-  c("bumble_bee_amended",
-    "honeybee_amended",
-    "large_dark_bee_amended",
-    "small_dark_bee_amended",
-    "greenbee_amended",
-    "non_bee_amended")
 
-# color scheme
-bee_palette <- function(bees = 1:6) {
-  bees = as.integer(bees)
-#  pal = c("red","orange","yellow","green","blue","purple")
-  pal = c("#972D07","#FFA400","#758BFD","#AEB8FE","#8CB369","#D664BE")
-  return(pal[bees])
-}
+# bee count data
+bee_cols = c(
+  "bumble_bee",
+  "honeybee",
+  "large_dark_bee",
+  "small_dark_bee",
+  "greenbee",
+  "non_bee"
+)
 
+# crossref for name aliases
 bee_ref <-
   tibble(
     bee_num = 1:6,
@@ -70,11 +72,17 @@ bee_ref <-
     )
   )
 
+# color scheme
+bee_palette <- function(bees = 1:6) {
+  bees = as.integer(bees)
+#  pal = c("red","orange","yellow","green","blue","purple")
+  pal = c("#972D07","#FFA400","#758BFD","#AEB8FE","#8CB369","#D664BE")
+  return(pal[bees])
+}
 
 # generate main dataset
 surveys <- wibee_in %>%
   select(-drop_cols) %>%
-  select(-bee_cols_amended) %>%
   filter(duration == "5 minutes") %>%
   mutate_at(fct_cols, as.factor) %>%
   mutate_at(bee_cols, replace_na, 0) %>%
@@ -87,22 +95,32 @@ surveys_long <- surveys %>%
   left_join(bee_ref, by = "species") %>%
   mutate(bee_name = factor(bee_name, levels = bee_ref$bee_name))
 
+# survey points for map, aggregated
+survey_pts <- surveys %>%
+  drop_na(lng, lat) %>%
+  mutate(
+    lng_rnd = round(lng, 1),
+    lat_rnd = round(lat, 1)) %>%
+  group_by(lng_rnd, lat_rnd) %>%
+  summarise(
+    n_surveys = n(),
+    lng = mean(lng),
+    lat = mean(lat)
+    ) %>%
+  ungroup() %>%
+  select(c(lng, lat, n_surveys))
+
 # get date range of data
 min_date <- min(surveys$date)
 max_date <- max(surveys$date)
 
-# survey points for map
-survey_pts <- surveys %>%
-  select(id, lng, lat) %>%
-  group_by(lng, lat) %>%
-  summarise(n = n())
-
+# total counts for project summary
 bee_totals <- surveys_long %>%
   group_by(bee_class) %>%
   summarise(tot_count = sum(count)) %>%
   mutate(pct_count = sprintf("%1.1f%%", tot_count / sum(.$tot_count) * 100))
 
-filter(bee_totals, bee_class == "Wild bees")$tot_count
+
 
 # App ---------------------------------------------------------------------
 
@@ -123,8 +141,8 @@ ui <- fixedPage(
       p(strong("Project summary")),
       p("Unique users: ", length(unique(surveys$user_id))),
       p("Total completed surveys: ", nrow(surveys)),
+      p("Most recent survey: ", max(surveys$date)),
       p("Total insect observations: ", sum(surveys_long$count)),
-      p("Most recent observation: ", max(surveys$date)),
       tags$ul(tags$li({
         x = filter(bee_totals, bee_class == "Honey bees")
         paste0("Honey bees: ", x$tot_count, " (", x$pct_count, ")")
@@ -175,6 +193,10 @@ ui <- fixedPage(
   
 #  br(),
 #  h2("Average number of bee visits per minute")
+  br(),
+  br(),
+  p(strong("©2020 University of Wisconsin Board of Regents"), align = "center", style = "font-size:small; color:grey"),
+  p("developed by tanuki.tech", align = "center", style = "font-size:small; color:grey")
   
 )
 
@@ -184,7 +206,7 @@ server <- function(input, output) {
   output$surveyMap <- renderLeaflet({
     leaflet(survey_pts) %>%
       addTiles() %>%
-      addMarkers( ~ lng, ~ lat)
+      addMarkers( ~ lng, ~ lat, label = ~ paste(n_surveys, "surveys"))
   })
   
   # simple survey data explorer
