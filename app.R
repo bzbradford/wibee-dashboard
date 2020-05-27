@@ -111,13 +111,17 @@ survey_pts1 <- surveys %>%
     wb = round(mean(wild_bee)/5,1),
     nb = round(mean(non_bee)/5,1)) %>%
   ungroup() %>%
-  select(-c(lng_rnd, lat_rnd))
+  select(-c(lng_rnd, lat_rnd)) %>%
+  mutate(
+    lng = lng + runif(length(.$lng), -.001, .001),
+    lat = lat + runif(length(.$lat), -.001, .001)
+  )
 
 survey_pts2 <- surveys %>%
   drop_na(lng, lat) %>%
   mutate(
-    lng_rnd = round(lng * 2, 1) / 2,
-    lat_rnd = round(lat * 2, 1) / 2,
+    lng_rnd = round(lng, 2),
+    lat_rnd = round(lat, 2),
     wild_bee = bumble_bee + large_dark_bee + small_dark_bee + greenbee) %>%
   group_by(lng_rnd, lat_rnd) %>%
   summarise(
@@ -140,6 +144,10 @@ bee_totals <- surveys_long %>%
   summarise(tot_count = sum(count)) %>%
   mutate(pct_count = sprintf("%1.1f%%", tot_count / sum(.$tot_count) * 100))
 
+bee_icon <- makeIcon(
+  iconUrl = "wibee-logo.png",
+  iconWidth = 30, iconHeight = 30,
+  iconAnchorX = 15, iconAnchorY = 15)
 
 
 # App ---------------------------------------------------------------------
@@ -188,7 +196,9 @@ ui <- fixedPage(
   h2("Survey locations", style = "border-bottom:1px grey"),
   p(em("Note: Survey locations are approximate and represent an aggregate of all surveys conducted within 5km of each displayed point."), style = "margin-bottom:.5em"),
   
-  leafletOutput("surveyMap1"),
+#  leafletOutput("surveyMap1"),
+  br(),
+  p(em("Click on each rectangle to show average counts for all surveys conducted within that area."), style = "margin-bottom:.5em"),
   leafletOutput("surveyMap2"),
   
   br(),
@@ -227,28 +237,46 @@ ui <- fixedPage(
 
 server <- function(input, output) {
   
-# leaflet map of survey sites (points)
-  output$surveyMap1 <- renderLeaflet({
-    leaflet(survey_pts1) %>%
-      addTiles() %>%
-      addCircles(~ lng, ~ lat, radius = 3000, opacity = 0) %>%
-      addMarkers( ~ lng, ~ lat,
-        label = ~ paste(n_surveys, "surveys"),
-        popup = ~ paste0(
-          "<strong>Total surveys: </strong>", n_surveys, "<br/>",
-          "<strong>Mean visits per minute:</strong><br/>",
-          "Honey bees: ", hb, "<br/>",
-          "Wild bees: ", wb, "<br/>",
-          "Non-bees: ", nb))
-  })
-
-  # leaflet map
+# # leaflet map of survey sites (points)
+#   output$surveyMap1 <- renderLeaflet({
+#     leaflet(survey_pts1) %>%
+#       addTiles() %>%
+#       addCircles(~ lng, ~ lat, radius = 3000, opacity = 0) %>%
+#       addMarkers( ~ lng, ~ lat,
+#         label = ~ paste(n_surveys, "surveys"),
+#         popup = ~ paste0(
+#           "<strong>Total surveys: </strong>", n_surveys, "<br/>",
+#           "<strong>Mean visits per minute:</strong><br/>",
+#           "Honey bees: ", hb, "<br/>",
+#           "Wild bees: ", wb, "<br/>",
+#           "Non-bees: ", nb),)
+#   })
+  
+  # # leaflet map
+  # output$surveyMap2 <- renderLeaflet({
+  #   leaflet(survey_pts2) %>%
+  #     addTiles() %>%
+  #     addRectangles(
+  #       lng1 = ~ lng - .005, lng2 = ~ lng + .005,
+  #       lat1 = ~ lat - .005, lat2 = ~ lat + .005,
+  #       label = ~ paste(n_surveys, "surveys"),
+  #       popup = ~ paste0(
+  #         "<strong>Total surveys: </strong>", n_surveys, "<br/>",
+  #         "<strong>Mean visits per minute:</strong><br/>",
+  #         "Honey bees: ", hb, "<br/>",
+  #         "Wild bees: ", wb, "<br/>",
+  #         "Non-bees: ", nb),
+  #       weight = 2,
+  #       opacity = 1,
+  #       fillOpacity = .25)
+  # })
+  
   output$surveyMap2 <- renderLeaflet({
     leaflet(survey_pts2) %>%
       addTiles() %>%
       addRectangles(
-        lng1 = ~ lng - .025, lng2 = ~ lng + .025,
-        lat1 = ~ lat - .025, lat2 = ~ lat + .025,
+        lng1 = ~ lng - .005, lng2 = ~ lng + .005,
+        lat1 = ~ lat - .005, lat2 = ~ lat + .005,
         label = ~ paste(n_surveys, "surveys"),
         popup = ~ paste0(
           "<strong>Total surveys: </strong>", n_surveys, "<br/>",
@@ -256,10 +284,36 @@ server <- function(input, output) {
           "Honey bees: ", hb, "<br/>",
           "Wild bees: ", wb, "<br/>",
           "Non-bees: ", nb),
-        weight = 3,
-        opacity = .75,
+        weight = 1,
+        opacity = 1,
         fillOpacity = .25)
   })
+  
+  observe({
+    z <- input$surveyMap2_zoom
+    op <- case_when(
+      z <= 8 ~ 1,
+      z == 9 ~ .75,
+      z == 10 ~ .5,
+      z == 11 ~ .25,
+      T ~ 0
+    )
+    leafletProxy("surveyMap2", data = survey_pts2) %>%
+      clearMarkers() %>%
+      addMarkers(~lng, ~lat, icon = bee_icon,
+        label = ~ paste(n_surveys, "surveys"),
+        popup = ~ paste0(
+          "<strong>Total surveys: </strong>", n_surveys, "<br/>",
+          "<strong>Mean visits per minute:</strong><br/>",
+          "Honey bees: ", hb, "<br/>",
+          "Wild bees: ", wb, "<br/>",
+          "Non-bees: ", nb),
+        options = markerOptions(opacity = op),
+        clusterOptions = markerClusterOptions(showCoverageOnHover = F)
+        )
+  })
+  
+  #
   
   # simple survey data explorer
   output$surveyCount <- renderPlot({
