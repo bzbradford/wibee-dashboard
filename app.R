@@ -96,19 +96,39 @@ surveys_long <- surveys %>%
   mutate(bee_name = factor(bee_name, levels = bee_ref$bee_name))
 
 # survey points for map, aggregated
-survey_pts <- surveys %>%
+survey_pts1 <- surveys %>%
   drop_na(lng, lat) %>%
   mutate(
     lng_rnd = round(lng, 1),
-    lat_rnd = round(lat, 1)) %>%
+    lat_rnd = round(lat, 1),
+    wild_bee = bumble_bee + large_dark_bee + small_dark_bee + greenbee) %>%
   group_by(lng_rnd, lat_rnd) %>%
   summarise(
     n_surveys = n(),
     lng = mean(lng),
-    lat = mean(lat)
-    ) %>%
+    lat = mean(lat),
+    hb = round(mean(honeybee)/5,1),
+    wb = round(mean(wild_bee)/5,1),
+    nb = round(mean(non_bee)/5,1)) %>%
   ungroup() %>%
-  select(c(lng, lat, n_surveys))
+  select(-c(lng_rnd, lat_rnd))
+
+survey_pts2 <- surveys %>%
+  drop_na(lng, lat) %>%
+  mutate(
+    lng_rnd = round(lng * 2, 1) / 2,
+    lat_rnd = round(lat * 2, 1) / 2,
+    wild_bee = bumble_bee + large_dark_bee + small_dark_bee + greenbee) %>%
+  group_by(lng_rnd, lat_rnd) %>%
+  summarise(
+    n_surveys = n(),
+    lng = mean(lng_rnd),
+    lat = mean(lat_rnd),
+    hb = round(mean(honeybee)/5,1),
+    wb = round(mean(wild_bee)/5,1),
+    nb = round(mean(non_bee)/5,1)) %>%
+  ungroup() %>%
+  select(-c(lng_rnd, lat_rnd))
 
 # get date range of data
 min_date <- min(surveys$date)
@@ -165,8 +185,13 @@ ui <- fixedPage(
     position = "right"),
   
   br(),
-  h2("Survey locations"),
-  leafletOutput("surveyMap"),
+  h2("Survey locations", style = "border-bottom:1px grey"),
+  p(em("Note: Survey locations are approximate and represent an aggregate of all surveys conducted within 5km of each displayed point."), style = "margin-bottom:.5em"),
+  
+  leafletOutput("surveyMap1"),
+  leafletOutput("surveyMap2"),
+  
+  br(),
   br(),
   h2("Daily bee counts across all surveys"),
   
@@ -202,11 +227,38 @@ ui <- fixedPage(
 
 server <- function(input, output) {
   
-  # leaflet map of survey sites
-  output$surveyMap <- renderLeaflet({
-    leaflet(survey_pts) %>%
+# leaflet map of survey sites (points)
+  output$surveyMap1 <- renderLeaflet({
+    leaflet(survey_pts1) %>%
       addTiles() %>%
-      addMarkers( ~ lng, ~ lat, label = ~ paste(n_surveys, "surveys"))
+      addCircles(~ lng, ~ lat, radius = 3000, opacity = 0) %>%
+      addMarkers( ~ lng, ~ lat,
+        label = ~ paste(n_surveys, "surveys"),
+        popup = ~ paste0(
+          "<strong>Total surveys: </strong>", n_surveys, "<br/>",
+          "<strong>Mean visits per minute:</strong><br/>",
+          "Honey bees: ", hb, "<br/>",
+          "Wild bees: ", wb, "<br/>",
+          "Non-bees: ", nb))
+  })
+
+  # leaflet map
+  output$surveyMap2 <- renderLeaflet({
+    leaflet(survey_pts2) %>%
+      addTiles() %>%
+      addRectangles(
+        lng1 = ~ lng - .025, lng2 = ~ lng + .025,
+        lat1 = ~ lat - .025, lat2 = ~ lat + .025,
+        label = ~ paste(n_surveys, "surveys"),
+        popup = ~ paste0(
+          "<strong>Total surveys: </strong>", n_surveys, "<br/>",
+          "<strong>Mean visits per minute:</strong><br/>",
+          "Honey bees: ", hb, "<br/>",
+          "Wild bees: ", wb, "<br/>",
+          "Non-bees: ", nb),
+        weight = 3,
+        opacity = .75,
+        fillOpacity = .25)
   })
   
   # simple survey data explorer
