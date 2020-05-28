@@ -121,6 +121,7 @@ surveys <- wibee_in %>%
         T ~ "other"),
     crop =
       case_when(
+        is.na(crop) ~ "none",
         crop %in% crop_types ~ crop,
         T ~ "other"),
     date = as.Date(ended_at)) %>%  
@@ -260,26 +261,30 @@ ui <- fixedPage(
     ),
     column(3,
       checkboxGroupInput(
-        "which_mgmt",
-        label = h4("Management type:"),
-        choiceNames = mgmt_types,
-        choiceValues = mgmt_types,
-        selected = mgmt_types
-      )),
-    column(3,
-      checkboxGroupInput(
         "which_crop",
         label = h4("Crop type:"),
         choiceNames = crop_types,
         choiceValues = crop_types,
         selected = crop_types
       )),
+    column(3,
+      checkboxGroupInput(
+        "which_mgmt",
+        label = h4("Management type:"),
+        choiceNames = mgmt_types,
+        choiceValues = mgmt_types,
+        selected = mgmt_types
+      )),
     ), 
   br(),
   textOutput("n_surveys"),
   br(),
-  plotOutput("surveyCount"),
-  
+  h4("Average daily counts by date"),
+  plotOutput("beePlot1"),
+  br(),
+  h4("Average visits per minute by category"),
+  plotOutput("beePlot2"),
+  br(),
   br(),
   br(),
   p(strong("©2020 University of Wisconsin Board of Regents"), align = "center", style = "font-size:small; color:grey"),
@@ -292,14 +297,6 @@ ui <- fixedPage(
 # define server -----------------------------------------------------------
 
 server <- function(input, output, session) {
-  
-  # observe({
-  #   print(input$date_range)
-  #   print(input$which_bees)
-  #   print(input$which_sites)
-  #   print(input$which_mgmt)
-  #   print(input$which_crop)
-  # })
   
   filtered_surveys <- reactive({
     surveys %>%
@@ -355,12 +352,12 @@ server <- function(input, output, session) {
     updateSliderInput(session, "date_range", value = c(min_date, max_date))
     updateCheckboxGroupInput(session, "which_bees", selected = 1:6)
     updateCheckboxGroupInput(session, "which_sites", selected = site_types)
-    updateCheckboxGroupInput(session, "which_mgmt", selected = mgmt_types)
     updateCheckboxGroupInput(session, "which_crop", selected = crop_types)
+    updateCheckboxGroupInput(session, "which_mgmt", selected = mgmt_types)
   })
   
   # simple survey data explorer
-  output$surveyCount <- renderPlot({
+  output$beePlot1 <- renderPlot({
     df <- filtered_surveys_long()
     if (nrow(df) > 0) {
       df %>%
@@ -371,6 +368,46 @@ server <- function(input, output, session) {
         scale_fill_manual(values = bee_palette(input$which_bees)) +
         labs(x = "Survey date", y = "Mean insect count", fill = "")}
   })
+  
+  output$beePlot2 <- renderPlot({
+    df <- filtered_surveys_long()
+    if (nrow(df) > 0) {
+      df_crop <- df %>%
+        mutate(type = as.character(crop)) %>%
+        group_by(type, bee_name) %>%
+        summarise(mean_count = mean(count)) %>%
+        mutate(type_label = "By crop")
+      
+      df_site <- df %>%
+        mutate(type = as.character(site_type)) %>%
+        group_by(type, bee_name) %>%
+        summarise(mean_count = mean(count)) %>%
+        mutate(type_label = "By site")
+      
+      df_mgmt <- df %>%
+        mutate(type = as.character(management_type)) %>%
+        group_by(type, bee_name) %>%
+        summarise(mean_count = mean(count)) %>%
+        mutate(type_label = "By management")
+      
+      df_bind <- bind_rows(df_crop, df_site, df_mgmt) %>%
+        mutate(mean_count = mean_count / 5)
+      
+      df_bind %>%
+        ggplot(aes(x = type, y = mean_count, fill = bee_name)) +
+        geom_col() +
+        scale_fill_manual(values = bee_palette(1:6)) +
+        labs(x = "", y = "Average visits per minute", fill = "") +
+        theme(axis.text.x = element_text(
+          angle = 90,
+          vjust = .5,
+          hjust = 1
+        )) +
+        facet_grid(. ~ type_label, scales = "free_x")
+    }
+  })
+  
+
 
 }
 
@@ -383,6 +420,74 @@ shinyApp(ui, server)
 
 
 # dustbin -----------------------------------------------------------------
+
+# df_crop <- surveys_long %>%
+#   mutate(type = as.character(crop)) %>%
+#   group_by(type, bee_name) %>%
+#   summarise(mean_count = mean(count)) %>%
+#   mutate(type_label = "By crop")
+# df_site <- surveys_long %>%
+#   mutate(type = as.character(site_type)) %>%
+#   group_by(type, bee_name) %>%
+#   summarise(mean_count = mean(count)) %>%
+#   mutate(type_label = "By site")
+# df_mgmt <- surveys_long %>%
+#   mutate(type = as.character(management_type)) %>%
+#   group_by(type, bee_name) %>%
+#   summarise(mean_count = mean(count)) %>%
+#   mutate(type_label = "By management")
+# df <- bind_rows(df_crop, df_site, df_mgmt) %>%
+#   mutate(mean_count = mean_count / 5)
+# 
+# 
+# df %>%
+#   ggplot(aes(x = type, y = mean_count, fill = bee_name)) +
+#   geom_col() +
+#   scale_fill_manual(values = bee_palette(1:6)) +
+#   labs(x = "", y = "Average visits per minute", fill = "") +
+#   theme(axis.text.x = element_text(angle = 90, vjust = .5, hjust = 1)) +
+#   facet_grid(. ~ type_label, scales = "free_x")
+
+
+# output$beePlotSiteType <- renderPlot({
+#   df <- filtered_surveys_long()
+#   if (nrow(df) > 0) {
+#     df %>%
+#       group_by(site_type, bee_name) %>%
+#       summarise(mean_count = mean(count)) %>%
+#       ggplot(aes(x = site_type, y = mean_count, fill = bee_name)) +
+#       geom_bar(stat = "identity") +
+#       scale_fill_manual(values = bee_palette(input$which_bees)) +
+#       labs(x = "Site type", y = "Mean insect count", fill = "") +
+#       coord_flip()}
+# })
+# 
+# output$beePlotCropType <- renderPlot({
+#   df <- filtered_surveys_long()
+#   if (nrow(df) > 0) {
+#     df %>%
+#       group_by(crop, bee_name) %>%
+#       summarise(mean_count = mean(count)) %>%
+#       arrange(desc(mean_count)) %>%
+#       ggplot(aes(x = crop, y = mean_count, fill = bee_name)) +
+#       geom_col() +
+#       scale_fill_manual(values = bee_palette(input$which_bees)) +
+#       labs(x = "Crop type", y = "Mean insect count", fill = "") +
+#       coord_flip()}
+# })
+# 
+# output$beePlotMgmtType <- renderPlot({
+#   df <- filtered_surveys_long()
+#   if (nrow(df) > 0) {
+#     df %>%
+#       group_by(management_type, bee_name) %>%
+#       summarise(mean_count = mean(count)) %>%
+#       ggplot(aes(x = management_type, y = mean_count, fill = bee_name)) +
+#       geom_col() +
+#       scale_fill_manual(values = bee_palette(input$which_bees)) +
+#       labs(x = "Management type", y = "Mean insect count", fill = "") +
+#       coord_flip()}
+# })
 
 # # survey points for map, aggregated
 # survey_pts1 <- surveys %>%
