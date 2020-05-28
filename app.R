@@ -2,6 +2,7 @@
 
 ## Notes / To Do ##
 # consider renaming variables in camelCase
+# add number of surveys matching each filter category for each category item
 
 
 library(shiny)
@@ -53,18 +54,12 @@ bee_cols = c(
   "non_bee"
 )
 
+
 # crossref for bee name aliases
 bee_ref <-
   tibble(
     bee_num = 1:6,
-    species = c(
-      "bumble_bee",
-      "honeybee",
-      "large_dark_bee",
-      "small_dark_bee",
-      "greenbee",
-      "non_bee"
-    ),
+    species = bee_cols,
     bee_name = c(
       "Bumble bee",
       "Honey bee",
@@ -83,6 +78,7 @@ bee_ref <-
     )
   )
 
+
 # color scheme
 bee_palette <- function(bees = 1:6) {
   bees = as.integer(bees)
@@ -91,8 +87,8 @@ bee_palette <- function(bees = 1:6) {
   return(pal[bees])
 }
 
-### For factors that have "other" ###
 
+## For stripping out user-entered options in some fields
 # valid management types
 mgmt_types <- 
   c("organic",
@@ -110,8 +106,8 @@ crop_types <-
     "other",
     "none")
 
+# valid site types
 site_types <- levels(surveys$site_type)
-
 
 
 # generate main dataset
@@ -139,29 +135,9 @@ surveys_long <- surveys %>%
   left_join(bee_ref, by = "species") %>%
   mutate(bee_name = factor(bee_name, levels = bee_ref$bee_name))
 
-# survey points for map, aggregated
-survey_pts1 <- surveys %>%
-  drop_na(lng, lat) %>%
-  mutate(
-    lng_rnd = round(lng, 1),
-    lat_rnd = round(lat, 1),
-    wild_bee = bumble_bee + large_dark_bee + small_dark_bee + greenbee) %>%
-  group_by(lng_rnd, lat_rnd) %>%
-  summarise(
-    n_surveys = n(),
-    lng = mean(lng),
-    lat = mean(lat),
-    hb = round(mean(honeybee)/5,1),
-    wb = round(mean(wild_bee)/5,1),
-    nb = round(mean(non_bee)/5,1)) %>%
-  ungroup() %>%
-  select(-c(lng_rnd, lat_rnd)) %>%
-  mutate(
-    lng = lng + runif(length(.$lng), -.001, .001),
-    lat = lat + runif(length(.$lat), -.001, .001)
-  )
 
-survey_pts2 <- surveys %>%
+# generate grid points and summary statistics
+survey_pts <- surveys %>%
   drop_na(lng, lat) %>%
   mutate(
     lng_rnd = round(lng, 2),
@@ -178,20 +154,24 @@ survey_pts2 <- surveys %>%
   ungroup() %>%
   select(-c(lng_rnd, lat_rnd))
 
+
+# set icon for leaflet
+bee_icon <- makeIcon(
+  iconUrl = "wibee-logo.png",
+  iconWidth = 30, iconHeight = 30,
+  iconAnchorX = 15, iconAnchorY = 15)
+
+
 # get date range of data
 min_date <- min(surveys$date)
 max_date <- max(surveys$date)
+
 
 # total counts for project summary
 bee_totals <- surveys_long %>%
   group_by(bee_class) %>%
   summarise(tot_count = sum(count)) %>%
   mutate(pct_count = sprintf("%1.1f%%", tot_count / sum(.$tot_count) * 100))
-
-bee_icon <- makeIcon(
-  iconUrl = "wibee-logo.png",
-  iconWidth = 30, iconHeight = 30,
-  iconAnchorX = 15, iconAnchorY = 15)
 
 
 
@@ -240,8 +220,9 @@ ui <- fixedPage(
   br(),
   h2("Survey locations", style = "border-bottom:1px grey"),
   p(em("Click on each bee icon or rectangle to show average counts for all surveys conducted within that area."), style = "margin-bottom:.5em"),
-#  leafletOutput("surveyMap"),
+  leafletOutput("surveyMap"),
   
+  br(),
   br(),
   h2("Data explorer"),
   
@@ -312,22 +293,20 @@ ui <- fixedPage(
 
 server <- function(input, output, session) {
   
-  observe({
-    print(input$date_range)
-    print(input$which_bees)
-    print(input$which_sites)
-    print(input$which_mgmt)
-    print(input$which_crop)
-  })
+  # observe({
+  #   print(input$date_range)
+  #   print(input$which_bees)
+  #   print(input$which_sites)
+  #   print(input$which_mgmt)
+  #   print(input$which_crop)
+  # })
   
   filtered_surveys <- reactive({
     surveys %>%
-      filter(date >= input$date_range[1] & date <= input$date_range[2])
-    
-    # %>%
-      # filter(site_type %in% input$which_sites) %>%
-      # filter(management_type %in% input$which_mgmt) %>%
-      # filter(crop %in% input$which_crop)
+      filter(date >= input$date_range[1] & date <= input$date_range[2]) %>%
+      filter(site_type %in% input$which_sites) %>%
+      filter(management_type %in% input$which_mgmt) %>%
+      filter(crop %in% input$which_crop)
   })
 
   filtered_surveys_long <- reactive({
@@ -342,8 +321,9 @@ server <- function(input, output, session) {
   output$n_surveys <- renderText({
     paste(nrow(filtered_surveys()), "surveys match your filter selections.")})
   
+  ## survey site map ##
   output$surveyMap <- renderLeaflet({
-    leaflet(survey_pts2) %>%
+    leaflet(survey_pts) %>%
       addTiles() %>%
       addRectangles(
         lng1 = ~ lng - .005, lng2 = ~ lng + .005,
@@ -379,30 +359,19 @@ server <- function(input, output, session) {
     updateCheckboxGroupInput(session, "which_crop", selected = crop_types)
   })
   
-#  simple survey data explorer
+  # simple survey data explorer
   output$surveyCount <- renderPlot({
-    df <- surveys_long %>%
-      filter(date >= input$date_range[1] &
-               date <= input$date_range[2]) %>%
-      filter(bee_num %in% input$which_bees) %>%
-      group_by(date, bee_name) %>%
-      summarise(mean_count = mean(count, na.rm = T))
-    ggplot(df, aes(x = date, y = mean_count, fill = bee_name)) +
-      geom_bar(stat = "identity") +
-      scale_fill_manual(values = bee_palette(input$which_bees)) +
-      labs(x = "Survey date", y = "Mean insect count", fill = "")
+    df <- filtered_surveys_long()
+    if (nrow(df) > 0) {
+      df %>%
+        group_by(date, bee_name) %>%
+        summarise(mean_count = mean(count, na.rm = T)) %>%
+        ggplot(aes(x = date, y = mean_count, fill = bee_name)) +
+        geom_bar(stat = "identity") +
+        scale_fill_manual(values = bee_palette(input$which_bees)) +
+        labs(x = "Survey date", y = "Mean insect count", fill = "")}
   })
-  
-  # output$surveyCount <- renderPlot({
-  #   df <- filtered_surveys_long()
-  #   df %>%
-  #     group_by(date, bee_name) %>%
-  #     summarise(mean_count = mean(count, na.rm = T)) %>%
-  #     ggplot(aes(x = date, y = mean_count, fill = bee_name)) +
-  #     geom_bar(stat = "identity") +
-  #     scale_fill_manual(values = bee_palette(input$which_bees)) +
-  #     labs(x = "Survey date", y = "Mean insect count", fill = "")
-  # })
+
 }
 
 
@@ -414,6 +383,29 @@ shinyApp(ui, server)
 
 
 # dustbin -----------------------------------------------------------------
+
+# # survey points for map, aggregated
+# survey_pts1 <- surveys %>%
+#   drop_na(lng, lat) %>%
+#   mutate(
+#     lng_rnd = round(lng, 1),
+#     lat_rnd = round(lat, 1),
+#     wild_bee = bumble_bee + large_dark_bee + small_dark_bee + greenbee) %>%
+#   group_by(lng_rnd, lat_rnd) %>%
+#   summarise(
+#     n_surveys = n(),
+#     lng = mean(lng),
+#     lat = mean(lat),
+#     hb = round(mean(honeybee)/5,1),
+#     wb = round(mean(wild_bee)/5,1),
+#     nb = round(mean(non_bee)/5,1)) %>%
+#   ungroup() %>%
+#   select(-c(lng_rnd, lat_rnd)) %>%
+#   mutate(
+#     lng = lng + runif(length(.$lng), -.001, .001),
+#     lat = lat + runif(length(.$lat), -.001, .001)
+#   )
+
 
 # leaflet map of survey sites (points)
 # output$surveyMap1 <- renderLeaflet({
@@ -429,6 +421,7 @@ shinyApp(ui, server)
 #         "Wild bees: ", wb, "<br/>",
 #         "Non-bees: ", nb),)
 # })
+
 
 # # leaflet map
 # output$surveyMap2 <- renderLeaflet({
@@ -449,7 +442,8 @@ shinyApp(ui, server)
 #       fillOpacity = .25)
 # })
 
-# 
+
+
 # observe({
 #   leafletProxy("surveyMap", data = survey_pts2) %>%
 #     clearMarkers() %>%
