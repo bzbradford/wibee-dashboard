@@ -279,12 +279,14 @@ ui <- fixedPage(
   br(),
   textOutput("n_surveys"),
   br(),
-  h4("Average daily counts by date"),
-  plotOutput("beePlot1"),
-  br(),
-  h4("Average visits per minute by category"),
-  plotOutput("beePlot2"),
-  br(),
+  tabsetPanel(
+    tabPanel("view by date",
+      h4("Average daily counts by date"),
+      plotOutput("beePlot1")),
+    tabPanel("View by category",
+      h4("Average visits per minute by category"),
+      plotOutput("beePlot2"))
+  ),
   br(),
   br(),
   p(strong("©2020 University of Wisconsin Board of Regents"), align = "center", style = "font-size:small; color:grey"),
@@ -362,11 +364,11 @@ server <- function(input, output, session) {
     if (nrow(df) > 0) {
       df %>%
         group_by(date, bee_name) %>%
-        summarise(mean_count = mean(count, na.rm = T)) %>%
+        summarise(mean_count = mean(count) / 5) %>%
         ggplot(aes(x = date, y = mean_count, fill = bee_name)) +
         geom_bar(stat = "identity") +
         scale_fill_manual(values = bee_palette(input$which_bees)) +
-        labs(x = "Survey date", y = "Mean insect count", fill = "")}
+        labs(x = "Survey date", y = "Average visits per minute", fill = "")}
   })
   
   output$beePlot2 <- renderPlot({
@@ -391,12 +393,24 @@ server <- function(input, output, session) {
         mutate(type_label = "By management")
       
       df_bind <- bind_rows(df_crop, df_site, df_mgmt) %>%
-        mutate(mean_count = mean_count / 5)
+        mutate(
+          mean_count = mean_count / 5,
+          n = n(),
+          type_label = factor(type_label,
+            levels = c("By site", "By crop", "By management"))) %>%
+        group_by(type_label, type)
+      
+      df_labels <- df_bind %>%
+        summarise(n = mean(n))
       
       df_bind %>%
-        ggplot(aes(x = type, y = mean_count, fill = bee_name)) +
-        geom_col() +
-        scale_fill_manual(values = bee_palette(1:6)) +
+        ggplot() +
+        geom_col(aes(x = type, y = mean_count, fill = bee_name)) +
+        geom_text(
+          data = df_labels,
+          aes(x = type, y = -.1, label = paste0("(", n, ")")),
+          size = 3) +
+        scale_fill_manual(values = bee_palette(input$which_bees)) +
         labs(x = "", y = "Average visits per minute", fill = "") +
         theme(axis.text.x = element_text(
           angle = 90,
@@ -420,29 +434,36 @@ shinyApp(ui, server)
 
 
 # dustbin -----------------------------------------------------------------
-
+# 
 # df_crop <- surveys_long %>%
 #   mutate(type = as.character(crop)) %>%
 #   group_by(type, bee_name) %>%
-#   summarise(mean_count = mean(count)) %>%
+#   summarise(mean_count = mean(count), n = n()) %>%
 #   mutate(type_label = "By crop")
 # df_site <- surveys_long %>%
 #   mutate(type = as.character(site_type)) %>%
 #   group_by(type, bee_name) %>%
-#   summarise(mean_count = mean(count)) %>%
+#   summarise(mean_count = mean(count), n = n()) %>%
 #   mutate(type_label = "By site")
 # df_mgmt <- surveys_long %>%
 #   mutate(type = as.character(management_type)) %>%
 #   group_by(type, bee_name) %>%
-#   summarise(mean_count = mean(count)) %>%
+#   summarise(mean_count = mean(count), n = n()) %>%
 #   mutate(type_label = "By management")
 # df <- bind_rows(df_crop, df_site, df_mgmt) %>%
-#   mutate(mean_count = mean_count / 5)
+#   mutate(mean_count = mean_count / 5) %>%
+#   group_by(type_label, type)
+# df_labels <- df %>%
+#   summarise(n = mean(n))
 # 
 # 
 # df %>%
-#   ggplot(aes(x = type, y = mean_count, fill = bee_name)) +
-#   geom_col() +
+#   ggplot() +
+#   geom_col(aes(x = type, y = mean_count, fill = bee_name)) +
+#   geom_text(
+#     data = df_labels,
+#     aes(x = type, y = -.1, label = paste0("(", n, ")")),
+#     size = 3) +
 #   scale_fill_manual(values = bee_palette(1:6)) +
 #   labs(x = "", y = "Average visits per minute", fill = "") +
 #   theme(axis.text.x = element_text(angle = 90, vjust = .5, hjust = 1)) +
