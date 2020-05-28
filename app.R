@@ -5,7 +5,10 @@
 
 
 library(shiny)
-library(tidyverse)
+library(readr)
+library(tidyr)
+library(dplyr)
+library(ggplot2)
 library(leaflet)
 
 
@@ -13,6 +16,10 @@ library(leaflet)
 
 # read csv
 wibee_in <- suppressMessages(read_csv("wibee-surveys.csv"))
+
+
+
+### Data wrangling ###
 
 # which columns to convert from char to factor
 fct_cols <- c(
@@ -46,7 +53,7 @@ bee_cols = c(
   "non_bee"
 )
 
-# crossref for name aliases
+# crossref for bee name aliases
 bee_ref <-
   tibble(
     bee_num = 1:6,
@@ -84,14 +91,47 @@ bee_palette <- function(bees = 1:6) {
   return(pal[bees])
 }
 
+### For factors that have "other" ###
+
+# valid management types
+mgmt_types <- 
+  c("organic",
+    "conventional",
+    "other",
+    "unknown")
+
+# valid crop types
+crop_types <- 
+  c("apple",
+    "berry",
+    "cucumber",
+    "melon",
+    "squash",
+    "other",
+    "none")
+
+site_types <- levels(surveys$site_type)
+
+
+
 # generate main dataset
 surveys <- wibee_in %>%
   select(-drop_cols) %>%
   filter(duration == "5 minutes") %>%
+  mutate(
+    management_type =
+      case_when(
+        management_type %in% mgmt_types ~ management_type,
+        T ~ "other"),
+    crop =
+      case_when(
+        crop %in% crop_types ~ crop,
+        T ~ "other"),
+    date = as.Date(ended_at)) %>%  
   mutate_at(fct_cols, as.factor) %>%
   mutate_at(bee_cols, replace_na, 0) %>%
-  mutate(date = as.Date(ended_at)) %>%
   filter(date >= "2020-01-01")
+
 
 # pivot longer for plotting etc
 surveys_long <- surveys %>%
@@ -154,7 +194,8 @@ bee_icon <- makeIcon(
   iconAnchorX = 15, iconAnchorY = 15)
 
 
-# App ---------------------------------------------------------------------
+
+# define ui ---------------------------------------------------------------
 
 ui <- fixedPage(
   fluidRow(
@@ -199,37 +240,65 @@ ui <- fixedPage(
   br(),
   h2("Survey locations", style = "border-bottom:1px grey"),
   p(em("Click on each bee icon or rectangle to show average counts for all surveys conducted within that area."), style = "margin-bottom:.5em"),
-  leafletOutput("surveyMap"),
-  # br(),
-  # leafletOutput("surveyMap1"),
+#  leafletOutput("surveyMap"),
   
   br(),
+  h2("Data explorer"),
+  
+  fluidRow(
+    column(6,
+      sliderInput(
+        "date_range",
+        label = h4("Date range:"),
+        min = min_date,
+        max = max_date,
+        value = c(min_date, max_date)
+        )
+      ),
+    column(6, actionButton("reset", "Reset selections"), align = "center")
+    ),
+  
+  fluidRow(
+    column(3,
+      checkboxGroupInput(
+        "which_bees",
+        label = h4("Bee group:"),
+        choiceNames = bee_ref$bee_name,
+        choiceValues = 1:6,
+        selected = 1:6
+        )
+      ),
+    column(3,
+      checkboxGroupInput(
+        "which_sites",
+        label = h4("Site type:"),
+        choiceNames = site_types,
+        choiceValues = site_types,
+        selected = site_types
+      )
+    ),
+    column(3,
+      checkboxGroupInput(
+        "which_mgmt",
+        label = h4("Management type:"),
+        choiceNames = mgmt_types,
+        choiceValues = mgmt_types,
+        selected = mgmt_types
+      )),
+    column(3,
+      checkboxGroupInput(
+        "which_crop",
+        label = h4("Crop type:"),
+        choiceNames = crop_types,
+        choiceValues = crop_types,
+        selected = crop_types
+      )),
+    ), 
   br(),
-  h2("Daily bee counts across all surveys"),
+  textOutput("n_surveys"),
+  br(),
+  plotOutput("surveyCount"),
   
-  sidebarLayout(
-      sidebarPanel(
-        sliderInput(
-            "date_range",
-            label = h4("Date range:"),
-            min = min_date,
-            max = max_date,
-            value = c(min_date, max_date)
-        ),
-        checkboxGroupInput(
-            "which_bees",
-            label = h4("Filter by bee group:"),
-            choiceNames = bee_ref$bee_name,
-            choiceValues = 1:6,
-            selected = 1:6
-            )
-    ),
-    mainPanel(
-        plotOutput("surveyCount"))
-    ),
-  
-#  br(),
-#  h2("Average number of bee visits per minute")
   br(),
   br(),
   p(strong("©2020 University of Wisconsin Board of Regents"), align = "center", style = "font-size:small; color:grey"),
@@ -237,41 +306,41 @@ ui <- fixedPage(
   
 )
 
-server <- function(input, output) {
+
+
+# define server -----------------------------------------------------------
+
+server <- function(input, output, session) {
   
-# leaflet map of survey sites (points)
-  # output$surveyMap1 <- renderLeaflet({
-  #   leaflet(survey_pts1) %>%
-  #     addTiles() %>%
-  #     addCircles(~ lng, ~ lat, radius = 3000, opacity = 0) %>%
-  #     addMarkers( ~ lng, ~ lat,
-  #       label = ~ paste(n_surveys, "surveys"),
-  #       popup = ~ paste0(
-  #         "<strong>Total surveys: </strong>", n_surveys, "<br/>",
-  #         "<strong>Mean visits per minute:</strong><br/>",
-  #         "Honey bees: ", hb, "<br/>",
-  #         "Wild bees: ", wb, "<br/>",
-  #         "Non-bees: ", nb),)
-  # })
+  observe({
+    print(input$date_range)
+    print(input$which_bees)
+    print(input$which_sites)
+    print(input$which_mgmt)
+    print(input$which_crop)
+  })
   
-  # # leaflet map
-  # output$surveyMap2 <- renderLeaflet({
-  #   leaflet(survey_pts2) %>%
-  #     addTiles() %>%
-  #     addRectangles(
-  #       lng1 = ~ lng - .005, lng2 = ~ lng + .005,
-  #       lat1 = ~ lat - .005, lat2 = ~ lat + .005,
-  #       label = ~ paste(n_surveys, "surveys"),
-  #       popup = ~ paste0(
-  #         "<strong>Total surveys: </strong>", n_surveys, "<br/>",
-  #         "<strong>Mean visits per minute:</strong><br/>",
-  #         "Honey bees: ", hb, "<br/>",
-  #         "Wild bees: ", wb, "<br/>",
-  #         "Non-bees: ", nb),
-  #       weight = 2,
-  #       opacity = 1,
-  #       fillOpacity = .25)
-  # })
+  filtered_surveys <- reactive({
+    surveys %>%
+      filter(date >= input$date_range[1] & date <= input$date_range[2])
+    
+    # %>%
+      # filter(site_type %in% input$which_sites) %>%
+      # filter(management_type %in% input$which_mgmt) %>%
+      # filter(crop %in% input$which_crop)
+  })
+
+  filtered_surveys_long <- reactive({
+    surveys_long %>%
+      filter(date >= input$date_range[1] & date <= input$date_range[2]) %>%
+      filter(bee_num %in% input$which_bees) %>%
+      filter(site_type %in% input$which_sites) %>%
+      filter(management_type %in% input$which_mgmt) %>%
+      filter(crop %in% input$which_crop)
+  })
+  
+  output$n_surveys <- renderText({
+    paste(nrow(filtered_surveys()), "surveys match your filter selections.")})
   
   output$surveyMap <- renderLeaflet({
     leaflet(survey_pts2) %>%
@@ -288,20 +357,7 @@ server <- function(input, output) {
           "Non-bees: ", nb),
         weight = 1,
         opacity = 1,
-        fillOpacity = .25)
-  })
-  
-  observe({
-    # z <- input$surveyMap2_zoom
-    # op <- case_when(
-    #   z <= 8 ~ 1,
-    #   z == 9 ~ .75,
-    #   z == 10 ~ .5,
-    #   z == 11 ~ .25,
-    #   T ~ 0
-    # )
-    leafletProxy("surveyMap", data = survey_pts2) %>%
-      clearMarkers() %>%
+        fillOpacity = .25) %>%
       addMarkers(~lng, ~lat, icon = bee_icon,
         label = ~ paste(n_surveys, "surveys"),
         popup = ~ paste0(
@@ -310,12 +366,20 @@ server <- function(input, output) {
           "Honey bees: ", hb, "<br/>",
           "Wild bees: ", wb, "<br/>",
           "Non-bees: ", nb),
-        # options = markerOptions(opacity = op),
         clusterOptions = markerClusterOptions(showCoverageOnHover = F)
-        )
+      )
+  })
+
+  # reset button
+  observeEvent(input$reset, {
+    updateSliderInput(session, "date_range", value = c(min_date, max_date))
+    updateCheckboxGroupInput(session, "which_bees", selected = 1:6)
+    updateCheckboxGroupInput(session, "which_sites", selected = site_types)
+    updateCheckboxGroupInput(session, "which_mgmt", selected = mgmt_types)
+    updateCheckboxGroupInput(session, "which_crop", selected = crop_types)
   })
   
-  # simple survey data explorer
+#  simple survey data explorer
   output$surveyCount <- renderPlot({
     df <- surveys_long %>%
       filter(date >= input$date_range[1] &
@@ -328,6 +392,76 @@ server <- function(input, output) {
       scale_fill_manual(values = bee_palette(input$which_bees)) +
       labs(x = "Survey date", y = "Mean insect count", fill = "")
   })
+  
+  # output$surveyCount <- renderPlot({
+  #   df <- filtered_surveys_long()
+  #   df %>%
+  #     group_by(date, bee_name) %>%
+  #     summarise(mean_count = mean(count, na.rm = T)) %>%
+  #     ggplot(aes(x = date, y = mean_count, fill = bee_name)) +
+  #     geom_bar(stat = "identity") +
+  #     scale_fill_manual(values = bee_palette(input$which_bees)) +
+  #     labs(x = "Survey date", y = "Mean insect count", fill = "")
+  # })
 }
 
+
+# run app -----------------------------------------------------------------
+
 shinyApp(ui, server)
+
+
+
+
+# dustbin -----------------------------------------------------------------
+
+# leaflet map of survey sites (points)
+# output$surveyMap1 <- renderLeaflet({
+#   leaflet(survey_pts1) %>%
+#     addTiles() %>%
+#     addCircles(~ lng, ~ lat, radius = 3000, opacity = 0) %>%
+#     addMarkers( ~ lng, ~ lat,
+#       label = ~ paste(n_surveys, "surveys"),
+#       popup = ~ paste0(
+#         "<strong>Total surveys: </strong>", n_surveys, "<br/>",
+#         "<strong>Mean visits per minute:</strong><br/>",
+#         "Honey bees: ", hb, "<br/>",
+#         "Wild bees: ", wb, "<br/>",
+#         "Non-bees: ", nb),)
+# })
+
+# # leaflet map
+# output$surveyMap2 <- renderLeaflet({
+#   leaflet(survey_pts2) %>%
+#     addTiles() %>%
+#     addRectangles(
+#       lng1 = ~ lng - .005, lng2 = ~ lng + .005,
+#       lat1 = ~ lat - .005, lat2 = ~ lat + .005,
+#       label = ~ paste(n_surveys, "surveys"),
+#       popup = ~ paste0(
+#         "<strong>Total surveys: </strong>", n_surveys, "<br/>",
+#         "<strong>Mean visits per minute:</strong><br/>",
+#         "Honey bees: ", hb, "<br/>",
+#         "Wild bees: ", wb, "<br/>",
+#         "Non-bees: ", nb),
+#       weight = 2,
+#       opacity = 1,
+#       fillOpacity = .25)
+# })
+
+# 
+# observe({
+#   leafletProxy("surveyMap", data = survey_pts2) %>%
+#     clearMarkers() %>%
+#     addMarkers(~lng, ~lat, icon = bee_icon,
+#       label = ~ paste(n_surveys, "surveys"),
+#       popup = ~ paste0(
+#         "<strong>Total surveys: </strong>", n_surveys, "<br/>",
+#         "<strong>Mean visits per minute:</strong><br/>",
+#         "Honey bees: ", hb, "<br/>",
+#         "Wild bees: ", wb, "<br/>",
+#         "Non-bees: ", nb),
+#       # options = markerOptions(opacity = op),
+#       clusterOptions = markerClusterOptions(showCoverageOnHover = F)
+#       )
+# })
