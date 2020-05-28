@@ -6,10 +6,7 @@
 
 
 library(shiny)
-library(readr)
-library(tidyr)
-library(dplyr)
-library(ggplot2)
+library(tidyverse)
 library(leaflet)
 
 
@@ -219,11 +216,6 @@ ui <- fixedPage(
     position = "right"),
   
   br(),
-  h2("Survey locations", style = "border-bottom:1px grey"),
-  p(em("Click on each bee icon or rectangle to show average counts for all surveys conducted within that area."), style = "margin-bottom:.5em"),
-  leafletOutput("surveyMap"),
-  
-  br(),
   br(),
   h2("Data explorer"),
   
@@ -237,7 +229,7 @@ ui <- fixedPage(
         value = c(min_date, max_date)
         )
       ),
-    column(6, actionButton("reset", "Reset selections"), align = "center")
+    column(6, actionButton("reset", "Reset filters"), align = "center")
     ),
   
   fluidRow(
@@ -247,17 +239,19 @@ ui <- fixedPage(
         label = h4("Bee group:"),
         choiceNames = bee_ref$bee_name,
         choiceValues = 1:6,
-        selected = 1:6
-        )
+        selected = 1:6),
+      div(actionButton("which_bees_all", "All"), style="display:inline-block"),
+      div(actionButton("which_bees_none", "None"), style="display:inline-block")
       ),
     column(3,
       checkboxGroupInput(
         "which_sites",
-        label = h4("Site type:"),
+        label = h4("Habitat type:"),
         choiceNames = site_types,
         choiceValues = site_types,
-        selected = site_types
-      )
+        selected = site_types),
+      div(actionButton("which_site_all", "All"), style = "display:inline-block"),
+      div(actionButton("which_site_none", "None"), style = "display:inline-block")
     ),
     column(3,
       checkboxGroupInput(
@@ -265,28 +259,38 @@ ui <- fixedPage(
         label = h4("Crop type:"),
         choiceNames = crop_types,
         choiceValues = crop_types,
-        selected = crop_types
-      )),
+        selected = crop_types),
+      div(actionButton("which_crop_all", "All"), style = "display:inline-block"),
+      div(actionButton("which_crop_none", "None"), style = "display:inline-block")
+      ),
     column(3,
       checkboxGroupInput(
         "which_mgmt",
         label = h4("Management type:"),
         choiceNames = mgmt_types,
         choiceValues = mgmt_types,
-        selected = mgmt_types
-      )),
-    ), 
+        selected = mgmt_types),
+      div(actionButton("which_mgmt_all", "All"), style = "display:inline-block"),
+      div(actionButton("which_mgmt_none", "None"), style = "display:inline-block")),
+    ),
+  
   br(),
-  textOutput("n_surveys"),
+  strong(textOutput("n_surveys")),
   br(),
+  
   tabsetPanel(
     tabPanel("view by date",
-      h4("Average daily counts by date"),
+      h3("Average daily counts by date"),
       plotOutput("beePlot1")),
     tabPanel("View by category",
-      h4("Average visits per minute by category"),
-      plotOutput("beePlot2"))
+      h3("Average visits per minute by category"),
+      plotOutput("beePlot2")),
+    tabPanel("Survey locations",
+      h3("Survey locations", style = "border-bottom:1px grey"),
+      p(em("Click on each bee icon or rectangle to show average counts for all surveys conducted within that area."), style = "margin-bottom:.5em"),
+      leafletOutput("surveyMap"))
   ),
+  
   br(),
   br(),
   p(strong("©2020 University of Wisconsin Board of Regents"), align = "center", style = "font-size:small; color:grey"),
@@ -320,6 +324,38 @@ server <- function(input, output, session) {
   output$n_surveys <- renderText({
     paste(nrow(filtered_surveys()), "surveys match your filter selections.")})
   
+  # reset button
+  observeEvent(input$reset, {
+    updateSliderInput(session, "date_range", value = c(min_date, max_date))
+    updateCheckboxGroupInput(session, "which_bees", selected = 1:6)
+    updateCheckboxGroupInput(session, "which_sites", selected = site_types)
+    updateCheckboxGroupInput(session, "which_crop", selected = crop_types)
+    updateCheckboxGroupInput(session, "which_mgmt", selected = mgmt_types)
+  })
+  
+  # bee buttons
+  observeEvent(input$which_bees_all, {updateCheckboxGroupInput(session, "which_bees", selected = 1:6)})
+  observeEvent(input$which_bees_none, {updateCheckboxGroupInput(session, "which_bees", selected = 0)})
+  
+  # habitat buttons
+  observeEvent(input$which_site_all, {updateCheckboxGroupInput(session, "which_sites", selected = site_types)})
+  observeEvent(input$which_site_none, {updateCheckboxGroupInput(session, "which_sites", selected = "")})
+  
+  # crop buttons
+  observeEvent(input$which_crop_all, {updateCheckboxGroupInput(session, "which_crop", selected = crop_types)})
+  observeEvent(input$which_crop_none, {updateCheckboxGroupInput(session, "which_crop", selected = "")})
+  
+  # management buttons
+  observeEvent(input$which_mgmt_all, {updateCheckboxGroupInput(session, "which_mgmt", selected = mgmt_types)})
+  observeEvent(input$which_mgmt_none, {updateCheckboxGroupInput(session, "which_mgmt", selected = "")})
+  
+  bee_totals <- reactive({
+    filtered_surveys_long() %>%
+    group_by(bee_class) %>%
+    summarise(tot_count = sum(count)) %>%
+    mutate(pct_count = sprintf("%1.1f%%", tot_count / sum(.$tot_count) * 100))
+    })
+  
   ## survey site map ##
   output$surveyMap <- renderLeaflet({
     leaflet(survey_pts) %>%
@@ -349,15 +385,7 @@ server <- function(input, output, session) {
       )
   })
 
-  # reset button
-  observeEvent(input$reset, {
-    updateSliderInput(session, "date_range", value = c(min_date, max_date))
-    updateCheckboxGroupInput(session, "which_bees", selected = 1:6)
-    updateCheckboxGroupInput(session, "which_sites", selected = site_types)
-    updateCheckboxGroupInput(session, "which_crop", selected = crop_types)
-    updateCheckboxGroupInput(session, "which_mgmt", selected = mgmt_types)
-  })
-  
+
   # simple survey data explorer
   output$beePlot1 <- renderPlot({
     df <- filtered_surveys_long()
@@ -377,30 +405,35 @@ server <- function(input, output, session) {
       df_crop <- df %>%
         mutate(type = as.character(crop)) %>%
         group_by(type, bee_name) %>%
-        summarise(mean_count = mean(count)) %>%
+        summarise(
+          mean_count = mean(count),
+          n = n()) %>%
         mutate(type_label = "By crop")
       
       df_site <- df %>%
         mutate(type = as.character(site_type)) %>%
         group_by(type, bee_name) %>%
-        summarise(mean_count = mean(count)) %>%
-        mutate(type_label = "By site")
+        summarise(
+          mean_count = mean(count),
+          n = n()) %>%
+        mutate(type_label = "By habitat")
       
       df_mgmt <- df %>%
         mutate(type = as.character(management_type)) %>%
         group_by(type, bee_name) %>%
-        summarise(mean_count = mean(count)) %>%
+        summarise(
+          mean_count = mean(count),
+          n = n()) %>%
         mutate(type_label = "By management")
       
       df_bind <- bind_rows(df_crop, df_site, df_mgmt) %>%
         mutate(
           mean_count = mean_count / 5,
-          n = n(),
-          type_label = factor(type_label,
-            levels = c("By site", "By crop", "By management"))) %>%
-        group_by(type_label, type)
+          type_label = factor(type_label, levels = c("By habitat", "By crop", "By management"))) %>%
+        ungroup()
       
       df_labels <- df_bind %>%
+        group_by(type_label, type) %>%
         summarise(n = mean(n))
       
       df_bind %>%
@@ -420,9 +453,6 @@ server <- function(input, output, session) {
         facet_grid(. ~ type_label, scales = "free_x")
     }
   })
-  
-
-
 }
 
 
@@ -432,9 +462,8 @@ shinyApp(ui, server)
 
 
 
-
 # dustbin -----------------------------------------------------------------
-# 
+
 # df_crop <- surveys_long %>%
 #   mutate(type = as.character(crop)) %>%
 #   group_by(type, bee_name) %>%
@@ -455,6 +484,8 @@ shinyApp(ui, server)
 #   group_by(type_label, type)
 # df_labels <- df %>%
 #   summarise(n = mean(n))
+# 
+# 
 # 
 # 
 # df %>%
