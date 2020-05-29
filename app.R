@@ -157,7 +157,7 @@ survey_pts <- surveys %>%
 
 # set icon for leaflet
 bee_icon <- makeIcon(
-  iconUrl = "wibee-logo.png",
+  iconUrl = "map-icon.png",
   iconWidth = 30, iconHeight = 30,
   iconAnchorX = 15, iconAnchorY = 15)
 
@@ -319,10 +319,12 @@ ui <- fixedPage(
   br(),
   div(strong(textOutput("n_surveys")), style = "font-size:larger; text-align:center"),
   hr(),
-  h4("Average visits per minute by date", align = "center"),
-  plotOutput("beePlot1", height = "300px"),
   br(),
-  h4("Average visits per minute by category", align = "center"),
+  h4("Pollinator activity per minute by survey date", align = "center"),
+  plotOutput("beePlot1", height = "300px"),
+  hr(),
+  br(),
+  h4("Pollinator activity by site characteristics", align = "center"),
   plotOutput("beePlot2"),
   
 
@@ -468,12 +470,16 @@ server <- function(input, output, session) {
         ggplot(aes(x = date, y = mean_count, fill = bee_name)) +
         geom_bar(stat = "identity") +
         scale_fill_manual(values = bee_palette(input$which_bees)) +
-        labs(x = "Survey date", y = "Average visits per minute", fill = "")}
+        labs(x = "Survey date", y = "Average visits per minute", fill = "") +
+        theme(text = element_text(size = 16))
+      }
   })
   
   output$beePlot2 <- renderPlot({
     df <- filtered_surveys_long()
     if (nrow(df) > 0) {
+      
+      # this should all be possible with a pivot_longer call
       df_crop <- df %>%
         mutate(type = as.character(crop)) %>%
         group_by(type, bee_name) %>%
@@ -516,13 +522,17 @@ server <- function(input, output, session) {
           aes(x = type, y = -.1, label = paste0("(", n, ")")),
           size = 3) +
         scale_fill_manual(values = bee_palette(input$which_bees)) +
-        labs(x = "", y = "Average visits per minute", fill = "") +
+        labs(
+          x = "",
+          y = "Average visits per minute",
+          fill = "") +
         theme(axis.text.x = element_text(
           angle = 90,
           vjust = .5,
           hjust = 1
         )) +
-        facet_grid(. ~ type_label, scales = "free_x")
+        facet_grid(. ~ type_label, scales = "free_x") +
+        theme(text = element_text(size = 16))
     }
   })
 }
