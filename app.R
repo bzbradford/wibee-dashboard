@@ -21,11 +21,11 @@ wibee_in <- suppressMessages(read_csv("wibee-surveys.csv"))
 
 # which columns to convert from char to factor
 fct_cols <- c(
-    "site_type",
+    "habitat",
     "cloud_cover",
     "wind_intensity",
     "temperature",
-    "management_type",
+    "management",
     "crop"
 )
 
@@ -103,18 +103,15 @@ crop_types <-
     "other",
     "none")
 
-# valid site types
-site_types <- levels(surveys$site_type)
-
-
 # generate main dataset
 surveys <- wibee_in %>%
   select(-drop_cols) %>%
+  rename(habitat = site_type, management = management_type) %>%
   filter(duration == "5 minutes") %>%
   mutate(
-    management_type =
+    management =
       case_when(
-        management_type %in% mgmt_types ~ management_type,
+        management %in% mgmt_types ~ management,
         T ~ "other"),
     crop =
       case_when(
@@ -126,6 +123,8 @@ surveys <- wibee_in %>%
   mutate_at(bee_cols, replace_na, 0) %>%
   filter(date >= "2020-01-01")
 
+# valid site types
+habitat_types <- levels(surveys$habitat)
 
 # pivot longer for plotting etc
 surveys_long <- surveys %>%
@@ -209,83 +208,74 @@ ui <- fixedPage(
       ),
     mainPanel(
       h3("What is the WiBee app?", style = "margin-top:0px"),
-      p("WiBee (pronounced Wee-bee) is a new smartphone app developed by the Gratton Lab at the University of Wisconsin-Madison. We invite growers and interested citizen scientists to use the app during the growing season to collect high quality data on wild bee abundance and diversity on Wisconsin’s fruit and vegetable farms."),
-      p("With your help, we can provide growers with better pollination management recommendations specific to individual farms and share more information about the diversity, abundance and value of Wisconsin’s wild bees."),
-      p("Learn more at the ", a("Gratton lab website.", href = "https://pollinators.wisc.edu/wibee/"))
-    ),
-    position = "right"),
+      p("WiBee (pronounced Wee-bee) is a new smartphone app developed by the",       a("Gratton Lab", href = "https://gratton.entomology.wisc.edu/"), "at the University of Wisconsin-Madison. We invite growers and interested citizen scientists to use the app during the growing season to collect high quality data on wild bee abundance and diversity on Wisconsin’s fruit and vegetable farms."),
+      p("WiBee is a citizen science project, so all the data here is collected by people like you going out and completing surveys with the WiBee App. We invite you to explore the data to see what wild bee populations and their flower visit rates look like across Wisconsin. You can also compare your own data in the WiBee app to this Wisconsin-wide data to help you make decisions about managing your local pollinator community or track any change over time."),
+      p("To join the project and help collect data, download the WiBee app today or visit", a("pollinators.wisc.edu/wibee", href = "http://www.pollinators.wisc.edu/wibee"), "to learn more. Thank you for participating!")
+    ), position = "right"),
   
+  h3("How to use this dashboard"),
+  p(strong("Step 1: Choose a habitat type(s)."), "If you run an orchard and you just want to look at the collective data from other orchards in Wisconsin, filter the data by checking the “orchard” box."),
+  p(strong("Step 2: Choose a crop type(s)."), "If you want to compare your apple bloom wild bee visit rate to other apple orchards in Wisconsin, check the apple box to filter the data. Keep in mind that crops bloom at different times of year and have different florescences, so the bee visit rate and bee group composition will likely be different between crops."),
+  p(strong("Step 3: Choose a management type(s)."), "These categories are subjective (chosen by the survey taker) and very broad, so take any variation between conventional, organic or “other” management styles with a grain of salt. "),
+  p(strong("Step 4: Explore the bee groups."), "We recommend looking at the bee data in three different combinations:"),
+  tags$ul(
+    tags$li("Visits by all the bees combined (honey bees and wild bees)"),
+    tags$li("Visits by honey bees compared to wild bees"),
+    tags$li("Visits by each individual bee group (bumble bee, honey bee, large dark bee, small dark bee, green bee)")),
+  p(strong("Step 5: Making sense of the data."), "Look at the average flower visits per minute and the composition of the bee visitors."),
+  tags$ul(
+    tags$li("How do your overall bee visits per minute and wild bee visits per minute compare to the Wisconsin average?"),
+    tags$li("What does your flower visit composition look like compared to the Wisconsin average? Do you have a lower, similar or higher percentage of wild bees compared to the Wisconsin average? Among your wild bees, how does the composition of bumble bees, large dark bees, small dark bees and green bees compare to your data?")
+  ),
   br(),
-  br(),
-  h2("Data explorer"),
+  h3("Data explorer"),
+  hr(),
   
   fluidRow(
-    column(6,
-      sliderInput(
-        "date_range",
-        label = h4("Date range:"),
-        min = min_date,
-        max = max_date,
-        value = c(min_date, max_date)
-        )
-      ),
-    column(6, actionButton("reset", "Reset filters"), align = "center")
-    ),
+    column(8,
+    sliderInput(
+      "date_range",
+      label = "Date range:",
+      min = min_date,
+      max = max_date,
+      value = c(min_date, max_date),
+      width = "100%"
+    )),
+    column(4, actionButton("reset", "Reset filters"), align = "center")
+  ),
   
   fluidRow(
     column(3,
-      checkboxGroupInput(
-        "which_bees",
-        label = h4("Bee group:"),
-        choiceNames = bee_ref$bee_name,
-        choiceValues = 1:6,
-        selected = 1:6),
+      uiOutput("which_bees"),
       div(actionButton("which_bees_all", "All"), style="display:inline-block"),
-      div(actionButton("which_bees_none", "None"), style="display:inline-block")
-      ),
+      div(actionButton("which_bees_none", "None"), style="display:inline-block")),
     column(3,
-      checkboxGroupInput(
-        "which_sites",
-        label = h4("Habitat type:"),
-        choiceNames = site_types,
-        choiceValues = site_types,
-        selected = site_types),
-      div(actionButton("which_site_all", "All"), style = "display:inline-block"),
-      div(actionButton("which_site_none", "None"), style = "display:inline-block")
-    ),
+      uiOutput("which_habitat"),
+      div(actionButton("which_habitat_all", "All"), style = "display:inline-block"),
+      div(actionButton("which_habitat_none", "None"), style = "display:inline-block")),
     column(3,
-      checkboxGroupInput(
-        "which_crop",
-        label = h4("Crop type:"),
-        choiceNames = crop_types,
-        choiceValues = crop_types,
-        selected = crop_types),
+      uiOutput("which_crop"),
       div(actionButton("which_crop_all", "All"), style = "display:inline-block"),
       div(actionButton("which_crop_none", "None"), style = "display:inline-block")
       ),
     column(3,
-      checkboxGroupInput(
-        "which_mgmt",
-        label = h4("Management type:"),
-        choiceNames = mgmt_types,
-        choiceValues = mgmt_types,
-        selected = mgmt_types),
+      uiOutput("which_mgmt"),
       div(actionButton("which_mgmt_all", "All"), style = "display:inline-block"),
       div(actionButton("which_mgmt_none", "None"), style = "display:inline-block")),
     ),
-  
-  br(),
-  strong(textOutput("n_surveys")),
-  br(),
+
+  hr(),
+  div(strong(textOutput("n_surveys")), style = "font-size:larger; text-align:center"),
+  hr(),
   
   tabsetPanel(
-    tabPanel("view by date",
-      h3("Average daily counts by date"),
-      plotOutput("beePlot1")),
-    tabPanel("View by category",
+    tabPanel("Bee activity charts",
+      h3("Average visits per minute date"),
+      plotOutput("beePlot1", height = "300px"),
+      br(),
       h3("Average visits per minute by category"),
       plotOutput("beePlot2")),
-    tabPanel("Survey locations",
+    tabPanel("Survey location map",
       h3("Survey locations", style = "border-bottom:1px grey"),
       p(em("Click on each bee icon or rectangle to show average counts for all surveys conducted within that area."), style = "margin-bottom:.5em"),
       leafletOutput("surveyMap"))
@@ -307,8 +297,8 @@ server <- function(input, output, session) {
   filtered_surveys <- reactive({
     surveys %>%
       filter(date >= input$date_range[1] & date <= input$date_range[2]) %>%
-      filter(site_type %in% input$which_sites) %>%
-      filter(management_type %in% input$which_mgmt) %>%
+      filter(habitat %in% input$which_habitats) %>%
+      filter(management %in% input$which_mgmt) %>%
       filter(crop %in% input$which_crop)
   })
 
@@ -316,8 +306,8 @@ server <- function(input, output, session) {
     surveys_long %>%
       filter(date >= input$date_range[1] & date <= input$date_range[2]) %>%
       filter(bee_num %in% input$which_bees) %>%
-      filter(site_type %in% input$which_sites) %>%
-      filter(management_type %in% input$which_mgmt) %>%
+      filter(habitat %in% input$which_habitats) %>%
+      filter(management %in% input$which_mgmt) %>%
       filter(crop %in% input$which_crop)
   })
   
@@ -328,7 +318,7 @@ server <- function(input, output, session) {
   observeEvent(input$reset, {
     updateSliderInput(session, "date_range", value = c(min_date, max_date))
     updateCheckboxGroupInput(session, "which_bees", selected = 1:6)
-    updateCheckboxGroupInput(session, "which_sites", selected = site_types)
+    updateCheckboxGroupInput(session, "which_habitats", selected = habitat_types)
     updateCheckboxGroupInput(session, "which_crop", selected = crop_types)
     updateCheckboxGroupInput(session, "which_mgmt", selected = mgmt_types)
   })
@@ -336,18 +326,50 @@ server <- function(input, output, session) {
   # bee buttons
   observeEvent(input$which_bees_all, {updateCheckboxGroupInput(session, "which_bees", selected = 1:6)})
   observeEvent(input$which_bees_none, {updateCheckboxGroupInput(session, "which_bees", selected = 0)})
+  output$which_bees <- renderUI({
+    checkboxGroupInput(
+      "which_bees",
+      label = "Bee group:",
+      choiceNames = bee_ref$bee_name,
+      choiceValues = 1:6,
+      selected = 1:6)
+  })
   
   # habitat buttons
-  observeEvent(input$which_site_all, {updateCheckboxGroupInput(session, "which_sites", selected = site_types)})
-  observeEvent(input$which_site_none, {updateCheckboxGroupInput(session, "which_sites", selected = "")})
-  
+  observeEvent(input$which_habitat_all, {updateCheckboxGroupInput(session, "which_habitats", selected = habitat_types)})
+  observeEvent(input$which_habitat_none, {updateCheckboxGroupInput(session, "which_habitats", selected = "")})
+  output$which_habitat <- renderUI({
+    checkboxGroupInput(
+      "which_habitats",
+      label = "Habitat type:",
+      choiceNames = habitat_types,
+      choiceValues = habitat_types,
+      selected = habitat_types)
+  })
+
   # crop buttons
   observeEvent(input$which_crop_all, {updateCheckboxGroupInput(session, "which_crop", selected = crop_types)})
   observeEvent(input$which_crop_none, {updateCheckboxGroupInput(session, "which_crop", selected = "")})
+    output$which_crop <- renderUI({
+    checkboxGroupInput(
+      "which_crop",
+      label = "Crop type:",
+      choiceNames = crop_types,
+      choiceValues = crop_types,
+      selected = crop_types)
+  })
   
   # management buttons
   observeEvent(input$which_mgmt_all, {updateCheckboxGroupInput(session, "which_mgmt", selected = mgmt_types)})
   observeEvent(input$which_mgmt_none, {updateCheckboxGroupInput(session, "which_mgmt", selected = "")})
+  output$which_mgmt <- renderUI({
+    checkboxGroupInput(
+      "which_mgmt",
+      label = "Management type:",
+      choiceNames = mgmt_types,
+      choiceValues = mgmt_types,
+      selected = mgmt_types)
+  })
   
   bee_totals <- reactive({
     filtered_surveys_long() %>%
@@ -411,7 +433,7 @@ server <- function(input, output, session) {
         mutate(type_label = "By crop")
       
       df_site <- df %>%
-        mutate(type = as.character(site_type)) %>%
+        mutate(type = as.character(habitat)) %>%
         group_by(type, bee_name) %>%
         summarise(
           mean_count = mean(count),
@@ -419,7 +441,7 @@ server <- function(input, output, session) {
         mutate(type_label = "By habitat")
       
       df_mgmt <- df %>%
-        mutate(type = as.character(management_type)) %>%
+        mutate(type = as.character(management)) %>%
         group_by(type, bee_name) %>%
         summarise(
           mean_count = mean(count),
@@ -470,7 +492,7 @@ shinyApp(ui, server)
 #   summarise(mean_count = mean(count), n = n()) %>%
 #   mutate(type_label = "By crop")
 # df_site <- surveys_long %>%
-#   mutate(type = as.character(site_type)) %>%
+#   mutate(type = as.character(habitat_type)) %>%
 #   group_by(type, bee_name) %>%
 #   summarise(mean_count = mean(count), n = n()) %>%
 #   mutate(type_label = "By site")
@@ -505,9 +527,9 @@ shinyApp(ui, server)
 #   df <- filtered_surveys_long()
 #   if (nrow(df) > 0) {
 #     df %>%
-#       group_by(site_type, bee_name) %>%
+#       group_by(habitat_type, bee_name) %>%
 #       summarise(mean_count = mean(count)) %>%
-#       ggplot(aes(x = site_type, y = mean_count, fill = bee_name)) +
+#       ggplot(aes(x = habitat_type, y = mean_count, fill = bee_name)) +
 #       geom_bar(stat = "identity") +
 #       scale_fill_manual(values = bee_palette(input$which_bees)) +
 #       labs(x = "Site type", y = "Mean insect count", fill = "") +
