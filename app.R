@@ -174,6 +174,16 @@ bee_totals <- surveys_long %>%
   mutate(pct_count = sprintf("%1.1f%%", tot_count / sum(.$tot_count) * 100))
 
 
+mgmt_labels <- left_join(
+  tibble(management = mgmt_types),
+  surveys %>%
+    group_by(management) %>%
+    summarise(n = n())) %>%
+  replace_na(list(n = 0)) %>%
+  mutate(label = paste0(management, " (", n, ")")) %>%
+  .$label
+
+
 
 # Define ui ---------------------------------------------------------------
 
@@ -262,19 +272,39 @@ ui <- fixedPage(
     ),
   fluidRow(
     column(3,
-      uiOutput("which_bees"),
+      checkboxGroupInput(
+        "which_bees",
+        label = "Bee group:",
+        choiceNames = bee_ref$bee_name,
+        choiceValues = 1:6,
+        selected = 1:6),
       div(actionButton("which_bees_all", "All"), style = "display:inline-block"),
       div(actionButton("which_bees_none", "None"), style = "display:inline-block")),
     column(3,
-      uiOutput("which_habitat"),
+      checkboxGroupInput(
+        "which_habitat",
+        label = "Habitat type:",
+        choiceNames = habitat_types,
+        choiceValues = habitat_types,
+        selected = habitat_types),
       div(actionButton("which_habitat_all", "All"), style = "display:inline-block"),
       div(actionButton("which_habitat_none", "None"), style = "display:inline-block")),
     column(3,
-      uiOutput("which_crop"),
+      checkboxGroupInput(
+        "which_crop",
+        label = "Crop type:",
+        choiceNames = crop_types,
+        choiceValues = crop_types,
+        selected = crop_types),
       div(actionButton("which_crop_all", "All"), style = "display:inline-block"),
       div(actionButton("which_crop_none", "None"), style = "display:inline-block")),
     column(3,
-      uiOutput("which_mgmt"),
+      checkboxGroupInput(
+        "which_mgmt",
+        label = "Management type:",
+        choiceNames = mgmt_labels,
+        choiceValues = mgmt_types,
+        selected = mgmt_types),
       div(actionButton("which_mgmt_all", "All"), style = "display:inline-block"),
       div(actionButton("which_mgmt_none", "None"), style = "display:inline-block"))
   ),
@@ -310,7 +340,7 @@ server <- function(input, output, session) {
   filtered_surveys <- reactive({
     surveys %>%
       filter(date >= input$date_range[1] & date <= input$date_range[2]) %>%
-      filter(habitat %in% input$which_habitats) %>%
+      filter(habitat %in% input$which_habitat) %>%
       filter(management %in% input$which_mgmt) %>%
       filter(crop %in% input$which_crop)
   })
@@ -319,18 +349,23 @@ server <- function(input, output, session) {
     surveys_long %>%
       filter(date >= input$date_range[1] & date <= input$date_range[2]) %>%
       filter(bee_num %in% input$which_bees) %>%
-      filter(habitat %in% input$which_habitats) %>%
+      filter(habitat %in% input$which_habitat) %>%
       filter(management %in% input$which_mgmt) %>%
       filter(crop %in% input$which_crop)
   })
-  
+
   mgmt_labels <- reactive({
-    df <- filtered_surveys %>%
-      group_by(management) %>%
-      summarise(n = n()) %>%
-      mutate(label = paste0(management, " (", n, ")"))
-    df$label
+    left_join(
+      tibble(management = mgmt_types),
+      filtered_surveys() %>%
+        group_by(management) %>%
+        summarise(n = n())) %>%
+      replace_na(list(n = 0)) %>%
+      mutate(label = paste0(management, " (", n, ")")) %>%
+      .$label
   })
+  
+  observe(print(mgmt_labels()))
   
   output$n_surveys <- renderText({
     paste(nrow(filtered_surveys()), "surveys match your filter selections.")})
@@ -339,7 +374,7 @@ server <- function(input, output, session) {
   observeEvent(input$reset, {
     updateSliderInput(session, "date_range", value = c(min_date, max_date))
     updateCheckboxGroupInput(session, "which_bees", selected = 1:6)
-    updateCheckboxGroupInput(session, "which_habitats", selected = habitat_types)
+    updateCheckboxGroupInput(session, "which_habitat", selected = habitat_types)
     updateCheckboxGroupInput(session, "which_crop", selected = crop_types)
     updateCheckboxGroupInput(session, "which_mgmt", selected = mgmt_types)
   })
@@ -347,50 +382,50 @@ server <- function(input, output, session) {
   # bee buttons
   observeEvent(input$which_bees_all, {updateCheckboxGroupInput(session, "which_bees", selected = 1:6)})
   observeEvent(input$which_bees_none, {updateCheckboxGroupInput(session, "which_bees", selected = 0)})
-  output$which_bees <- renderUI({
-    checkboxGroupInput(
-      "which_bees",
-      label = "Bee group:",
-      choiceNames = bee_ref$bee_name,
-      choiceValues = 1:6,
-      selected = 1:6)
-  })
+  # output$which_bees <- renderUI({
+  #   checkboxGroupInput(
+  #     "which_bees",
+  #     label = "Bee group:",
+  #     choiceNames = bee_ref$bee_name,
+  #     choiceValues = 1:6,
+  #     selected = 1:6)
+  # })
   
   # habitat buttons
-  observeEvent(input$which_habitat_all, {updateCheckboxGroupInput(session, "which_habitats", selected = habitat_types)})
-  observeEvent(input$which_habitat_none, {updateCheckboxGroupInput(session, "which_habitats", selected = "")})
-  output$which_habitat <- renderUI({
-    checkboxGroupInput(
-      "which_habitats",
-      label = "Habitat type:",
-      choiceNames = habitat_types,
-      choiceValues = habitat_types,
-      selected = habitat_types)
-  })
+  observeEvent(input$which_habitat_all, {updateCheckboxGroupInput(session, "which_habitat", selected = habitat_types)})
+  observeEvent(input$which_habitat_none, {updateCheckboxGroupInput(session, "which_habitat", selected = "")})
+  observeEvent(input$which_habitat,
+    {
+      updateCheckboxGroupInput(session, "which_mgmt",
+        choiceNames = mgmt_labels(), choiceValues = mgmt_types, selected = input$which_mgmt)
+    })
+
 
   # crop buttons
   observeEvent(input$which_crop_all, {updateCheckboxGroupInput(session, "which_crop", selected = crop_types)})
   observeEvent(input$which_crop_none, {updateCheckboxGroupInput(session, "which_crop", selected = "")})
-    output$which_crop <- renderUI({
-    checkboxGroupInput(
-      "which_crop",
-      label = "Crop type:",
-      choiceNames = crop_types,
-      choiceValues = crop_types,
-      selected = crop_types)
-  })
+  #   output$which_crop <- renderUI({
+  #   checkboxGroupInput(
+  #     "which_crop",
+  #     label = "Crop type:",
+  #     choiceNames = crop_types,
+  #     choiceValues = crop_types,
+  #     selected = crop_types)
+  # })
   
   # management buttons
-  observeEvent(input$which_mgmt_all, {updateCheckboxGroupInput(session, "which_mgmt", selected = mgmt_types)})
-  observeEvent(input$which_mgmt_none, {updateCheckboxGroupInput(session, "which_mgmt", selected = "")})
-  output$which_mgmt <- renderUI({
-    checkboxGroupInput(
-      "which_mgmt",
-      label = "Management type:",
-      choiceNames = mgmt_types,
-      choiceValues = mgmt_types,
-      selected = mgmt_types)
-  })
+  observeEvent(input$which_mgmt_all,
+    {updateCheckboxGroupInput(session, "which_mgmt", selected = mgmt_types)})
+  observeEvent(input$which_mgmt_none,
+    {updateCheckboxGroupInput(session, "which_mgmt", selected = "")})
+  # output$which_mgmt <- renderUI({
+  #   checkboxGroupInput(
+  #     "which_mgmt",
+  #     label = "Management type:",
+  #     choiceNames = mgmt_labels(),
+  #     choiceValues = mgmt_types,
+  #     selected = mgmt_types)
+  # })
   
   bee_totals <- reactive({
     filtered_surveys_long() %>%
@@ -484,6 +519,22 @@ shinyApp(ui, server)
 
 
 # dustbin -----------------------------------------------------------------
+
+
+# left_join(
+#   tibble(management = as.factor(mgmt_types)),
+#   surveys %>%
+#     group_by(management) %>%
+#     summarise(n = n()),
+#   by = "management") %>%
+#   replace_na(list(n = 0)) %>%
+#   mutate(label = paste0(management, " (", n, ")")) %>%
+#   .$label
+
+
+
+
+
 
 # df_crop <- surveys_long %>%
 #   mutate(type = as.character(crop)) %>%
