@@ -175,9 +175,11 @@ bee_totals <- surveys_long %>%
 
 
 
-# define ui ---------------------------------------------------------------
+# Define ui ---------------------------------------------------------------
 
 ui <- fixedPage(
+  
+  ## page heading ##
   fluidRow(
     column(1, h2(img(src = "wibee-logo.png", height = 60))),
     column(10,
@@ -189,150 +191,111 @@ ui <- fixedPage(
   hr(style = "margin-top:0px"),
   br(),
   
-  sidebarLayout(sidebarPanel(
-    p(strong("Project summary")),
-    p("Unique users: ", length(unique(surveys$user_id))),
-    p("Total completed surveys: ", nrow(surveys)),
-    p("Most recent survey: ", max(surveys$date)),
-    p("Total insect observations: ", sum(surveys_long$count)),
-    tags$ul(tags$li({
-      x = filter(bee_totals, bee_class == "Honey bees")
-      paste0("Honey bees: ", x$tot_count, " (", x$pct_count, ")")
-    }),
-      tags$li({
-        x = filter(bee_totals, bee_class == "Wild bees")
-        paste0("Wild bees: ", x$tot_count, " (", x$pct_count, ")")
+  ## Intro and project survey ##
+  sidebarLayout(
+    sidebarPanel(
+      p(strong("Project summary")),
+      p("Unique users: ", length(unique(surveys$user_id))),
+      p("Total completed surveys: ", nrow(surveys)),
+      p("Most recent survey: ", max(surveys$date)),
+      p("Total insect observations: ", sum(surveys_long$count)),
+      tags$ul(tags$li({
+        x = filter(bee_totals, bee_class == "Honey bees")
+        paste0("Honey bees: ", x$tot_count, " (", x$pct_count, ")")
       }),
-      tags$li({
-        x = filter(bee_totals, bee_class == "Non-bees")
-        paste0("Non-bees: ", x$tot_count, " (", x$pct_count, ")")
-      })),
-  ),
-    mainPanel(
-      h3("What is the WiBee app?", style = "margin-top:0px"),
-      p(
-        "WiBee (pronounced Wee-bee) is a new smartphone app developed by the",
-        a("Gratton Lab", href = "https://gratton.entomology.wisc.edu/"),
-        "at the University of Wisconsin-Madison. We invite growers and interested citizen scientists to use the app during the growing season to collect high quality data on wild bee abundance and diversity on Wisconsin’s fruit and vegetable farms."
-      ),
-      p(
-        "WiBee is a citizen science project, so all the data here is collected by people like you going out and completing surveys with the WiBee App. We invite you to explore the data to see what wild bee populations and their flower visit rates look like across Wisconsin. You can also compare your own data in the WiBee app to this Wisconsin-wide data to help you make decisions about managing your local pollinator community or track any change over time."
-      ),
-      p(
-        "To join the project and help collect data, download the WiBee app today or visit",
-        a("pollinators.wisc.edu/wibee", href = "http://www.pollinators.wisc.edu/wibee"),
-        "to learn more. Thank you for participating!"
-      )
+        tags$li({
+          x = filter(bee_totals, bee_class == "Wild bees")
+          paste0("Wild bees: ", x$tot_count, " (", x$pct_count, ")")
+        }),
+        tags$li({
+          x = filter(bee_totals, bee_class == "Non-bees")
+          paste0("Non-bees: ", x$tot_count, " (", x$pct_count, ")")
+        })),
     ),
+      mainPanel(
+        h3("What is the WiBee app?", style = "margin-top:0px"),
+        p("WiBee (pronounced Wee-bee) is a new smartphone app developed by the", a("Gratton Lab", href = "https://gratton.entomology.wisc.edu/"), "at the University of Wisconsin-Madison. We invite growers and interested citizen scientists to use the app during the growing season to collect high quality data on wild bee abundance and diversity on Wisconsin’s fruit and vegetable farms."),
+        p("WiBee is a citizen science project, so all the data here is collected by people like you going out and completing surveys with the WiBee App. We invite you to explore the data to see what wild bee populations and their flower visit rates look like across Wisconsin. You can also compare your own data in the WiBee app to this Wisconsin-wide data to help you make decisions about managing your local pollinator community or track any change over time."),
+        p("To join the project and help collect data, download the WiBee app today or visit", a("pollinators.wisc.edu/wibee", href = "http://www.pollinators.wisc.edu/wibee"), "to learn more. Thank you for participating!")),
     position = "right"),
   
-  
+  ## Survey location map and summary data ##
   h2("Survey locations", style = "border-bottom:1px grey"),
   p(em("Click on each bee icon or rectangle to show average counts for all surveys conducted within that area."), style = "margin-bottom:.5em"),
   leafletOutput("surveyMap"),
-  
-  
   br(),
+  
+  ## Tabset with How-To on page 2 ##
   h2("Data explorer"),
   tabsetPanel(
-    tabPanel("View and filter data",
-      br()),
-    tabPanel(
-      "How to use this dashboard",
+    tabPanel("View and filter data", br()),
+    tabPanel("How to use this dashboard",
       br(),
-      p(
-        strong("Step 1: Choose a habitat type(s)."),
-        "If you run an orchard and you just want to look at the collective data from other orchards in Wisconsin, filter the data by checking the “orchard” box."
-      ),
-      p(
-        strong("Step 2: Choose a crop type(s)."),
-        "If you want to compare your apple bloom wild bee visit rate to other apple orchards in Wisconsin, check the apple box to filter the data. Keep in mind that crops bloom at different times of year and have different florescences, so the bee visit rate and bee group composition will likely be different between crops."
-      ),
-      p(
-        strong("Step 3: Choose a management type(s)."),
-        "These categories are subjective (chosen by the survey taker) and very broad, so take any variation between conventional, organic or “other” management styles with a grain of salt. "
-      ),
-      p(
-        strong("Step 4: Explore the bee groups."),
-        "We recommend looking at the bee data in three different combinations:"
-      ),
+      p(strong("Step 1: Choose a habitat type(s)."), "If you run an orchard and you just want to look at the collective data from other orchards in Wisconsin, filter the data by checking the “orchard” box."),
+      p(strong("Step 2: Choose a crop type(s)."), "If you want to compare your apple bloom wild bee visit rate to other apple orchards in Wisconsin, check the apple box to filter the data. Keep in mind that crops bloom at different times of year and have different florescences, so the bee visit rate and bee group composition will likely be different between crops."),
+      p(strong("Step 3: Choose a management type(s)."), "These categories are subjective (chosen by the survey taker) and very broad, so take any variation between conventional, organic or “other” management styles with a grain of salt."),
+      p(strong("Step 4: Explore the bee groups."), "We recommend looking at the bee data in three different combinations:"),
       tags$ul(
         tags$li("Visits by all the bees combined (honey bees and wild bees)"),
         tags$li("Visits by honey bees compared to wild bees"),
-        tags$li(
-          "Visits by each individual bee group (bumble bee, honey bee, large dark bee, small dark bee, green bee)"
-        )
-      ),
-      p(
-        strong("Step 5: Making sense of the data."),
-        "Look at the average flower visits per minute and the composition of the bee visitors."
-      ),
+        tags$li("Visits by each individual bee group (bumble bee, honey bee, large dark bee, small dark bee, green bee)")),
+      p(strong("Step 5: Making sense of the data."), "Look at the average flower visits per minute and the composition of the bee visitors."),
       tags$ul(
-        tags$li(
-          "How do your overall bee visits per minute and wild bee visits per minute compare to the Wisconsin average?"
-        ),
-        tags$li(
-          "What does your flower visit composition look like compared to the Wisconsin average? Do you have a lower, similar or higher percentage of wild bees compared to the Wisconsin average? Among your wild bees, how does the composition of bumble bees, large dark bees, small dark bees and green bees compare to your data?"
-        )
-      ),
+        tags$li("How do your overall bee visits per minute and wild bee visits per minute compare to the Wisconsin average?"),
+        tags$li("What does your flower visit composition look like compared to the Wisconsin average? Do you have a lower, similar or higher percentage of wild bees compared to the Wisconsin average? Among your wild bees, how does the composition of bumble bees, large dark bees, small dark bees and green bees compare to your data?")),
       hr()
-    )
-  ), 
-  fluidRow(column(
-    8,
-    sliderInput(
-      "date_range",
-      label = "Date range:",
-      min = min_date,
-      max = max_date,
-      value = c(min_date, max_date),
-      width = "100%"
-    )
-  ),
-    column(4, actionButton("reset", "Reset filters"), align = "center")),
+      )
+    ),
+  
+  ## Filter data ##
   fluidRow(
-    column(
-      3,
+    column(8,
+      sliderInput(
+        "date_range",
+        label = "Date range:",
+        min = min_date,
+        max = max_date,
+        value = c(min_date, max_date),
+        width = "100%")
+      ),
+    column(4, actionButton("reset", "Reset filters"), align = "center")
+    ),
+  fluidRow(
+    column(3,
       uiOutput("which_bees"),
       div(actionButton("which_bees_all", "All"), style = "display:inline-block"),
-      div(actionButton("which_bees_none", "None"), style = "display:inline-block")
-    ),
-    column(
-      3,
+      div(actionButton("which_bees_none", "None"), style = "display:inline-block")),
+    column(3,
       uiOutput("which_habitat"),
       div(actionButton("which_habitat_all", "All"), style = "display:inline-block"),
-      div(actionButton("which_habitat_none", "None"), style = "display:inline-block")
-    ),
-    column(
-      3,
+      div(actionButton("which_habitat_none", "None"), style = "display:inline-block")),
+    column(3,
       uiOutput("which_crop"),
       div(actionButton("which_crop_all", "All"), style = "display:inline-block"),
-      div(actionButton("which_crop_none", "None"), style = "display:inline-block")
-    ),
-    column(
-      3,
+      div(actionButton("which_crop_none", "None"), style = "display:inline-block")),
+    column(3,
       uiOutput("which_mgmt"),
       div(actionButton("which_mgmt_all", "All"), style = "display:inline-block"),
-      div(actionButton("which_mgmt_none", "None"), style = "display:inline-block")
-    ),
+      div(actionButton("which_mgmt_none", "None"), style = "display:inline-block"))
   ),
   br(),
   div(strong(textOutput("n_surveys")), style = "font-size:larger; text-align:center"),
   hr(),
   br(),
-  h4("Pollinator activity per minute by survey date", align = "center"),
+  
+  ## Plots based on filtered data ##
+  h4("Pollinator activity per minute by survey date"),
   plotOutput("beePlot1", height = "300px"),
   hr(),
   br(),
-  h4("Pollinator activity by site characteristics", align = "center"),
+  
+  h4("Pollinator activity by site characteristics"),
   plotOutput("beePlot2"),
-  
-
-  
   hr(),
-  
   br(),
-  br(), 
+  
+  ## Credits ##
+  br(),
   p(strong("©2020 University of Wisconsin Board of Regents"), align = "center", style = "font-size:small; color:grey"),
   p("developed by tanuki.tech", align = "center", style = "font-size:small; color:grey")
   
@@ -340,7 +303,7 @@ ui <- fixedPage(
 
 
 
-# define server -----------------------------------------------------------
+# Define server -----------------------------------------------------------
 
 server <- function(input, output, session) {
   
@@ -359,6 +322,14 @@ server <- function(input, output, session) {
       filter(habitat %in% input$which_habitats) %>%
       filter(management %in% input$which_mgmt) %>%
       filter(crop %in% input$which_crop)
+  })
+  
+  mgmt_labels <- reactive({
+    df <- filtered_surveys %>%
+      group_by(management) %>%
+      summarise(n = n()) %>%
+      mutate(label = paste0(management, " (", n, ")"))
+    df$label
   })
   
   output$n_surveys <- renderText({
@@ -474,64 +445,32 @@ server <- function(input, output, session) {
         theme(text = element_text(size = 16))
       }
   })
-  
+
+  # Plot of bee visitation rate by survey categorization
   output$beePlot2 <- renderPlot({
     df <- filtered_surveys_long()
     if (nrow(df) > 0) {
+      df <- df %>%
+        rename(`By crop` = crop, `By habitat` = habitat, `By management` = management) %>%
+        pivot_longer(cols = c("By crop", "By habitat", "By management")) %>%
+        group_by(name, value, bee_name) %>%
+        summarise(visit_rate = mean(count) / 5, n = n())
       
-      # this should all be possible with a pivot_longer call
-      df_crop <- df %>%
-        mutate(type = as.character(crop)) %>%
-        group_by(type, bee_name) %>%
-        summarise(
-          mean_count = mean(count),
-          n = n()) %>%
-        mutate(type_label = "By crop")
-      
-      df_site <- df %>%
-        mutate(type = as.character(habitat)) %>%
-        group_by(type, bee_name) %>%
-        summarise(
-          mean_count = mean(count),
-          n = n()) %>%
-        mutate(type_label = "By habitat")
-      
-      df_mgmt <- df %>%
-        mutate(type = as.character(management)) %>%
-        group_by(type, bee_name) %>%
-        summarise(
-          mean_count = mean(count),
-          n = n()) %>%
-        mutate(type_label = "By management")
-      
-      df_bind <- bind_rows(df_crop, df_site, df_mgmt) %>%
-        mutate(
-          mean_count = mean_count / 5,
-          type_label = factor(type_label, levels = c("By habitat", "By crop", "By management"))) %>%
-        ungroup()
-      
-      df_labels <- df_bind %>%
-        group_by(type_label, type) %>%
+      df_labels <- df %>%
+        group_by(name, value) %>%
         summarise(n = mean(n))
       
-      df_bind %>%
+      df %>%
         ggplot() +
-        geom_col(aes(x = type, y = mean_count, fill = bee_name)) +
+        geom_col(aes(x = value, y = visit_rate, fill = bee_name)) +
         geom_text(
           data = df_labels,
-          aes(x = type, y = -.1, label = paste0("(", n, ")")),
+          aes(x = value, y = -.1, label = paste0("(", n, ")")),
           size = 3) +
         scale_fill_manual(values = bee_palette(input$which_bees)) +
-        labs(
-          x = "",
-          y = "Average visits per minute",
-          fill = "") +
-        theme(axis.text.x = element_text(
-          angle = 90,
-          vjust = .5,
-          hjust = 1
-        )) +
-        facet_grid(. ~ type_label, scales = "free_x") +
+        labs(x = "", y = "Average visits per minute", fill = "") +
+        theme(axis.text.x = element_text(angle = 90, vjust = .5, hjust = 1)) +
+        facet_grid(. ~ name, scales = "free_x") +
         theme(text = element_text(size = 16))
     }
   })
