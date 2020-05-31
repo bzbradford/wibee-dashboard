@@ -90,14 +90,22 @@ bee_palette <- function(bees = 1:6) {
 }
 
 
-## For stripping out user-entered options in some fields
+# Valid habitat types
+habitat_types <- 
+  c("corn-soybeans-alfalfa",
+    "fruit-vegetable-field",
+    "orchard",
+    "lawn-and-garden",
+    "prairie",
+    "road-field-edge")
+
+
 # valid management types
 mgmt_types <- 
   c("organic",
     "conventional",
     "other",
     "unknown")
-mgmt_labels <- mgmt_types
 
 
 # valid crop types
@@ -110,33 +118,34 @@ crop_types <-
     "squash",
     "other",
     "none")
-crop_labels <- crop_types
 
 
 # generate main dataset
 surveys <- wibee_in %>%
   select(-drop_cols) %>%
   rename(habitat = site_type, management = management_type) %>%
-  mutate(crop = tolower(crop)) %>%
   filter(duration == "5 minutes") %>%
-  mutate(
-    management = case_when(
-      management %in% mgmt_types ~ management,
-      T ~ "other"),
-    crop = case_when(
-      is.na(crop) ~ "none",
-      grepl("berry", crop) ~ "berry",
-      crop %in% crop_types ~ crop,
-      T ~ "other"),
-    date = as.Date(ended_at)) %>%  
-  mutate_at(fct_cols, as.factor) %>%
   mutate_at(bee_cols, replace_na, 0) %>%
+  mutate_at(fct_cols, tolower) %>%
+  mutate(
+    habitat = factor(habitat, levels = habitat_types),
+    crop = 
+      factor(
+        case_when(
+          is.na(crop) ~ "none",
+          grepl("berry", crop) ~ "berry",
+          crop %in% crop_types ~ crop,
+          T ~ "other"),
+        levels = crop_types),
+    management = 
+      factor(
+        case_when(
+          management %in% mgmt_types ~ management,
+          T ~ "other"),
+        levels = mgmt_types),
+    date = as.Date(ended_at)) %>%
   filter(date >= "2020-01-01")
 
-
-# valid site types
-habitat_types <- levels(surveys$habitat)
-habitat_labels <- habitat_types
 
 
 # pivot longer for plotting etc
@@ -184,44 +193,27 @@ bee_totals <- surveys_long %>%
   mutate(pct_count = sprintf("%1.1f%%", tot_count / sum(.$tot_count) * 100))
 
 
-# habitat_labels <- left_join(
-#   tibble(habitat = habitat_types),
-#   surveys %>%
-#     mutate(habitat = as.character(habitat)) %>%
-#     group_by(habitat) %>%
-#     summarise(n = n()),
-#   by = "habitat") %>%
-#   replace_na(list(n = 0)) %>%
-#   mutate(label = paste0(habitat, " (", n, ")")) %>%
-#   .$label
-# 
-# 
-# crop_labels <- left_join(
-#   tibble(crop = crop_types),
-#   surveys %>%
-#     mutate(crop = as.character(crop)) %>%
-#     group_by(crop) %>%
-#     summarise(n = n()),
-#   by = "crop") %>%
-#   replace_na(list(n = 0)) %>%
-#   mutate(label = paste0(crop, " (", n, ")")) %>%
-#   .$label
-# 
-# 
-# mgmt_labels <- left_join(
-#   tibble(management = mgmt_types),
-#   surveys %>%
-#     mutate(management = as.character(management)) %>%
-#     group_by(management) %>%
-#     summarise(n = n()),
-#   by = "management") %>%
-#   replace_na(list(n = 0)) %>%
-#   mutate(label = paste0(management, " (", n, ")")) %>%
-#   .$label
+## generate initial filter labels ##
+habitat_labels <- {
+  surveys %>%
+    count(habitat, .drop = F) %>%
+    mutate(label = paste0(habitat, " (", n, ")")) %>%
+    .$label
+}
+crop_labels <- {
+  surveys %>%
+    count(crop, .drop = F) %>%
+    mutate(label = paste0(crop, " (", n, ")")) %>%
+    .$label
+}
+mgmt_labels <- {
+  surveys %>%
+    count(management, .drop = F) %>%
+    mutate(label = paste0(management, " (", n, ")")) %>%
+    .$label
+}
 
-habitat_labels = habitat_types
-mgmt_labels = mgmt_types
-crop_labels = crop_types
+
 
 # Define ui ---------------------------------------------------------------
 
@@ -391,46 +383,7 @@ server <- function(input, output, session) {
       filter(management %in% input$which_mgmt) %>%
       filter(crop %in% input$which_crop)
   })
-  
-  habitat_labels <- reactive({
-    left_join(
-      tibble(habitat = habitat_types),
-      filtered_surveys() %>%
-        mutate(habitat = as.character(habitat)) %>%
-        group_by(habitat) %>%
-        summarise(n = n()),
-      by = "habitat") %>%
-      replace_na(list(n = 0)) %>%
-      mutate(label = paste0(habitat, " (", n, ")")) %>%
-      .$label
-  })
-  
-  crop_labels <- reactive({
-    left_join(
-      tibble(crop = crop_types),
-      filtered_surveys() %>%
-        mutate(crop = as.character(crop)) %>%
-        group_by(crop) %>%
-        summarise(n = n()),
-      by = "crop") %>%
-      replace_na(list(n = 0)) %>%
-      mutate(label = paste0(crop, " (", n, ")")) %>%
-      .$label
-  })
-  
-  mgmt_labels <- reactive({
-    left_join(
-      tibble(management = mgmt_types),
-      filtered_surveys() %>%
-        mutate(management = as.character(management)) %>%
-        group_by(management) %>%
-        summarise(n = n()),
-      by = "management") %>%
-      replace_na(list(n = 0)) %>%
-      mutate(label = paste0(management, " (", n, ")")) %>%
-      .$label
-  })
-  
+
   
   ## Number of matching surveys ##
   output$n_surveys <- renderText({
@@ -438,27 +391,15 @@ server <- function(input, output, session) {
   })
   
   
-  ## Bee filter ##
+  ## All/None buttons ##
   observeEvent(input$which_bees_all, {updateCheckboxGroupInput(session, "which_bees", selected = 1:6)})
   observeEvent(input$which_bees_none, {updateCheckboxGroupInput(session, "which_bees", selected = 0)})
-  
-  
-  ## Habitat filter ##
   observeEvent(input$which_habitat_all, {updateCheckboxGroupInput(session, "which_habitat", selected = habitat_types)})
-  observeEvent(input$which_habitat_none, {updateCheckboxGroupInput(session, "which_habitat", selected = " ")})
-  observeEvent(input$which_habitat, update_labels(), ignoreNULL = F)
-  
-  
-  ## Crop filter ##
+  observeEvent(input$which_habitat_none, {updateCheckboxGroupInput(session, "which_habitat", selected = "")})
   observeEvent(input$which_crop_all, {updateCheckboxGroupInput(session, "which_crop", selected = crop_types)})
-  observeEvent(input$which_crop_none, {updateCheckboxGroupInput(session, "which_crop", selected = " ")})
-  observeEvent(input$which_crop, update_labels(), ignoreNULL = F)
- 
-  
-  ## Management filter ##
+  observeEvent(input$which_crop_none, {updateCheckboxGroupInput(session, "which_crop", selected = "")})
   observeEvent(input$which_mgmt_all, {updateCheckboxGroupInput(session, "which_mgmt", selected = mgmt_types)})
-  observeEvent(input$which_mgmt_none, {updateCheckboxGroupInput(session, "which_mgmt", selected = " ")})
-  observeEvent(input$which_mgmt, update_labels(), ignoreNULL = F)
+  observeEvent(input$which_mgmt_none, {updateCheckboxGroupInput(session, "which_mgmt", selected = "")})
   
   
   ## Reset button ##
@@ -469,18 +410,38 @@ server <- function(input, output, session) {
     updateCheckboxGroupInput(session, "which_crop", selected = crop_types)
     updateCheckboxGroupInput(session, "which_mgmt", selected = mgmt_types)
   })
+  
+  
+  # # update filter labels ##
+  # observe({
+  #   df <- filtered_surveys()
+  #   habitat_labels <- {
+  #     df %>%
+  #       count(habitat, .drop = F) %>%
+  #       mutate(label = paste0(habitat, " (", n, ")")) %>%
+  #       .$label
+  #   }
+  #   habitat_selections <- input$which_habitat
+  #   crop_labels <- {
+  #     df %>%
+  #       count(crop, .drop = F) %>%
+  #       mutate(label = paste0(crop, " (", n, ")")) %>%
+  #       .$label
+  #   }
+  #   crop_selections <- input$which_crop
+  #   mgmt_labels <- {
+  #     filtered_surveys() %>%
+  #       count(management, .drop = F) %>%
+  #       mutate(label = paste0(management, " (", n, ")")) %>%
+  #       .$label
+  #   }
+  #   mgmt_selections <- input$which_mgmt
+  #   updateCheckboxGroupInput(session, "which_habitat", choiceNames = habitat_labels, choiceValues = habitat_types, selected = habitat_selections)
+  #   updateCheckboxGroupInput(session, "which_crop", choiceNames = crop_labels, choiceValues = crop_types, selected = crop_selections)
+  #   updateCheckboxGroupInput(session, "which_mgmt", choiceNames = mgmt_labels, choiceValues = mgmt_types, selected = mgmt_selections)
+  # })
 
-  
-  ## update filter labels ##
-update_labels <- function() {
-  updateCheckboxGroupInput(session, "which_habitat",
-    choiceNames = habitat_labels(), choiceValues = habitat_types, selected = input$which_habitat)
-  updateCheckboxGroupInput(session, "which_crop",
-    choiceNames = crop_labels(), choiceValues = crop_types, selected = input$which_crop)
-  updateCheckboxGroupInput(session, "which_mgmt",
-    choiceNames = mgmt_labels(), choiceValues = mgmt_types, selected = input$which_mgmt)
-  }
-  
+
   # bee_totals <- reactive({
   #   filtered_surveys_long() %>%
   #   group_by(bee_class) %>%
@@ -569,6 +530,8 @@ update_labels <- function() {
 # run app -----------------------------------------------------------------
 
 shinyApp(ui, server)
+
+
 
 
 
