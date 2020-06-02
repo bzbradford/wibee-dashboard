@@ -10,85 +10,85 @@
 
 
 library(shiny)
+library(httr)
 library(tidyverse)
 library(leaflet)
+
+
 
 
 # Script ------------------------------------------------------------------
 
 # read csv
-wibee_in <- suppressMessages(read_csv("wibee-surveys.csv"))
+# wibee_in <- suppressMessages(read_csv("wibee-surveys.csv"))
 
-unique(wibee_in$crop)
-
-
-### Data wrangling ###
-
-# which columns to convert from char to factor
-fct_cols <- c(
-    "habitat",
-    "cloud_cover",
-    "wind_intensity",
-    "temperature",
-    "management",
-    "crop"
-)
-
-# useless cols
-drop_cols <- c(
-  "picture_id",
-  "picture_url",
-  "honeybee_amended",
-  "bumble_bee_amended",
-  "large_dark_bee_amended",
-  "small_dark_bee_amended",
-  "greenbee_amended",
-  "non_bee_amended"
-)
-
-# bee count data
-bee_cols = c(
-  "honeybee",  
-  "bumble_bee",
-  "large_dark_bee",
-  "small_dark_bee",
-  "greenbee",
-  "non_bee"
-)
-
-
-# crossref for bee name aliases
-bee_ref <-
-  tibble(
-    bee_num = 1:6,
-    species = bee_cols,
-    bee_name = c(
-      "Honey bee",
-      "Bumble bee",
-      "Large dark bee",
-      "Small dark bee",
-      "Green bee",
-      "Non-bee"
-    ),
-    bee_class = c(
-      "Honey bees",
-      "Wild bees",
-      "Wild bees",
-      "Wild bees",
-      "Wild bees",
-      "Non-bees"
+# load current surveys
+try(
+  suppressMessages(
+    wibee_in <- 
+      content(
+        GET(
+          url = "https://wibee.caracal.tech/api/data/survey-summaries",
+          config = add_headers(Authorization = "9cd665b8-95d2-4bc2-be7d-587210a5666d")
+          )
+        )
     )
   )
 
+# wibee_in %>% write_csv("wibee-surveys-downloaded.csv")
 
-# color scheme
-bee_palette <- function(bees = 1:6) {
-  bees = as.integer(bees)
-#  pal = c("red","orange","yellow","green","blue","purple")
-  pal = c("#FFA400", "#972D07", "#758BFD", "#AEB8FE", "#8CB369", "#D664BE")
-  return(pal[bees])
-}
+# explanatory cols to keep
+keep_cols <- c(
+  "id", "user_id",
+  "lat", "lng",
+  "date", "duration",
+  "habitat", "crop", "management")
 
+bee_names <- c(
+  "Honey bees",
+  "Bumble bees",
+  "Large dark bees",
+  "Small dark bees",
+  "Green bees",
+  "Non-bees")
+
+wildbee_names <- c(
+  "Honey bees",
+  "Wild bees",
+  "Non-bees"
+)
+
+
+# bee crossref
+bee_ref <-
+  tibble(
+    bee_type = c(
+      "honeybee",
+      "bumble_bee",
+      "large_dark_bee",
+      "small_dark_bee",
+      "greenbee",
+      "wild_bee",
+      "non_bee"),
+    bee_name = fct_inorder(c(
+      "Honey bees",
+      "Bumble bees",
+      "Large dark bees",
+      "Small dark bees",
+      "Green bees",
+      "Wild bees",
+      "Non-bees")
+      ),
+    bee_color = fct_inorder(c(
+      "#eca500",
+      "#d86d27",
+      "#758BFD",
+      "#AEB8FE",
+      "#99b5aa",
+      "#5f8475",
+      "#949494")
+      )
+    )
 
 # Valid habitat types
 habitat_types <- 
@@ -98,15 +98,6 @@ habitat_types <-
     "lawn-and-garden",
     "prairie",
     "road-field-edge")
-
-
-# valid management types
-mgmt_types <- 
-  c("organic",
-    "conventional",
-    "other",
-    "unknown")
-
 
 # valid crop types
 crop_types <- 
@@ -119,59 +110,58 @@ crop_types <-
     "other",
     "none")
 
+# valid management types
+mgmt_types <- 
+  c("organic",
+    "conventional",
+    "other",
+    "unknown")
+
 
 # generate main dataset
 surveys <- wibee_in %>%
-  select(-drop_cols) %>%
   rename(habitat = site_type, management = management_type) %>%
+  mutate(date = as.Date(ended_at)) %>%
+  mutate(wild_bee = bumble_bee + large_dark_bee + small_dark_bee + greenbee) %>%
+  select(keep_cols, bee_ref$bee_type) %>%
+  mutate(crop = tolower(crop)) %>%
+  mutate_at(bee_ref$bee_type, replace_na, 0) %>%
+  mutate(habitat = factor(habitat, levels = habitat_types)) %>%
+  mutate(crop = factor(
+    case_when(
+      is.na(crop) ~ "none",
+      grepl("berry", crop) ~ "berry",
+      crop %in% crop_types ~ crop,
+      T ~ "other"), levels = crop_types)) %>%
+  mutate(management = factor(
+    case_when(
+      management %in% mgmt_types ~ management,
+      T ~ "other"), levels = mgmt_types)) %>%
   filter(duration == "5 minutes") %>%
-  mutate_at(bee_cols, replace_na, 0) %>%
-  mutate_at(fct_cols, tolower) %>%
-  mutate(
-    habitat = factor(habitat, levels = habitat_types),
-    crop = 
-      factor(
-        case_when(
-          is.na(crop) ~ "none",
-          grepl("berry", crop) ~ "berry",
-          crop %in% crop_types ~ crop,
-          T ~ "other"),
-        levels = crop_types),
-    management = 
-      factor(
-        case_when(
-          management %in% mgmt_types ~ management,
-          T ~ "other"),
-        levels = mgmt_types),
-    date = as.Date(ended_at)) %>%
-  filter(date >= "2020-01-01")
-
-
+  filter(date >= "2020-04-01")
 
 # pivot longer for plotting etc
 surveys_long <- surveys %>%
-  pivot_longer(bee_cols, names_to = "species", values_to = "count") %>%
-  left_join(bee_ref, by = "species") %>%
-  mutate(bee_name = factor(bee_name, levels = bee_ref$bee_name))
+  pivot_longer(bee_ref$bee_type, names_to = "bee_type", values_to = "count") %>%
+  left_join(bee_ref, by = "bee_type")
 
 
 # generate grid points and summary statistics
 survey_pts <- surveys %>%
   drop_na(lng, lat) %>%
   mutate(
-    lng_rnd = round(lng, 1),
-    lat_rnd = round(lat, 1),
-    wild_bee = bumble_bee + large_dark_bee + small_dark_bee + greenbee) %>%
-  group_by(lng_rnd, lat_rnd) %>%
+    lng2 = round(lng, 1),
+    lat2 = round(lat, 1)) %>%
+  group_by(lng2, lat2) %>%
   summarise(
     n_surveys = n(),
-    lng = mean(lng_rnd),
-    lat = mean(lat_rnd),
+    lng = mean(lng2),
+    lat = mean(lat2),
     hb = round(mean(honeybee)/5,1),
     wb = round(mean(wild_bee)/5,1),
     nb = round(mean(non_bee)/5,1)) %>%
   ungroup() %>%
-  select(-c(lng_rnd, lat_rnd))
+  select(-c(lng2, lat2))
 
 
 # set icon for leaflet
@@ -188,7 +178,8 @@ max_date <- max(surveys$date)
 
 # total counts for project summary
 bee_totals <- surveys_long %>%
-  group_by(bee_class) %>%
+  filter(bee_name %in% wildbee_names) %>%
+  group_by(bee_name) %>%
   summarise(tot_count = sum(count)) %>%
   mutate(pct_count = sprintf("%1.1f%%", tot_count / sum(.$tot_count) * 100))
 
@@ -240,17 +231,17 @@ ui <- fixedPage(
       p("Most recent survey: ", max(surveys$date)),
       p("Total insect observations: ", sum(surveys_long$count)),
       tags$ul(tags$li({
-        x = filter(bee_totals, bee_class == "Honey bees")
+        x = filter(bee_totals, bee_name == "Honey bees")
         paste0("Honey bees: ", x$tot_count, " (", x$pct_count, ")")
       }),
         tags$li({
-          x = filter(bee_totals, bee_class == "Wild bees")
+          x = filter(bee_totals, bee_name == "Wild bees")
           paste0("Wild bees: ", x$tot_count, " (", x$pct_count, ")")
         }),
         tags$li({
-          x = filter(bee_totals, bee_class == "Non-bees")
+          x = filter(bee_totals, bee_name == "Non-bees")
           paste0("Non-bees: ", x$tot_count, " (", x$pct_count, ")")
-        })),
+        }))
     ),
       mainPanel(
         h3("What is the WiBee app?", style = "margin-top:0px"),
@@ -305,11 +296,12 @@ ui <- fixedPage(
       checkboxGroupInput(
         "which_bees",
         label = "Bee group:",
-        choiceNames = bee_ref$bee_name,
-        choiceValues = 1:6,
-        selected = 1:6),
+        choiceNames = bee_names,
+        choiceValues = bee_names,
+        selected = bee_names),
       div(actionButton("which_bees_all", "All"), style = "display:inline-block"),
-      div(actionButton("which_bees_none", "None"), style = "display:inline-block")),
+      div(actionButton("which_bees_none", "None"), style = "display:inline-block"),
+      checkboxInput("group_wild", label = "Group wild bees together")),
     column(3,
       checkboxGroupInput(
         "which_habitat",
@@ -344,15 +336,26 @@ ui <- fixedPage(
   br(),
   
   ## Plots based on filtered data ##
-  h4("Pollinator activity per minute by survey date"),
-  plotOutput("beePlot1", height = "300px"),
-  hr(),
-  br(),
+  tabsetPanel(
+    tabPanel(
+      "View by date",
+      h4("Pollinator activity per minute by survey date"),
+      plotOutput("beePlot1", height = "300px"),
+    ),
+    tabPanel(
+      "View by survey characteristics",
+      h4("Pollinator activity by survey site characteristics"),
+      plotOutput("beePlot2"),
+    ),
+    tabPanel(
+      "Flower visit frequency",
+      h4("Frequency of flower visits by pollinator group"),
+      plotOutput("beePlot3"),
+    )
+  ),
   
-  h4("Pollinator activity by site characteristics"),
-  plotOutput("beePlot2"),
   hr(),
-  br(),
+  br(), 
   
   ## Credits ##
   br(),
@@ -360,7 +363,6 @@ ui <- fixedPage(
   p("developed by tanuki.tech", align = "center", style = "font-size:small; color:grey")
   
 )
-
 
 
 # Define server -----------------------------------------------------------
@@ -371,18 +373,38 @@ server <- function(input, output, session) {
     surveys %>%
       filter(date >= input$date_range[1] & date <= input$date_range[2]) %>%
       filter(habitat %in% input$which_habitat) %>%
-      filter(management %in% input$which_mgmt) %>%
-      filter(crop %in% input$which_crop)
-  })
+      filter(crop %in% input$which_crop) %>%
+      filter(management %in% input$which_mgmt)
+    })
+
 
   filtered_surveys_long <- reactive({
     surveys_long %>%
       filter(date >= input$date_range[1] & date <= input$date_range[2]) %>%
-      filter(bee_num %in% input$which_bees) %>%
       filter(habitat %in% input$which_habitat) %>%
-      filter(management %in% input$which_mgmt) %>%
-      filter(crop %in% input$which_crop)
+      filter(crop %in% input$which_crop) %>%
+      filter(management %in% input$which_mgmt) %>% 
+      filter(bee_name %in% input$which_bees)
   })
+  
+  ## Refresh bee selection checkbox, depending on yes/no wild bee grouping selection ##
+  reset_bees <- function() {
+    if(input$group_wild) {
+      updateCheckboxGroupInput(
+        session,
+        "which_bees",
+        choiceNames = wildbee_names,
+        choiceValues = wildbee_names,
+        selected = wildbee_names)
+    } else {
+      updateCheckboxGroupInput(
+        session,
+        "which_bees",
+        choiceNames = bee_names,
+        choiceValues = bee_names,
+        selected = bee_names)
+    }
+  }
 
   
   ## Number of matching surveys ##
@@ -391,63 +413,38 @@ server <- function(input, output, session) {
   })
   
   
-  ## All/None buttons ##
-  observeEvent(input$which_bees_all, {updateCheckboxGroupInput(session, "which_bees", selected = 1:6)})
-  observeEvent(input$which_bees_none, {updateCheckboxGroupInput(session, "which_bees", selected = 0)})
-  observeEvent(input$which_habitat_all, {updateCheckboxGroupInput(session, "which_habitat", selected = habitat_types)})
-  observeEvent(input$which_habitat_none, {updateCheckboxGroupInput(session, "which_habitat", selected = "")})
-  observeEvent(input$which_crop_all, {updateCheckboxGroupInput(session, "which_crop", selected = crop_types)})
-  observeEvent(input$which_crop_none, {updateCheckboxGroupInput(session, "which_crop", selected = "")})
-  observeEvent(input$which_mgmt_all, {updateCheckboxGroupInput(session, "which_mgmt", selected = mgmt_types)})
-  observeEvent(input$which_mgmt_none, {updateCheckboxGroupInput(session, "which_mgmt", selected = "")})
-  
-  
   ## Reset button ##
   observeEvent(input$reset, {
     updateSliderInput(session, "date_range", value = c(min_date, max_date))
-    updateCheckboxGroupInput(session, "which_bees", selected = 1:6)
     updateCheckboxGroupInput(session, "which_habitat", selected = habitat_types)
     updateCheckboxGroupInput(session, "which_crop", selected = crop_types)
     updateCheckboxGroupInput(session, "which_mgmt", selected = mgmt_types)
+    updateCheckboxInput(session, "group_wild", value = F)
+    reset_bees()
   })
   
   
-  # # update filter labels ##
-  # observe({
-  #   df <- filtered_surveys()
-  #   habitat_labels <- {
-  #     df %>%
-  #       count(habitat, .drop = F) %>%
-  #       mutate(label = paste0(habitat, " (", n, ")")) %>%
-  #       .$label
-  #   }
-  #   habitat_selections <- input$which_habitat
-  #   crop_labels <- {
-  #     df %>%
-  #       count(crop, .drop = F) %>%
-  #       mutate(label = paste0(crop, " (", n, ")")) %>%
-  #       .$label
-  #   }
-  #   crop_selections <- input$which_crop
-  #   mgmt_labels <- {
-  #     filtered_surveys() %>%
-  #       count(management, .drop = F) %>%
-  #       mutate(label = paste0(management, " (", n, ")")) %>%
-  #       .$label
-  #   }
-  #   mgmt_selections <- input$which_mgmt
-  #   updateCheckboxGroupInput(session, "which_habitat", choiceNames = habitat_labels, choiceValues = habitat_types, selected = habitat_selections)
-  #   updateCheckboxGroupInput(session, "which_crop", choiceNames = crop_labels, choiceValues = crop_types, selected = crop_selections)
-  #   updateCheckboxGroupInput(session, "which_mgmt", choiceNames = mgmt_labels, choiceValues = mgmt_types, selected = mgmt_selections)
-  # })
-
-
-  # bee_totals <- reactive({
-  #   filtered_surveys_long() %>%
-  #   group_by(bee_class) %>%
-  #   summarise(tot_count = sum(count)) %>%
-  #   mutate(pct_count = sprintf("%1.1f%%", tot_count / sum(.$tot_count) * 100))
-  #   })
+  ## Group wild bees together ##
+  observeEvent(input$group_wild, reset_bees())
+  
+  
+  ## All/None buttons ##
+  observeEvent(input$which_bees_all, reset_bees())
+  observeEvent(input$which_bees_none,
+    {updateCheckboxGroupInput(session, "which_bees", selected = "")})
+  observeEvent(input$which_habitat_all,
+    {updateCheckboxGroupInput(session, "which_habitat", selected = habitat_types)})
+  observeEvent(input$which_habitat_none,
+    {updateCheckboxGroupInput(session, "which_habitat", selected = "")})
+  observeEvent(input$which_crop_all,
+    {updateCheckboxGroupInput(session, "which_crop", selected = crop_types)})
+  observeEvent(input$which_crop_none,
+    {updateCheckboxGroupInput(session, "which_crop", selected = "")})
+  observeEvent(input$which_mgmt_all,
+    {updateCheckboxGroupInput(session, "which_mgmt", selected = mgmt_types)})
+  observeEvent(input$which_mgmt_none,
+    {updateCheckboxGroupInput(session, "which_mgmt", selected = "")})
+  
   
   ## survey site map ##
   output$surveyMap <- renderLeaflet({
@@ -480,52 +477,87 @@ server <- function(input, output, session) {
       )
   })
 
-
-  # simple survey data explorer
+  
+  ## Plot of daily bee averages ##
   output$beePlot1 <- renderPlot({
     df <- filtered_surveys_long()
     if (nrow(df) > 0) {
-      df %>%
-        group_by(date, bee_name) %>%
-        summarise(mean_count = mean(count) / 5) %>%
-        ggplot(aes(x = date, y = mean_count, fill = bee_name)) +
-        geom_bar(stat = "identity") +
-        scale_fill_manual(values = bee_palette(input$which_bees)) +
+      df2 <- df %>%
+        group_by(date, bee_name, bee_color) %>%
+        summarise(visit_rate = mean(count) / 5) %>%
+        droplevels()
+      
+      df2 %>%
+        ggplot(aes(x = date, y = visit_rate, fill = bee_name)) +
+        geom_col() +
+        scale_fill_manual(values = levels(df2$bee_color)) +
         labs(x = "Survey date", y = "Average visits per minute", fill = "") +
-        theme(text = element_text(size = 16))
-      }
-  })
-
-  # Plot of bee visitation rate by survey categorization
-  output$beePlot2 <- renderPlot({
-    df <- filtered_surveys_long()
-    if (nrow(df) > 0) {
-      df <- df %>%
-        rename(`By crop` = crop, `By habitat` = habitat, `By management` = management) %>%
-        pivot_longer(cols = c("By crop", "By habitat", "By management")) %>%
-        group_by(name, value, bee_name) %>%
-        summarise(visit_rate = mean(count) / 5, n = n())
-      
-      df_labels <- df %>%
-        group_by(name, value) %>%
-        summarise(n = mean(n))
-      
-      df %>%
-        ggplot() +
-        geom_col(aes(x = value, y = visit_rate, fill = bee_name)) +
-        geom_text(
-          data = df_labels,
-          aes(x = value, y = -.1, label = paste0("(", n, ")")),
-          size = 3) +
-        scale_fill_manual(values = bee_palette(input$which_bees)) +
-        labs(x = "", y = "Average visits per minute", fill = "") +
-        theme(axis.text.x = element_text(angle = 90, vjust = .5, hjust = 1)) +
-        facet_grid(. ~ name, scales = "free_x") +
         theme(text = element_text(size = 16))
     }
   })
-}
+  
 
+  ## Plot of bee activity averages by site characteristics ##
+  output$beePlot2 <- renderPlot({
+    
+    df <- filtered_surveys_long()
+    
+    if (nrow(df) > 0) {
+      
+      # create working dataset
+      df2 <- df %>%
+        rename(`By crop` = crop, `By habitat` = habitat, `By management` = management) %>%
+        pivot_longer(cols = c("By habitat", "By crop", "By management"), names_to = "category") %>%
+        mutate(category = factor(category, c("By habitat", "By crop", "By management"))) %>%
+        group_by(category, value, bee_name, bee_color) %>%
+        summarise(visit_rate = mean(count) / 5, n = n()) %>%
+        droplevels()
+      
+      # get matching surveys counts by category
+      survey_count <- df2 %>% group_by(category, value) %>% summarise(n = mean(n))
+      
+      # plot
+      df2 %>%
+        ggplot() +
+        geom_col(aes(x = value, y = visit_rate, fill = bee_name)) +
+        geom_text(
+          data = survey_count,
+          aes(x = value, y = -.15, label = paste0("(", n, ")")),
+          size = 3) +
+        scale_fill_manual(values = levels(df2$bee_color)) +
+        labs(x = "", y = "Average visits per minute", fill = "") +
+        theme(axis.text.x = element_text(angle = 90,vjust = .5, hjust = 1)) +
+        facet_grid(. ~ category, scales = "free_x") +
+        theme(text = element_text(size = 16))
+    }
+  })
+    
+  
+  
+  ## histograms of total insect counts per survey
+  output$beePlot3 <- renderPlot({
+    
+    df <- filtered_surveys_long()
+    
+    if (nrow(df) > 0) {
+      
+      # exclude zero-counts from histograms
+      df2 <- df %>%
+        filter(count > 0) %>%
+        droplevels()
+      
+      # plot
+      df2 %>%
+        ggplot(aes(x = count, fill = bee_name)) +
+        geom_histogram(bins = 20) +
+        facet_wrap( ~ bee_name) +
+        scale_fill_manual(values = levels(df2$bee_color)) +
+        labs(x = "Number of flower visits per survey", y = "Number of surveys", fill = "")
+    }
+  })
+
+}
+  
 
 # run app -----------------------------------------------------------------
 
@@ -533,9 +565,104 @@ shinyApp(ui, server)
 
 
 
-
-
 # dustbin -----------------------------------------------------------------
+
+# surveys_long %>%
+#   filter(count > 0) %>%
+#   mutate(visit_rate = count / 5) %>%
+#   ggplot(aes(x = visit_rate, fill = bee_name)) +
+#   geom_histogram() +
+#   facet_wrap(~ bee_name, scale = "free_y") +
+#   scale_fill_manual(values = bee_palette(levels(surveys_long$bee_name))) +
+#   labs(x = "Visitation rate (when present)", y = "Number of surveys")
+# 
+# 
+
+# df_in <- surveys_long
+# if (nrow(df) > 0) {
+#   df <- df_in %>%
+#     droplevels() %>%
+#     rename(`By crop` = crop, `By habitat` = habitat, `By management` = management) %>%
+#     pivot_longer(cols = c("By crop", "By habitat", "By management")) %>%
+#     group_by(name, value, bee_class, bee_name) %>%
+#     summarise(visit_rate = mean(count) / 5, n = n())
+#   df_labels <- df %>% group_by(name, value) %>% summarise(n = n[1])
+#   
+#   if (T) {
+#     plt <- df %>%
+#       summarise(visit_rate = sum(visit_rate)) %>%
+#       ggplot() +
+#       geom_col(aes(x = value, y = visit_rate, fill = bee_class)) +
+#       geom_text(
+#         data = df_labels,
+#         aes(x = value, y = -.1, label = paste0("(", n, ")")),
+#         size = 3) +
+#       scale_fill_manual(values = bee_palette(levels(df$bee_class)))
+#   } else {
+#     plt <- df %>%
+#       ggplot() +
+#       geom_col(aes(x = value, y = visit_rate, fill = bee_name)) +
+#       geom_text(
+#         data = {group_by(., name, value) %>% summarise(n = n[1])},
+#         aes(x = value, y = -.1, label = paste0("(", n, ")")),
+#         size = 3) +
+#       scale_fill_manual(values = bee_palette(levels(df$bee_name)))
+#   }
+#   
+#   plt +
+#     labs(x = "", y = "Average visits per minute", fill = "") +
+#     theme(axis.text.x = element_text(angle = 90, vjust = .5, hjust = 1)) +
+#     facet_grid(. ~ name, scales = "free_x") +
+#     theme(text = element_text(size = 16))
+# }
+
+
+# observeEvent(filtered_surveys(), {
+#   df <- filtered_surveys()
+#   which_habitat <- input$which_habitat
+#   which_crop <- input$which_crop
+#   which_mgmt <- input$which_mgmt
+#   
+#   updateCheckboxGroupInput(
+#     session,
+#     "which_habitat",
+#     choiceNames = {
+#       filtered_surveys() %>%
+#         count(habitat, .drop = F) %>%
+#         mutate(label = paste0(habitat, " (", n, ")")) %>%
+#         .$label
+#     },
+#     choiceValues = habitat_types,
+#     selected = which_habitat
+#   )
+#   
+#   updateCheckboxGroupInput(
+#     session,
+#     "which_crop",
+#     choiceNames = {
+#       filtered_surveys() %>%
+#         count(crop, .drop = F) %>%
+#         mutate(label = paste0(crop, " (", n, ")")) %>%
+#         .$label
+#     },
+#     choiceValues = crop_types,
+#     selected = which_crop
+#   )
+#   
+#   updateCheckboxGroupInput(
+#     session,
+#     "which_mgmt",
+#     choiceNames = {
+#       filtered_surveys() %>%
+#         count(management, .drop = F) %>%
+#         mutate(label = paste0(management, " (", n, ")")) %>%
+#         .$label
+#     },
+#     choiceValues = mgmt_types,
+#     selected = which_mgmt
+#   )
+# })
+
 
 
 # left_join(
