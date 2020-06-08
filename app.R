@@ -15,34 +15,49 @@ library(tidyverse)
 library(leaflet)
 
 
-
-
 # Script ------------------------------------------------------------------
 
 # read csv
 # wibee_in <- suppressMessages(read_csv("wibee-surveys.csv"))
 
 # load current surveys
-try(
-  suppressMessages(
-    wibee_in <- 
-      content(
-        GET(
-          url = "https://wibee.caracal.tech/api/data/survey-summaries",
-          config = add_headers(Authorization = "9cd665b8-95d2-4bc2-be7d-587210a5666d")
-          )
-        )
+get_surveys <-
+  content(
+    GET(
+      url = "https://wibee.caracal.tech/api/data/survey-summaries",
+      config = add_headers(Authorization = "9cd665b8-95d2-4bc2-be7d-587210a5666d")
     )
   )
 
-# wibee_in %>% write_csv("wibee-surveys-downloaded.csv")
+# check if GET returned valid data frame
+if(is.data.frame(get_surveys)) {
+  wibee_in <- get_surveys
+  wibee_in %>% write_csv("wibee-surveys-downloaded.csv")
+}
+
+unique(wibee_in$site_type)
+
 
 # explanatory cols to keep
 keep_cols <- c(
-  "id", "user_id",
-  "lat", "lng",
-  "date", "duration",
-  "habitat", "crop", "management")
+  "id",
+  "user_id",
+  "lat",
+  "lng",
+  "ended_at",
+  "duration",
+  "site_type",
+  "crop",
+  "management_type")
+
+bee_cols <- c(
+  "honeybee",
+  "bumble_bee",
+  "large_dark_bee",
+  "small_dark_bee",
+  "greenbee",
+  "non_bee"
+)
 
 bee_names <- c(
   "Honey bees",
@@ -95,9 +110,10 @@ habitat_types <-
   c("corn-soybeans-alfalfa",
     "fruit-vegetable-field",
     "orchard",
+    "road-field-edge",
     "lawn-and-garden",
     "prairie",
-    "road-field-edge")
+    "woodland")
 
 # valid crop types
 crop_types <- 
@@ -120,13 +136,13 @@ mgmt_types <-
 
 # generate main dataset
 surveys <- wibee_in %>%
-  rename(habitat = site_type, management = management_type) %>%
-  mutate(date = as.Date(ended_at)) %>%
+  select(all_of(c(keep_cols, bee_cols))) %>%
+  mutate(ended_at = as.Date(ended_at)) %>%
+  rename(habitat = site_type, management = management_type, date = ended_at) %>%
+  mutate_at(bee_cols, replace_na, 0) %>%
   mutate(wild_bee = bumble_bee + large_dark_bee + small_dark_bee + greenbee) %>%
-  select(keep_cols, bee_ref$bee_type) %>%
-  mutate(crop = tolower(crop)) %>%
-  mutate_at(bee_ref$bee_type, replace_na, 0) %>%
   mutate(habitat = factor(habitat, levels = habitat_types)) %>%
+  mutate(crop = tolower(crop)) %>%
   mutate(crop = factor(
     case_when(
       is.na(crop) ~ "none",
@@ -138,7 +154,8 @@ surveys <- wibee_in %>%
       management %in% mgmt_types ~ management,
       T ~ "other"), levels = mgmt_types)) %>%
   filter(duration == "5 minutes") %>%
-  filter(date >= "2020-04-01")
+  filter(date >= "2020-04-01") %>%
+  drop_na(c(habitat, crop, management))
 
 # pivot longer for plotting etc
 surveys_long <- surveys %>%
@@ -263,7 +280,7 @@ ui <- fixedPage(
     tabPanel("How to use this dashboard",
       br(),
       p(strong("Step 1: Choose a habitat type(s)."), "If you run an orchard and you just want to look at the collective data from other orchards in Wisconsin, filter the data by checking the “orchard” box."),
-      p(strong("Step 2: Choose a crop type(s)."), "If you want to compare your apple bloom wild bee visit rate to other apple orchards in Wisconsin, check the apple box to filter the data. Keep in mind that crops bloom at different times of year and have different florescences, so the bee visit rate and bee group composition will likely be different between crops."),
+      p(strong("Step 2: Choose a crop type(s)."), "If you want to compare your apple bloom wild bee visit rate to other apple orchards in Wisconsin, check the apple box to filter the data. Keep in mind that crops bloom at different times of year and have different inflorescences, so the bee visit rate and bee group composition will likely be different between crops."),
       p(strong("Step 3: Choose a management type(s)."), "These categories are subjective (chosen by the survey taker) and very broad, so take any variation between conventional, organic or “other” management styles with a grain of salt."),
       p(strong("Step 4: Explore the bee groups."), "We recommend looking at the bee data in three different combinations:"),
       tags$ul(
