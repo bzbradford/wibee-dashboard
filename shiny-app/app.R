@@ -20,14 +20,18 @@ library(leaflet)
 # read csv
 # wibee_in <- suppressMessages(read_csv("wibee-surveys.csv"))
 
+#apiKey <- Sys.getenv('survey_summaries_token')
+
 # load current surveys
 get_surveys <-
   content(
     GET(
       url = "https://wibee.caracal.tech/api/data/survey-summaries",
-      config = add_headers(Authorization = "9cd665b8-95d2-4bc2-be7d-587210a5666d")
+      config = add_headers(Authorization = print(Sys.getenv('survey_summaries_token')))
     )
   )
+      #config = add_headers(Authorization = print(apiKey))
+      #config = add_headers(Authorization = "9cd665b8-95d2-4bc2-be7d-587210a5666d")
 
 # check if GET returned valid data frame
 if(is.data.frame(get_surveys)) {
