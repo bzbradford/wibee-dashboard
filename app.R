@@ -16,6 +16,9 @@ library(leaflet)
 # run if reading in from saved csv
 # wibee_in <- read_csv("wibee-surveys.csv")
 
+# get survey auth token
+caracal_token <- Sys.getenv("caracal_token")
+
 # load current surveys
 get_surveys <-
   content(

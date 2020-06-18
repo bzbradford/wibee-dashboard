@@ -31,8 +31,8 @@ RUN R -e "install.packages('leaflet', repos='http://cran.rstudio.com/')"
 
 # R shiny app files
 COPY app.r /srv/shiny-server/
-COPY .RData /srv/shiny-server/
-COPY www/ /srv/shiny-server/
+COPY .Renviron /srv/shiny-server/
+COPY www/ /srv/shiny-server/www/
 RUN chown -R shiny:shiny /srv/shiny-server
 
 # R secrets --  https://github.com/rocker-org/shiny/issues/76
