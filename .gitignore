@@ -1,7 +1,11 @@
-.Rproj.user
-.Rhistory
+## .gitignore
+
 .RData
+.Rhistory
+.Rproj.user
 .Ruserdata
 desktop.ini
-rsconnect
 etc
+shiny-logs/
+rsconnect
+
