@@ -1,11 +1,7 @@
 ### WiBee Shiny App ###
 
 ## Notes / To Do ##
-# consider renaming variables in camelCase
-# add number of surveys matching each filter category for each category item
 # map shows larger grid cells at wider zoom levels with aggregated data for those levels
-# update wibee icon for map
-# group bees by honey bee/wild bee/non-bee
 # move honeybee before bumblebee
 
 
@@ -17,30 +13,25 @@ library(leaflet)
 
 # Script ------------------------------------------------------------------
 
-# read csv
-# wibee_in <- suppressMessages(read_csv("wibee-surveys.csv"))
-
-#apiKey <- Sys.getenv('survey_summaries_token')
+# run if reading in from saved csv
+# wibee_in <- read_csv("wibee-surveys.csv")
 
 # load current surveys
 get_surveys <-
   content(
     GET(
       url = "https://wibee.caracal.tech/api/data/survey-summaries",
-      config = add_headers(Authorization = print(Sys.getenv('survey_summaries_token')))
+      config = add_headers(Authorization = caracal_token)
     )
   )
-      #config = add_headers(Authorization = print(apiKey))
-      #config = add_headers(Authorization = "9cd665b8-95d2-4bc2-be7d-587210a5666d")
 
-# check if GET returned valid data frame
+# check if GET returned valid data frame, else use existing data
 if(is.data.frame(get_surveys)) {
   wibee_in <- get_surveys
-  wibee_in %>% write_csv("wibee-surveys-downloaded.csv")
+  wibee_in %>% 
+    arrange(ended_at) %>%
+    write_csv("wibee-surveys.csv")
 }
-
-unique(wibee_in$site_type)
-
 
 # explanatory cols to keep
 keep_cols <- c(
@@ -54,6 +45,7 @@ keep_cols <- c(
   "crop",
   "management_type")
 
+# bee count column names
 bee_cols <- c(
   "honeybee",
   "bumble_bee",
@@ -63,6 +55,7 @@ bee_cols <- c(
   "non_bee"
 )
 
+# formatted bee names for ungrouped
 bee_names <- c(
   "Honey bees",
   "Bumble bees",
@@ -71,12 +64,12 @@ bee_names <- c(
   "Green bees",
   "Non-bees")
 
+# formatted names for wild bee grouping
 wildbee_names <- c(
   "Honey bees",
   "Wild bees",
   "Non-bees"
 )
-
 
 # bee crossref
 bee_ref <-
@@ -267,7 +260,7 @@ ui <- fixedPage(
       mainPanel(
         h3("What is the WiBee app?", style = "margin-top:0px"),
         p("WiBee (pronounced Wee-bee) is a new smartphone app developed by the", a("Gratton Lab", href = "https://gratton.entomology.wisc.edu/"), "at the University of Wisconsin-Madison. We invite growers and interested citizen scientists to use the app during the growing season to collect high quality data on wild bee abundance and diversity on Wisconsin’s fruit and vegetable farms."),
-        p("WiBee is a citizen science project, so all the data here is collected by people like you going out and completing surveys with the WiBee App. We invite you to explore the data to see what wild bee populations and their flower visit rates look like across Wisconsin. You can also compare your own data in the WiBee app to this Wisconsin-wide data to help you make decisions about managing your local pollinator community or track any change over time."),
+        p("WiBee is a citizen science project, so all the data here is collected by people like you going out and completing surveys with the WiBee App. We invite you to explore the data to see what wild bee populations and their flower visit rates look like across Wisconsin. You can also compare your own data in the WiBee app to this Wisconsin-wide data to help you make decisions about managing your local pollinator community or track any change over time. As you explore the data below, remember that it's a work in progress. We will continue to collect and refine the data over the course of the year."),
         p("To join the project and help collect data, download the WiBee app today or visit", a("pollinators.wisc.edu/wibee", href = "http://www.pollinators.wisc.edu/wibee"), "to learn more. Thank you for participating!")),
     position = "right"),
   
@@ -375,13 +368,26 @@ ui <- fixedPage(
     )
   ),
   
-  hr(),
-  br(), 
   
   ## Credits ##
+  
   br(),
-  p(strong("©2020 University of Wisconsin Board of Regents"), align = "center", style = "font-size:small; color:grey"),
-  p("developed by tanuki.tech", align = "center", style = "font-size:small; color:grey")
+  hr(),
+  br(),
+  div(
+    align = "center",
+    style = "font-size:small; color:grey; border-top:2px darkgrey",    
+    p(strong("©2020 University of Wisconsin Board of Regents"), style = "font-size:small; color:grey"),
+    p(
+      a("More information", href = "http://www.pollinators.wisc.edu/wibee"),
+        " - ", a("Email us", href = "mailto:pollinators@wisc.edu"),
+        " - ", a("Sign up for our newsletter", href = "http://eepurl.com/gMqRdr"),
+        " - ", a("Send feedback", href = "https://forms.gle/6qy9qJLwCxSTTPNT8")
+      ),
+    br(),
+    p("developed by tanuki.tech", style = "font-size:small; color:grey"),
+    br(),
+    )
   
 )
 
@@ -390,15 +396,21 @@ ui <- fixedPage(
 
 server <- function(input, output, session) {
   
-  filtered_surveys <- reactive({
+  # filter survey data by date slider
+  surveys_datefilter <- reactive({
     surveys %>%
-      filter(date >= input$date_range[1] & date <= input$date_range[2]) %>%
+      filter(date >= input$date_range[1] & date <= input$date_range[2])
+  })
+  
+  # filter survey data by checkboxes
+  filtered_surveys <- reactive({
+    surveys_datefilter() %>%
       filter(habitat %in% input$which_habitat) %>%
       filter(crop %in% input$which_crop) %>%
       filter(management %in% input$which_mgmt)
-    })
-
-
+  })
+  
+  # filter long dataset by date slider and checkboxes
   filtered_surveys_long <- reactive({
     surveys_long %>%
       filter(date >= input$date_range[1] & date <= input$date_range[2]) %>%
@@ -408,7 +420,46 @@ server <- function(input, output, session) {
       filter(bee_name %in% input$which_bees)
   })
   
-  ## Refresh bee selection checkbox, depending on yes/no wild bee grouping selection ##
+  # update checkbox labels when date slider is moved
+  observeEvent(input$date_range, {
+    habitat_labels <- surveys_datefilter() %>%
+      count(habitat, .drop = F) %>%
+      mutate(label = paste0(habitat, " (", n, ")")) %>%
+      .$label
+    crop_labels <- surveys_datefilter() %>%
+      count(crop, .drop = F) %>%
+      mutate(label = paste0(crop, " (", n, ")")) %>%
+      .$label
+    mgmt_labels <- surveys_datefilter() %>%
+      count(management, .drop = F) %>%
+      mutate(label = paste0(management, " (", n, ")")) %>%
+      .$label
+    
+    updateCheckboxGroupInput(
+      session,
+      "which_habitat",
+      choiceNames = habitat_labels,
+      choiceValues = habitat_types,
+      selected = input$which_habitat
+    )
+    updateCheckboxGroupInput(
+      session,
+      "which_crop",
+      choiceNames = crop_labels,
+      choiceValues = crop_types,
+      selected = input$which_crop
+    )
+    updateCheckboxGroupInput(
+      session,
+      "which_mgmt",
+      choiceNames = mgmt_labels,
+      choiceValues = mgmt_types,
+      selected = input$which_mgmt
+    )
+  })
+  
+
+  # Refresh bee selection checkbox, depending on yes/no wild bee grouping selection
   reset_bees <- function() {
     if(input$group_wild) {
       updateCheckboxGroupInput(
@@ -427,14 +478,12 @@ server <- function(input, output, session) {
     }
   }
 
-  
-  ## Number of matching surveys ##
+  # Number of matching surveys
   output$n_surveys <- renderText({
     paste(nrow(filtered_surveys()), "surveys match your filter selections.")
   })
   
-  
-  ## Reset button ##
+  # Reset button
   observeEvent(input$reset, {
     updateSliderInput(session, "date_range", value = c(min_date, max_date))
     updateCheckboxGroupInput(session, "which_habitat", selected = habitat_types)
@@ -444,8 +493,7 @@ server <- function(input, output, session) {
     reset_bees()
   })
   
-  
-  ## Group wild bees together ##
+  # Group wild bees together
   observeEvent(input$group_wild, reset_bees())
   
   
@@ -467,7 +515,7 @@ server <- function(input, output, session) {
     {updateCheckboxGroupInput(session, "which_mgmt", selected = "")})
   
   
-  ## survey site map ##
+  # Survey site map - not currently reactive to data filters
   output$surveyMap <- renderLeaflet({
     leaflet(survey_pts) %>%
       addTiles() %>%
@@ -499,7 +547,7 @@ server <- function(input, output, session) {
   })
 
   
-  ## Plot of daily bee averages ##
+  # Plot of daily bee averages
   output$beePlot1 <- renderPlot({
     df <- filtered_surveys_long()
     if (nrow(df) > 0) {
@@ -518,7 +566,7 @@ server <- function(input, output, session) {
   })
   
 
-  ## Plot of bee activity averages by site characteristics ##
+  # Plot of bee activity averages by site characteristics
   output$beePlot2 <- renderPlot({
     
     df <- filtered_surveys_long()
