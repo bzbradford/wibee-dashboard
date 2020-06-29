@@ -1,8 +1,5 @@
 ### WiBee Shiny App ###
-
-## Notes / To Do ##
-# map shows larger grid cells at wider zoom levels with aggregated data for those levels
-# move honeybee before bumblebee
+# currently built under R 3.6.3 for compatibility with data-viz.it.wisc.edu
 
 
 library(shiny)
@@ -11,29 +8,25 @@ library(tidyverse)
 library(leaflet)
 
 
-# Script ------------------------------------------------------------------
-
 # run if reading in from saved csv
 # wibee_in <- read_csv("wibee-surveys.csv")
 
-# get survey auth token
-caracal_token <- Sys.getenv("caracal_token")
 
 # load current surveys
 get_surveys <-
   content(
     GET(
       url = "https://wibee.caracal.tech/api/data/survey-summaries",
-      config = add_headers(Authorization = caracal_token)
+      config = add_headers(Authorization = Sys.getenv("caracal_token"))
     )
   )
 
 # check if GET returned valid data frame, else use existing data
 if(is.data.frame(get_surveys)) {
-  wibee_in <- get_surveys
+  wibee_in <- get_surveys %>% arrange(ended_at)
   wibee_in %>% 
-    arrange(ended_at) %>%
     write_csv("wibee-surveys.csv")
+  last_get <- Sys.Date()
 }
 
 # explanatory cols to keep
@@ -119,6 +112,7 @@ habitat_types <-
 crop_types <- 
   c("apple",
     "cherry",
+    "cranberry",
     "berry",
     "cucumber",
     "melon",
@@ -146,8 +140,8 @@ surveys <- wibee_in %>%
   mutate(crop = factor(
     case_when(
       is.na(crop) ~ "none",
-      grepl("berry", crop) ~ "berry",
       crop %in% crop_types ~ crop,
+      grepl("berry", crop) ~ "berry",
       T ~ "other"), levels = crop_types)) %>%
   mutate(management = factor(
     case_when(
@@ -223,7 +217,9 @@ mgmt_labels <- {
 
 
 
-# Define ui ---------------------------------------------------------------
+###############
+## DEFINE UI ##
+###############
 
 ui <- fixedPage(
   
@@ -295,7 +291,8 @@ ui <- fixedPage(
       )
     ),
   
-  ## Filter data ##
+  
+  ## Filter by date ##
   fluidRow(
     column(8,
       sliderInput(
@@ -307,7 +304,7 @@ ui <- fixedPage(
         width = "100%")
       ),
     column(4, actionButton("reset", "Reset filters"), align = "center")
-    ),
+    ),  
   fluidRow(
     column(3,
       checkboxGroupInput(
@@ -355,19 +352,23 @@ ui <- fixedPage(
   ## Plots based on filtered data ##
   tabsetPanel(
     tabPanel(
-      "View by date",
-      h4("Pollinator activity per minute by survey date"),
+      "View as plots",
       plotOutput("beePlot1", height = "300px"),
+      br(),
+      plotOutput("beePlot2")
     ),
     tabPanel(
-      "View by survey characteristics",
-      h4("Pollinator activity by survey site characteristics"),
-      plotOutput("beePlot2"),
-    ),
-    tabPanel(
-      "Flower visit frequency",
-      h4("Frequency of flower visits by pollinator group"),
-      plotOutput("beePlot3"),
+      "View as data table",
+      p("The table below shows the average visitation rate (per minute) for the surveys selected by the filters above. Check or uncheck the grouping variables to simplify or expand the summary table."),
+      checkboxGroupInput(
+        "dtGroups",
+        label = "Select grouping variables:",
+        choiceNames = c("Date", "Habitat", "Crop", "Management"),
+        choiceValues = c("date", "habitat", "crop", "management"),
+        selected = c("habitat", "crop", "management"),
+        inline = T
+      ),
+      tableOutput("dailyTbl")
     )
   ),
   
@@ -388,14 +389,17 @@ ui <- fixedPage(
         " - ", a("Send feedback", href = "https://forms.gle/6qy9qJLwCxSTTPNT8")
       ),
     br(),
-    p("developed by tanuki.tech", style = "font-size:small; color:grey"),
+    p("developed by", a("tanuki.tech", href = "https://github.com/bzbradford"), style = "font-size:small; color:grey"),
     br(),
     )
   
 )
 
 
-# Define server -----------------------------------------------------------
+
+###################
+## DEFINE SERVER ##
+###################
 
 server <- function(input, output, session) {
   
@@ -563,8 +567,15 @@ server <- function(input, output, session) {
         ggplot(aes(x = date, y = visit_rate, fill = bee_name)) +
         geom_col() +
         scale_fill_manual(values = levels(df2$bee_color)) +
-        labs(x = "Survey date", y = "Average visits per minute", fill = "") +
-        theme(text = element_text(size = 16))
+        labs(
+          title = "Pollinator visitation rate by survey date",
+          x = "Survey date", y = "Average visits per minute", fill = "") +
+        scale_x_date(expand = c(0, 0)) +
+        scale_y_continuous(expand = c(0, 0)) +
+        theme_bw() +
+        theme(
+          text = element_text(size = 14),
+          plot.title = element_text(face = "bold", hjust = .5))
     }
   })
   
@@ -594,13 +605,18 @@ server <- function(input, output, session) {
         geom_col(aes(x = value, y = visit_rate, fill = bee_name)) +
         geom_text(
           data = survey_count,
-          aes(x = value, y = -.15, label = paste0("(", n, ")")),
-          size = 3) +
+          aes(x = value, y = 0, label = paste0("(", n, ")")),
+          size = 3, vjust = 1) +
         scale_fill_manual(values = levels(df2$bee_color)) +
-        labs(x = "", y = "Average visits per minute", fill = "") +
-        theme(axis.text.x = element_text(angle = 90,vjust = .5, hjust = 1)) +
+        labs(
+          title = "Pollinator visitation rate by site characteristics",
+          x = "", y = "Average visits per minute", fill = "") +
         facet_grid(. ~ category, scales = "free_x") +
-        theme(text = element_text(size = 16))
+        theme_bw() +
+        theme(
+          axis.text.x = element_text(angle = 90, vjust = .5, hjust = 1),
+          text = element_text(size = 14),
+          plot.title = element_text(face = "bold", hjust = .5))
     }
   })
     
@@ -628,6 +644,17 @@ server <- function(input, output, session) {
     }
   })
 
+  
+  output$dailyTbl <- renderTable({
+    filtered_surveys_long() %>%
+      mutate(date = as.character(date)) %>%
+      group_by_at(input$dtGroups) %>%
+      group_by(bee_name, .add = T) %>%
+      summarise(n = n(), visit_rate = mean(count) / 5) %>%
+      mutate("Total" = sum(visit_rate)) %>%
+      pivot_wider(names_from = bee_name, values_from = visit_rate)
+  })
+
 }
   
 
@@ -636,271 +663,3 @@ server <- function(input, output, session) {
 shinyApp(ui, server)
 
 
-
-# dustbin -----------------------------------------------------------------
-
-# surveys_long %>%
-#   filter(count > 0) %>%
-#   mutate(visit_rate = count / 5) %>%
-#   ggplot(aes(x = visit_rate, fill = bee_name)) +
-#   geom_histogram() +
-#   facet_wrap(~ bee_name, scale = "free_y") +
-#   scale_fill_manual(values = bee_palette(levels(surveys_long$bee_name))) +
-#   labs(x = "Visitation rate (when present)", y = "Number of surveys")
-# 
-# 
-
-# df_in <- surveys_long
-# if (nrow(df) > 0) {
-#   df <- df_in %>%
-#     droplevels() %>%
-#     rename(`By crop` = crop, `By habitat` = habitat, `By management` = management) %>%
-#     pivot_longer(cols = c("By crop", "By habitat", "By management")) %>%
-#     group_by(name, value, bee_class, bee_name) %>%
-#     summarise(visit_rate = mean(count) / 5, n = n())
-#   df_labels <- df %>% group_by(name, value) %>% summarise(n = n[1])
-#   
-#   if (T) {
-#     plt <- df %>%
-#       summarise(visit_rate = sum(visit_rate)) %>%
-#       ggplot() +
-#       geom_col(aes(x = value, y = visit_rate, fill = bee_class)) +
-#       geom_text(
-#         data = df_labels,
-#         aes(x = value, y = -.1, label = paste0("(", n, ")")),
-#         size = 3) +
-#       scale_fill_manual(values = bee_palette(levels(df$bee_class)))
-#   } else {
-#     plt <- df %>%
-#       ggplot() +
-#       geom_col(aes(x = value, y = visit_rate, fill = bee_name)) +
-#       geom_text(
-#         data = {group_by(., name, value) %>% summarise(n = n[1])},
-#         aes(x = value, y = -.1, label = paste0("(", n, ")")),
-#         size = 3) +
-#       scale_fill_manual(values = bee_palette(levels(df$bee_name)))
-#   }
-#   
-#   plt +
-#     labs(x = "", y = "Average visits per minute", fill = "") +
-#     theme(axis.text.x = element_text(angle = 90, vjust = .5, hjust = 1)) +
-#     facet_grid(. ~ name, scales = "free_x") +
-#     theme(text = element_text(size = 16))
-# }
-
-
-# observeEvent(filtered_surveys(), {
-#   df <- filtered_surveys()
-#   which_habitat <- input$which_habitat
-#   which_crop <- input$which_crop
-#   which_mgmt <- input$which_mgmt
-#   
-#   updateCheckboxGroupInput(
-#     session,
-#     "which_habitat",
-#     choiceNames = {
-#       filtered_surveys() %>%
-#         count(habitat, .drop = F) %>%
-#         mutate(label = paste0(habitat, " (", n, ")")) %>%
-#         .$label
-#     },
-#     choiceValues = habitat_types,
-#     selected = which_habitat
-#   )
-#   
-#   updateCheckboxGroupInput(
-#     session,
-#     "which_crop",
-#     choiceNames = {
-#       filtered_surveys() %>%
-#         count(crop, .drop = F) %>%
-#         mutate(label = paste0(crop, " (", n, ")")) %>%
-#         .$label
-#     },
-#     choiceValues = crop_types,
-#     selected = which_crop
-#   )
-#   
-#   updateCheckboxGroupInput(
-#     session,
-#     "which_mgmt",
-#     choiceNames = {
-#       filtered_surveys() %>%
-#         count(management, .drop = F) %>%
-#         mutate(label = paste0(management, " (", n, ")")) %>%
-#         .$label
-#     },
-#     choiceValues = mgmt_types,
-#     selected = which_mgmt
-#   )
-# })
-
-
-
-# left_join(
-#   tibble(management = as.factor(mgmt_types)),
-#   surveys %>%
-#     group_by(management) %>%
-#     summarise(n = n()),
-#   by = "management") %>%
-#   replace_na(list(n = 0)) %>%
-#   mutate(label = paste0(management, " (", n, ")")) %>%
-#   .$label
-
-
-
-
-
-
-# df_crop <- surveys_long %>%
-#   mutate(type = as.character(crop)) %>%
-#   group_by(type, bee_name) %>%
-#   summarise(mean_count = mean(count), n = n()) %>%
-#   mutate(type_label = "By crop")
-# df_site <- surveys_long %>%
-#   mutate(type = as.character(habitat_type)) %>%
-#   group_by(type, bee_name) %>%
-#   summarise(mean_count = mean(count), n = n()) %>%
-#   mutate(type_label = "By site")
-# df_mgmt <- surveys_long %>%
-#   mutate(type = as.character(management_type)) %>%
-#   group_by(type, bee_name) %>%
-#   summarise(mean_count = mean(count), n = n()) %>%
-#   mutate(type_label = "By management")
-# df <- bind_rows(df_crop, df_site, df_mgmt) %>%
-#   mutate(mean_count = mean_count / 5) %>%
-#   group_by(type_label, type)
-# df_labels <- df %>%
-#   summarise(n = mean(n))
-# 
-# 
-# 
-# 
-# df %>%
-#   ggplot() +
-#   geom_col(aes(x = type, y = mean_count, fill = bee_name)) +
-#   geom_text(
-#     data = df_labels,
-#     aes(x = type, y = -.1, label = paste0("(", n, ")")),
-#     size = 3) +
-#   scale_fill_manual(values = bee_palette(1:6)) +
-#   labs(x = "", y = "Average visits per minute", fill = "") +
-#   theme(axis.text.x = element_text(angle = 90, vjust = .5, hjust = 1)) +
-#   facet_grid(. ~ type_label, scales = "free_x")
-
-
-# output$beePlotSiteType <- renderPlot({
-#   df <- filtered_surveys_long()
-#   if (nrow(df) > 0) {
-#     df %>%
-#       group_by(habitat_type, bee_name) %>%
-#       summarise(mean_count = mean(count)) %>%
-#       ggplot(aes(x = habitat_type, y = mean_count, fill = bee_name)) +
-#       geom_bar(stat = "identity") +
-#       scale_fill_manual(values = bee_palette(input$which_bees)) +
-#       labs(x = "Site type", y = "Mean insect count", fill = "") +
-#       coord_flip()}
-# })
-# 
-# output$beePlotCropType <- renderPlot({
-#   df <- filtered_surveys_long()
-#   if (nrow(df) > 0) {
-#     df %>%
-#       group_by(crop, bee_name) %>%
-#       summarise(mean_count = mean(count)) %>%
-#       arrange(desc(mean_count)) %>%
-#       ggplot(aes(x = crop, y = mean_count, fill = bee_name)) +
-#       geom_col() +
-#       scale_fill_manual(values = bee_palette(input$which_bees)) +
-#       labs(x = "Crop type", y = "Mean insect count", fill = "") +
-#       coord_flip()}
-# })
-# 
-# output$beePlotMgmtType <- renderPlot({
-#   df <- filtered_surveys_long()
-#   if (nrow(df) > 0) {
-#     df %>%
-#       group_by(management_type, bee_name) %>%
-#       summarise(mean_count = mean(count)) %>%
-#       ggplot(aes(x = management_type, y = mean_count, fill = bee_name)) +
-#       geom_col() +
-#       scale_fill_manual(values = bee_palette(input$which_bees)) +
-#       labs(x = "Management type", y = "Mean insect count", fill = "") +
-#       coord_flip()}
-# })
-
-# # survey points for map, aggregated
-# survey_pts1 <- surveys %>%
-#   drop_na(lng, lat) %>%
-#   mutate(
-#     lng_rnd = round(lng, 1),
-#     lat_rnd = round(lat, 1),
-#     wild_bee = bumble_bee + large_dark_bee + small_dark_bee + greenbee) %>%
-#   group_by(lng_rnd, lat_rnd) %>%
-#   summarise(
-#     n_surveys = n(),
-#     lng = mean(lng),
-#     lat = mean(lat),
-#     hb = round(mean(honeybee)/5,1),
-#     wb = round(mean(wild_bee)/5,1),
-#     nb = round(mean(non_bee)/5,1)) %>%
-#   ungroup() %>%
-#   select(-c(lng_rnd, lat_rnd)) %>%
-#   mutate(
-#     lng = lng + runif(length(.$lng), -.001, .001),
-#     lat = lat + runif(length(.$lat), -.001, .001)
-#   )
-
-
-# leaflet map of survey sites (points)
-# output$surveyMap1 <- renderLeaflet({
-#   leaflet(survey_pts1) %>%
-#     addTiles() %>%
-#     addCircles(~ lng, ~ lat, radius = 3000, opacity = 0) %>%
-#     addMarkers( ~ lng, ~ lat,
-#       label = ~ paste(n_surveys, "surveys"),
-#       popup = ~ paste0(
-#         "<strong>Total surveys: </strong>", n_surveys, "<br/>",
-#         "<strong>Mean visits per minute:</strong><br/>",
-#         "Honey bees: ", hb, "<br/>",
-#         "Wild bees: ", wb, "<br/>",
-#         "Non-bees: ", nb),)
-# })
-
-
-# # leaflet map
-# output$surveyMap2 <- renderLeaflet({
-#   leaflet(survey_pts2) %>%
-#     addTiles() %>%
-#     addRectangles(
-#       lng1 = ~ lng - .005, lng2 = ~ lng + .005,
-#       lat1 = ~ lat - .005, lat2 = ~ lat + .005,
-#       label = ~ paste(n_surveys, "surveys"),
-#       popup = ~ paste0(
-#         "<strong>Total surveys: </strong>", n_surveys, "<br/>",
-#         "<strong>Mean visits per minute:</strong><br/>",
-#         "Honey bees: ", hb, "<br/>",
-#         "Wild bees: ", wb, "<br/>",
-#         "Non-bees: ", nb),
-#       weight = 2,
-#       opacity = 1,
-#       fillOpacity = .25)
-# })
-
-
-
-# observe({
-#   leafletProxy("surveyMap", data = survey_pts2) %>%
-#     clearMarkers() %>%
-#     addMarkers(~lng, ~lat, icon = bee_icon,
-#       label = ~ paste(n_surveys, "surveys"),
-#       popup = ~ paste0(
-#         "<strong>Total surveys: </strong>", n_surveys, "<br/>",
-#         "<strong>Mean visits per minute:</strong><br/>",
-#         "Honey bees: ", hb, "<br/>",
-#         "Wild bees: ", wb, "<br/>",
-#         "Non-bees: ", nb),
-#       # options = markerOptions(opacity = op),
-#       clusterOptions = markerClusterOptions(showCoverageOnHover = F)
-#       )
-# })
