@@ -3,6 +3,7 @@
 
 
 library(shiny)
+library(shinythemes)
 library(httr)
 library(tidyverse)
 library(leaflet)
@@ -10,24 +11,34 @@ library(leaflet)
 
 # run if reading in from saved csv
 # wibee_in <- read_csv("wibee-surveys.csv")
+# lastUpdate = max(surveys$date)
+# Sys.setenv(lastUpdate = "2020-07-02")
+# Sys.unsetenv("lastUpdate")
+# Sys.time()
 
+if(Sys.getenv("refresh_date") == "") {Sys.setenv("refresh_date" = "2020-01-01")}
+if(Sys.getenv("refresh_time") == "") {Sys.setenv("refresh_time" = "Never")}
 
-# load current surveys
-get_surveys <-
-  content(
-    GET(
-      url = "https://wibee.caracal.tech/api/data/survey-summaries",
-      config = add_headers(Authorization = Sys.getenv("caracal_token"))
-    )
-  )
-
-# check if GET returned valid data frame, else use existing data
-if(is.data.frame(get_surveys)) {
-  wibee_in <- get_surveys %>% arrange(ended_at)
-  wibee_in %>% 
-    write_csv("wibee-surveys.csv")
-  last_get <- Sys.Date()
+# update surveys at most once a day
+if(Sys.getenv("refresh_date") < Sys.Date()) {
+  get_surveys <-
+    content(
+      GET(url = "https://wibee.caracal.tech/api/data/survey-summaries",
+        config = add_headers(Authorization = Sys.getenv("caracal_token")))
+      )
+  if(is.data.frame(get_surveys)) {
+    arrange(get_surveys, ended_at) %>% write_csv("./data/surveys.csv")
+    Sys.setenv(refresh_date = as.character(Sys.Date()))
+    Sys.setenv(refresh_time = as.character(Sys.time()))
+    msg <- "Survey data refreshed from remote database."
+  } else {
+    msg <- "Unable to refresh data, falling back on stored data."
+  }
+} else {
+  msg <- "Surveys refreshed recently, using cached data instead."
 }
+
+wibee_in <- read_csv("./data/surveys.csv", col_types = cols())
 
 # explanatory cols to keep
 keep_cols <- c(
@@ -170,8 +181,8 @@ survey_pts <- surveys %>%
     lat = mean(lat2),
     hb = round(mean(honeybee)/5,1),
     wb = round(mean(wild_bee)/5,1),
-    nb = round(mean(non_bee)/5,1)) %>%
-  ungroup() %>%
+    nb = round(mean(non_bee)/5,1),
+    .groups = "drop") %>%
   select(-c(lng2, lat2))
 
 
@@ -191,7 +202,7 @@ max_date <- max(surveys$date)
 bee_totals <- surveys_long %>%
   filter(bee_name %in% wildbee_names) %>%
   group_by(bee_name) %>%
-  summarise(tot_count = sum(count)) %>%
+  summarise(tot_count = sum(count), .groups = "drop") %>%
   mutate(pct_count = sprintf("%1.1f%%", tot_count / sum(.$tot_count) * 100))
 
 
@@ -222,6 +233,8 @@ mgmt_labels <- {
 ###############
 
 ui <- fixedPage(
+  
+  theme = shinytheme("flatly"),
   
   ## page heading ##
   fluidRow(
@@ -260,19 +273,31 @@ ui <- fixedPage(
         h3("What is the WiBee app?", style = "margin-top:0px"),
         p("WiBee (pronounced Wee-bee) is a new smartphone app developed by the", a("Gratton Lab", href = "https://gratton.entomology.wisc.edu/"), "at the University of Wisconsin-Madison. We invite growers and interested citizen scientists to use the app during the growing season to collect high quality data on wild bee abundance and diversity on Wisconsin’s fruit and vegetable farms."),
         p("WiBee is a citizen science project, so all the data here is collected by people like you going out and completing surveys with the WiBee App. We invite you to explore the data to see what wild bee populations and their flower visit rates look like across Wisconsin. You can also compare your own data in the WiBee app to this Wisconsin-wide data to help you make decisions about managing your local pollinator community or track any change over time. As you explore the data below, remember that it's a work in progress. We will continue to collect and refine the data over the course of the year."),
-        p("To join the project and help collect data, download the WiBee app today or visit", a("pollinators.wisc.edu/wibee", href = "http://www.pollinators.wisc.edu/wibee"), "to learn more. Thank you for participating!")),
+        p("To join the project and help collect data, download the WiBee app today or visit", a("pollinators.wisc.edu/wibee", href = "http://www.pollinators.wisc.edu/wibee"), "to learn more. Questions?", a("Email us.", href = "mailto:pollinators@wisc.edu"), "Comments?", a("Send feedback.", href = "https://forms.gle/6qy9qJLwCxSTTPNT8"), "Want to stay in the loop?", a("Sign up for our newsletter.", href = "http://eepurl.com/gMqRdr"), "Thank you for participating!")),
     position = "right"),
+  # 
+  # p(
+  #   a("More information", href = "http://www.pollinators.wisc.edu/wibee"),
+  #   " - ", a("Email us", href = "mailto:pollinators@wisc.edu"),
+  #   " - ", a("Sign up for our newsletter", href = "http://eepurl.com/gMqRdr"),
+  #   " - ", a("Send feedback", href = "https://forms.gle/6qy9qJLwCxSTTPNT8")
+  # ),
   
-  ## Survey location map and summary data ##
-  h2("Survey locations", style = "border-bottom:1px grey"),
+  # Survey location map and summary data
+  h3("Survey locations", style = "border-bottom:1px grey"),
   p(em("Click on each bee icon or rectangle to show average counts for all surveys conducted within that area."), style = "margin-bottom:.5em"),
   leafletOutput("surveyMap"),
   br(),
   
-  ## Tabset with How-To on page 2 ##
-  h2("Data explorer"),
+  
+  hr(),
+  h3("Data explorer"),
+  p(em("View and filter survey data submitted by you and other users of the app."), style = "margin-bottom:.5em"),
+  br(),
+  
+  # Tabset with blank 1st tab and How-To on second tab
   tabsetPanel(
-    tabPanel("View and filter data", br()),
+    tabPanel("Jump right in", br()),
     tabPanel("How to use this dashboard",
       br(),
       p(strong("Step 1: Choose a habitat type(s)."), "If you run an orchard and you just want to look at the collective data from other orchards in Wisconsin, filter the data by checking the “orchard” box."),
@@ -286,13 +311,14 @@ ui <- fixedPage(
       p(strong("Step 5: Making sense of the data."), "Look at the average flower visits per minute and the composition of the bee visitors."),
       tags$ul(
         tags$li("How do your overall bee visits per minute and wild bee visits per minute compare to the Wisconsin average?"),
-        tags$li("What does your flower visit composition look like compared to the Wisconsin average? Do you have a lower, similar or higher percentage of wild bees compared to the Wisconsin average? Among your wild bees, how does the composition of bumble bees, large dark bees, small dark bees and green bees compare to your data?")),
-      hr()
+        tags$li("What does your flower visit composition look like compared to the Wisconsin average? Do you have a lower, similar or higher percentage of wild bees compared to the Wisconsin average? Among your wild bees, how does the composition of bumble bees, large dark bees, small dark bees and green bees compare to your data?")
+        )
       )
     ),
+
   
-  
-  ## Filter by date ##
+  # Apply filters
+  h4("Filter survey data:"),
   fluidRow(
     column(8,
       sliderInput(
@@ -303,8 +329,8 @@ ui <- fixedPage(
         value = c(min_date, max_date),
         width = "100%")
       ),
-    column(4, actionButton("reset", "Reset filters"), align = "center")
-    ),  
+    column(4, br(), actionButton("reset", "Reset filters"), align = "center")
+    ),
   fluidRow(
     column(3,
       checkboxGroupInput(
@@ -346,29 +372,41 @@ ui <- fixedPage(
   ),
   br(),
   div(strong(textOutput("n_surveys")), style = "font-size:larger; text-align:center"),
-  hr(),
   br(),
   
-  ## Plots based on filtered data ##
+ 
   tabsetPanel(
-    tabPanel(
-      "View as plots",
-      plotOutput("beePlot1", height = "300px"),
+    
+     # Plots based on filtered data
+    tabPanel("View summary charts",
       br(),
-      plotOutput("beePlot2")
+      plotOutput("plotByDate", height = "400px"),
+      br(),
+      br(),
+      br(),
+      plotOutput("plotByCat", height = "400px")
     ),
-    tabPanel(
-      "View as data table",
-      p("The table below shows the average visitation rate (per minute) for the surveys selected by the filters above. Check or uncheck the grouping variables to simplify or expand the summary table."),
+    
+    # Tabular survey data
+    tabPanel("View as data table",
+      br(),
+      p("The table below shows the average visitation rate per minute for the surveys and insect categories selected by the filters above. Check or uncheck the grouping variables to simplify or expand the summary table."),
+      br(),
       checkboxGroupInput(
         "dtGroups",
-        label = "Select grouping variables:",
+        label = "Select which variables to include in table:",
         choiceNames = c("Date", "Habitat", "Crop", "Management"),
         choiceValues = c("date", "habitat", "crop", "management"),
         selected = c("habitat", "crop", "management"),
         inline = T
       ),
       tableOutput("dailyTbl")
+    ),
+    
+    # user stats
+    tabPanel("User statistics",
+      br(),
+      plotOutput("plotUserStats", height = "400px")
     )
   ),
   
@@ -391,6 +429,7 @@ ui <- fixedPage(
     br(),
     p("developed by", a("tanuki.tech", href = "https://github.com/bzbradford"), style = "font-size:small; color:grey"),
     br(),
+    p(em(paste(msg, "Last server query:", Sys.getenv("refresh_time"))))
     )
   
 )
@@ -553,16 +592,15 @@ server <- function(input, output, session) {
       )
   })
 
-  
+
   # Plot of daily bee averages
-  output$beePlot1 <- renderPlot({
+  output$plotByDate <- renderPlot({
     df <- filtered_surveys_long()
     if (nrow(df) > 0) {
       df2 <- df %>%
         group_by(date, bee_name, bee_color) %>%
-        summarise(visit_rate = mean(count) / 5) %>%
+        summarise(visit_rate = mean(count / 5), .groups = "drop") %>%
         droplevels()
-      
       df2 %>%
         ggplot(aes(x = date, y = visit_rate, fill = bee_name)) +
         geom_col() +
@@ -570,34 +608,37 @@ server <- function(input, output, session) {
         labs(
           title = "Pollinator visitation rate by survey date",
           x = "Survey date", y = "Average visits per minute", fill = "") +
-        scale_x_date(expand = c(0, 0)) +
-        scale_y_continuous(expand = c(0, 0)) +
-        theme_bw() +
+        theme_classic() +
         theme(
           text = element_text(size = 14),
           plot.title = element_text(face = "bold", hjust = .5))
     }
   })
-  
 
+  
   # Plot of bee activity averages by site characteristics
-  output$beePlot2 <- renderPlot({
-    
+  output$plotByCat <- renderPlot({
     df <- filtered_surveys_long()
-    
     if (nrow(df) > 0) {
-      
       # create working dataset
       df2 <- df %>%
-        rename(`By crop` = crop, `By habitat` = habitat, `By management` = management) %>%
-        pivot_longer(cols = c("By habitat", "By crop", "By management"), names_to = "category") %>%
+        rename(
+          `By crop` = crop,
+          `By habitat` = habitat,
+          `By management` = management) %>%
+        pivot_longer(
+          cols = c("By habitat", "By crop", "By management"),
+          names_to = "category") %>%
         mutate(category = factor(category, c("By habitat", "By crop", "By management"))) %>%
         group_by(category, value, bee_name, bee_color) %>%
-        summarise(visit_rate = mean(count) / 5, n = n()) %>%
+        summarise(visit_rate = mean(count) / 5, n = n(), .groups = "drop") %>%
         droplevels()
       
       # get matching surveys counts by category
-      survey_count <- df2 %>% group_by(category, value) %>% summarise(n = mean(n))
+      survey_count <-
+        df2 %>%
+        group_by(category, value) %>%
+        summarise(n = mean(n), .groups = "drop")
       
       # plot
       df2 %>%
@@ -619,40 +660,57 @@ server <- function(input, output, session) {
           plot.title = element_text(face = "bold", hjust = .5))
     }
   })
-    
-  
-  
-  ## histograms of total insect counts per survey
-  output$beePlot3 <- renderPlot({
-    
-    df <- filtered_surveys_long()
-    
-    if (nrow(df) > 0) {
-      
-      # exclude zero-counts from histograms
-      df2 <- df %>%
-        filter(count > 0) %>%
-        droplevels()
-      
-      # plot
-      df2 %>%
-        ggplot(aes(x = count, fill = bee_name)) +
-        geom_histogram(bins = 20) +
-        facet_wrap( ~ bee_name) +
-        scale_fill_manual(values = levels(df2$bee_color)) +
-        labs(x = "Number of flower visits per survey", y = "Number of surveys", fill = "")
-    }
-  })
 
+
+
+  ## histograms of total insect counts per survey
+  # output$beePlot3 <- renderPlot({
+  #   df <- filtered_surveys_long()
+  #   if (nrow(df) > 0) {
+  #     # exclude zero-counts from histograms
+  #     df2 <- df %>%
+  #       filter(count > 0) %>%
+  #       droplevels()
+  #     df2 %>%
+  #       ggplot(aes(x = count, fill = bee_name)) +
+  #       geom_histogram(bins = 20) +
+  #       facet_wrap( ~ bee_name) +
+  #       scale_fill_manual(values = levels(df2$bee_color)) +
+  #       labs(x = "Number of flower visits per survey", y = "Number of surveys", fill = "")
+  #   }
+  # })
   
   output$dailyTbl <- renderTable({
     filtered_surveys_long() %>%
       mutate(date = as.character(date)) %>%
       group_by_at(input$dtGroups) %>%
       group_by(bee_name, .add = T) %>%
-      summarise(n = n(), visit_rate = mean(count) / 5) %>%
-      mutate("Total" = sum(visit_rate)) %>%
+      summarise(n = n(), visit_rate = mean(count) / 5, .groups = "drop") %>%
+      mutate("Total insects" = sum(visit_rate)) %>%
       pivot_wider(names_from = bee_name, values_from = visit_rate)
+  })
+  
+  output$plotUserStats <- renderPlot({
+    filtered_surveys() %>%
+      group_by(user_id) %>%
+      summarise(n = n(), .groups = "drop") %>%
+      arrange(desc(n)) %>%
+      mutate(rank = row_number()) %>%
+      mutate(rank = factor(rank, levels = rank)) %>%
+      ggplot(aes(x = rank, y = n, fill = as.integer(n))) +
+      geom_col() +
+      geom_text(aes(label = n), vjust = -0.5) +
+      scale_fill_gradient(low = "gold", high = "darkgreen") +
+      labs(
+        title = "Number of matching surveys by user",
+        x = "User rank",
+        y = "Number of surveys"
+      ) +
+      guides(fill = "none") +
+      theme_classic() +
+      theme(
+        text = element_text(size = 14),
+        plot.title = element_text(face = "bold", hjust = .5))
   })
 
 }
