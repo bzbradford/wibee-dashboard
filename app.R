@@ -7,6 +7,7 @@ library(shinythemes)
 library(httr)
 library(tidyverse)
 library(leaflet)
+library(DT)
 
 
 # run if reading in from saved csv
@@ -16,11 +17,15 @@ library(leaflet)
 # Sys.unsetenv("lastUpdate")
 # Sys.time()
 
-if(Sys.getenv("refresh_date") == "") {Sys.setenv("refresh_date" = "2020-01-01")}
-if(Sys.getenv("refresh_time") == "") {Sys.setenv("refresh_time" = "Never")}
 
-# update surveys at most once a day
-if(Sys.getenv("refresh_date") < Sys.Date()) {
+if(file.exists("./data/refresh_time")) {
+  refresh_time <- readRDS("./data/refresh_time")
+} else {
+  refresh_time <- as.POSIXct("2020-01-01")
+}
+
+# update surveys at most once an hour
+if(refresh_time < Sys.time() - 3600) {
   get_surveys <-
     content(
       GET(url = "https://wibee.caracal.tech/api/data/survey-summaries",
@@ -28,14 +33,14 @@ if(Sys.getenv("refresh_date") < Sys.Date()) {
       )
   if(is.data.frame(get_surveys)) {
     arrange(get_surveys, ended_at) %>% write_csv("./data/surveys.csv")
-    Sys.setenv(refresh_date = as.character(Sys.Date()))
-    Sys.setenv(refresh_time = as.character(Sys.time()))
+    refresh_time <- Sys.time()
+    saveRDS(refresh_time, "./data/refresh_time")
     msg <- "Survey data refreshed from remote database."
   } else {
-    msg <- "Unable to refresh data, falling back on stored data."
+    msg <- "Unable to refresh data from server, falling back on local cache."
   }
 } else {
-  msg <- "Surveys refreshed recently, using cached data instead."
+  msg <- "Survey data refreshed recently."
 }
 
 wibee_in <- read_csv("./data/surveys.csv", col_types = cols())
@@ -124,7 +129,7 @@ crop_types <-
   c("apple",
     "cherry",
     "cranberry",
-    "berry",
+    "other berry",
     "cucumber",
     "melon",
     "squash",
@@ -152,7 +157,7 @@ surveys <- wibee_in %>%
     case_when(
       is.na(crop) ~ "none",
       crop %in% crop_types ~ crop,
-      grepl("berry", crop) ~ "berry",
+      grepl("berry", crop) ~ "other berry",
       T ~ "other"), levels = crop_types)) %>%
   mutate(management = factor(
     case_when(
@@ -400,7 +405,7 @@ ui <- fixedPage(
         selected = c("habitat", "crop", "management"),
         inline = T
       ),
-      tableOutput("dailyTbl")
+      DTOutput("summaryTable")
     ),
     
     # user stats
@@ -429,7 +434,7 @@ ui <- fixedPage(
     br(),
     p("developed by", a("tanuki.tech", href = "https://github.com/bzbradford"), style = "font-size:small; color:grey"),
     br(),
-    p(em(paste(msg, "Last server query:", Sys.getenv("refresh_time"))))
+    p(em(paste(msg, "Last update:", as.character(refresh_time, format="%Y-%m-%d %H:%M:%S %Z"))))
     )
   
 )
@@ -680,15 +685,23 @@ server <- function(input, output, session) {
   #   }
   # })
   
-  output$dailyTbl <- renderTable({
+  output$summaryTable <- renderDT({
     filtered_surveys_long() %>%
       mutate(date = as.character(date)) %>%
       group_by_at(input$dtGroups) %>%
       group_by(bee_name, .add = T) %>%
-      summarise(n = n(), visit_rate = mean(count) / 5, .groups = "drop") %>%
-      mutate("Total insects" = sum(visit_rate)) %>%
-      pivot_wider(names_from = bee_name, values_from = visit_rate)
-  })
+      summarise(
+        n = n(),
+        visit_rate = round(mean(count) / 5, 1),
+        .groups = "drop_last") %>%
+      mutate("Total rate" = sum(visit_rate)) %>%
+      ungroup() %>%
+      pivot_wider(names_from = bee_name, values_from = visit_rate) %>%
+      mutate("row" = row_number()) %>%
+      select("row", everything())},
+    rownames = F,
+    options = list(pageLength = 25)
+  )
   
   output$plotUserStats <- renderPlot({
     filtered_surveys() %>%
