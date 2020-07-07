@@ -276,17 +276,11 @@ ui <- fixedPage(
     ),
       mainPanel(
         h3("What is the WiBee app?", style = "margin-top:0px"),
-        p("WiBee (pronounced Wee-bee) is a new smartphone app developed by the", a("Gratton Lab", href = "https://gratton.entomology.wisc.edu/"), "at the University of Wisconsin-Madison. We invite growers and interested citizen scientists to use the app during the growing season to collect high quality data on wild bee abundance and diversity on Wisconsin’s fruit and vegetable farms."),
-        p("WiBee is a citizen science project, so all the data here is collected by people like you going out and completing surveys with the WiBee App. We invite you to explore the data to see what wild bee populations and their flower visit rates look like across Wisconsin. You can also compare your own data in the WiBee app to this Wisconsin-wide data to help you make decisions about managing your local pollinator community or track any change over time. As you explore the data below, remember that it's a work in progress. We will continue to collect and refine the data over the course of the year."),
-        p("To join the project and help collect data, download the WiBee app today or visit", a("pollinators.wisc.edu/wibee", href = "http://www.pollinators.wisc.edu/wibee"), "to learn more. Questions?", a("Email us.", href = "mailto:pollinators@wisc.edu"), "Comments?", a("Send feedback.", href = "https://forms.gle/6qy9qJLwCxSTTPNT8"), "Want to stay in the loop?", a("Sign up for our newsletter.", href = "http://eepurl.com/gMqRdr"), "Thank you for participating!")),
+        p("WiBee (pronounced Wee-bee) is a new smartphone app developed by the", a("Gratton Lab", href = "https://gratton.entomology.wisc.edu/", target = "_blank"), "at the University of Wisconsin-Madison. We invite growers and interested citizen scientists to use the app during the growing season to collect high quality data on wild bee abundance and diversity on Wisconsin’s fruit and vegetable farms. The app can also be used in your home garden, or at prairies, parks, woodlands, or anywhere else you see pollinator activity, whether or not you live in Wisconsin. All are welcome to contribute."),
+        p("WiBee is a citizen science project, so all the data here is collected by people like you going out and completing surveys with the WiBee App. We invite you to explore the data to see what wild bee populations and their flower visit rates look like across Wisconsin. You can also compare your own data in the WiBee app to the summary data presented here in this dashboard to help you make decisions about managing your local pollinator community or track any change over time. As you explore the data below, remember that this dashboard is a work in progress. If you have specific suggestions, please contact us!"),
+        p("To join the project and help collect data, download the WiBee app today or visit", a("pollinators.wisc.edu/wibee", href = "http://www.pollinators.wisc.edu/wibee", target = "_blank"), "to learn more. Questions?", a("Email us.", href = "mailto:pollinators@wisc.edu"), "Comments?", a("Send feedback.", href = "https://forms.gle/6qy9qJLwCxSTTPNT8", target = "_blank"), "Want to stay in the loop?", a("Sign up for our newsletter.", href = "http://eepurl.com/gMqRdr", target = "_blank"), "Thank you for participating!")),
     position = "right"),
-  # 
-  # p(
-  #   a("More information", href = "http://www.pollinators.wisc.edu/wibee"),
-  #   " - ", a("Email us", href = "mailto:pollinators@wisc.edu"),
-  #   " - ", a("Sign up for our newsletter", href = "http://eepurl.com/gMqRdr"),
-  #   " - ", a("Send feedback", href = "https://forms.gle/6qy9qJLwCxSTTPNT8")
-  # ),
+
   
   # Survey location map and summary data
   h3("Survey locations", style = "border-bottom:1px grey"),
@@ -426,13 +420,13 @@ ui <- fixedPage(
     style = "font-size:small; color:grey; border-top:2px darkgrey",    
     p(strong("©2020 University of Wisconsin Board of Regents"), style = "font-size:small; color:grey"),
     p(
-      a("More information", href = "http://www.pollinators.wisc.edu/wibee"),
+      a("More information", href = "http://www.pollinators.wisc.edu/wibee", target = "_blank"),
         " - ", a("Email us", href = "mailto:pollinators@wisc.edu"),
-        " - ", a("Sign up for our newsletter", href = "http://eepurl.com/gMqRdr"),
-        " - ", a("Send feedback", href = "https://forms.gle/6qy9qJLwCxSTTPNT8")
+        " - ", a("Sign up for our newsletter", href = "http://eepurl.com/gMqRdr", target = "_blank"),
+        " - ", a("Send feedback", href = "https://forms.gle/6qy9qJLwCxSTTPNT8", target = "_blank")
       ),
     br(),
-    p("developed by", a("tanuki.tech", href = "https://github.com/bzbradford"), style = "font-size:small; color:grey"),
+    p("developed by", a("tanuki.tech", href = "https://github.com/bzbradford", target = "_blank"), style = "font-size:small; color:grey"),
     br(),
     p(em(paste(msg, "Last update:", as.character(refresh_time, format="%Y-%m-%d %H:%M:%S %Z"))))
     )
