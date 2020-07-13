@@ -238,11 +238,13 @@ mgmt_labels <- {
 ###############
 
 ui <- fixedPage(
-  
+  title = "WiBee Dashboard",
   theme = shinytheme("flatly"),
   
-  ## page heading ##
-  fluidRow(
+  HTML('<meta name="viewport" content="width=1024">'),
+  
+  # page heading ##
+  fixedRow(
     column(1, h2(img(src = "wibee-logo.png", height = 60))),
     column(10,
       h2("WiBee Data Dashboard"),
