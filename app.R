@@ -7,6 +7,7 @@ library(shinythemes)
 library(httr)
 library(tidyverse)
 library(leaflet)
+library(leaflet.extras)
 library(DT)
 
 
@@ -165,7 +166,12 @@ surveys <- wibee_in %>%
       T ~ "other"), levels = mgmt_types)) %>%
   filter(duration == "5 minutes") %>%
   filter(date >= "2020-04-01") %>%
-  drop_na(c(habitat, crop, management))
+  drop_na(c(habitat, crop, management)) %>%
+  mutate(
+    lng_rnd = round(lng, 1),
+    lat_rnd = round(lat, 1)) %>%
+  mutate(grid_pt = paste(lng_rnd, lat_rnd))
+
 
 # pivot longer for plotting etc
 surveys_long <- surveys %>%
@@ -174,21 +180,23 @@ surveys_long <- surveys %>%
 
 
 # generate grid points and summary statistics
-survey_pts <- surveys %>%
+map_pts <- surveys %>%
   drop_na(lng, lat) %>%
   mutate(
-    lng2 = round(lng, 1),
-    lat2 = round(lat, 1)) %>%
-  group_by(lng2, lat2) %>%
+    lng_rnd = round(lng, 1),
+    lat_rnd = round(lat, 1)) %>%
+  group_by(lng_rnd, lat_rnd) %>%
   summarise(
     n_surveys = n(),
-    lng = mean(lng2),
-    lat = mean(lat2),
     hb = round(mean(honeybee)/5,1),
     wb = round(mean(wild_bee)/5,1),
     nb = round(mean(non_bee)/5,1),
     .groups = "drop") %>%
-  select(-c(lng2, lat2))
+  mutate(grid_pt = paste(lng_rnd, lat_rnd))
+
+map_pts_all <- map_pts$grid_pt
+map_first_click <- T
+
 
 
 # set icon for leaflet
@@ -230,6 +238,11 @@ mgmt_labels <- {
     mutate(label = paste0(management, " (", n, ")")) %>%
     .$label
 }
+
+
+
+
+
 
 
 
@@ -287,7 +300,8 @@ ui <- fixedPage(
   # Survey location map and summary data
   h3("Survey locations", style = "border-bottom:1px grey"),
   p(em("Click on each bee icon or rectangle to show average counts for all surveys conducted within that area."), style = "margin-bottom:.5em"),
-  leafletOutput("surveyMap"),
+  leafletOutput("map"),
+  actionButton("reset_map", "Reset map selection"),
   br(),
   
   
@@ -443,9 +457,14 @@ ui <- fixedPage(
 
 server <- function(input, output, session) {
   
+  surveys_spatialfilter <- reactive({
+    surveys %>%
+      filter(grid_pt %in% map_selection())
+  })
+  
   # filter survey data by date slider
   surveys_datefilter <- reactive({
-    surveys %>%
+    surveys_spatialfilter() %>%
       filter(date >= input$date_range[1] & date <= input$date_range[2])
   })
   
@@ -458,14 +477,27 @@ server <- function(input, output, session) {
   })
   
   # filter long dataset by date slider and checkboxes
+  # filtered_surveys_long <- reactive({
+  #   surveys_long %>%
+  #     filter(date >= input$date_range[1] & date <= input$date_range[2]) %>%
+  #     filter(habitat %in% input$which_habitat) %>%
+  #     filter(crop %in% input$which_crop) %>%
+  #     filter(management %in% input$which_mgmt) %>% 
+  #     filter(bee_name %in% input$which_bees)
+  # })
+  
   filtered_surveys_long <- reactive({
-    surveys_long %>%
-      filter(date >= input$date_range[1] & date <= input$date_range[2]) %>%
-      filter(habitat %in% input$which_habitat) %>%
-      filter(crop %in% input$which_crop) %>%
-      filter(management %in% input$which_mgmt) %>% 
+    filtered_surveys() %>%
+      pivot_longer(
+        bee_ref$bee_type,
+        names_to = "bee_type",
+        values_to = "count") %>%
+      left_join(bee_ref, by = "bee_type") %>%
       filter(bee_name %in% input$which_bees)
   })
+  
+  
+  map_selection <- reactiveVal(value = map_pts_all)
   
   # update checkbox labels when date slider is moved
   observeEvent(input$date_range, {
@@ -563,37 +595,155 @@ server <- function(input, output, session) {
   
   
   # Survey site map - not currently reactive to data filters
-  output$surveyMap <- renderLeaflet({
-    leaflet(survey_pts) %>%
+  output$map <- renderLeaflet({
+    leaflet(map_pts) %>%
       addTiles() %>%
       addRectangles(
-        lng1 = ~ lng - .05, lng2 = ~ lng + .05,
-        lat1 = ~ lat - .05, lat2 = ~ lat + .05,
+        lng1 = ~ lng_rnd - .05, lng2 = ~ lng_rnd + .05,
+        lat1 = ~ lat_rnd - .05, lat2 = ~ lat_rnd + .05,
+        layerId = ~ grid_pt,
+        group = "All points",
         label = ~ paste(n_surveys, "surveys"),
-        popup = ~ paste0(
-          "<strong>Total surveys: </strong>", n_surveys, "<br/>",
-          "<strong>Mean visits per minute:</strong><br/>",
-          "Honey bees: ", hb, "<br/>",
-          "Wild bees: ", wb, "<br/>",
-          "Non-bees: ", nb),
         weight = 1,
         opacity = 1,
         color = "orange",
         fillOpacity = .25,
-        fillColor = "yellow") %>%
-      addMarkers(~lng, ~lat, icon = bee_icon,
+        fillColor = "yellow",
+        highlight = highlightOptions(
+          weight = 3,
+          color = "red",
+          fillColor = "orange",
+          fillOpacity = 0.7)) %>%
+      setView(lng = -89.7, lat = 44.8, zoom = 6)
+  })
+  
+  observeEvent(map_selection(), {
+    leafletProxy("map") %>%
+      addRectangles(
+        layerId = ~ paste(grid_pt, "selected"),
+        group = "Select points",
+        lng1 = ~ lng_rnd - .05, lng2 = ~ lng_rnd + .05,
+        lat1 = ~ lat_rnd - .05, lat2 = ~ lat_rnd + .05,
         label = ~ paste(n_surveys, "surveys"),
-        popup = ~ paste0(
-          "<strong>Total surveys: </strong>", n_surveys, "<br/>",
-          "<strong>Mean visits per minute:</strong><br/>",
-          "Honey bees: ", hb, "<br/>",
-          "Wild bees: ", wb, "<br/>",
-          "Non-bees: ", nb),
-        clusterOptions = markerClusterOptions(showCoverageOnHover = F)
-      )
+        weight = 1,
+        opacity = 1,
+        color = "red",
+        fillOpacity = .25,
+        fillColor = "orange",
+        highlight = highlightOptions(
+          weight = 3,
+          color = "red",
+          fillColor = "orange",
+          fillOpacity = 0.7),
+        data = filter(map_pts, grid_pt %in% map_selection()))
+  })
+  
+  observeEvent(input$reset_map, {
+    map_selection(map_pts_all)
   })
 
+  # observeEvent(input$map_shape_click, {print(input$map_shape_click)})
+  # observeEvent(input$map_click, {print(input$map_click)})
 
+  
+  observeEvent(input$map_shape_click, {
+    click <- input$map_shape_click
+    print(click$id)
+    grid_pt <- str_remove(click$id, " selected")
+    proxy <- leafletProxy("map")
+      
+    if(setequal(map_selection(), map_pts_all)) {
+      print("first click")
+      proxy %>% clearGroup("Select points")
+      map_selection(grid_pt)
+      print(map_selection())
+    } else {
+      if(grepl("selected", click$id, fixed = T)) {
+        print("removing pt")
+        proxy %>% removeShape(click$id)
+        old_sel <- map_selection()
+        new_sel <- old_sel[old_sel != grid_pt]
+        map_selection(new_sel)
+        print(map_selection())
+    } else {
+        print("selecting pt")
+        map_selection(c(map_selection(), grid_pt))
+        print(map_selection())
+    }
+      }
+
+  })
+  
+  
+  
+  # observeEvent(input$map_shape_click, {
+  #   click <- input$map_shape_click
+  #   lng <- round(click$lng, 1)
+  #   lat <- round(click$lat, 1)
+  #   proxy <- leafletProxy("map")
+  #   
+  #   if(grepl("selected", click$id, fixed = T)) {
+  #     proxy %>% removeShape(layerId = click$id)
+  #     print("removing")
+  #   } else {
+  #     proxy %>%
+  #       addRectangles(
+  #         lng1 = ~ round(lng, 1) - .05, lng2 = ~ round(lng, 1) + .05,
+  #         lat1 = ~ round(lat, 1) - .05, lat2 = ~ round(lat, 1) + .05,
+  #         layerId = paste(lng, lat, "selected"),
+  #         label = ~ paste(n_surveys, "surveys"),
+  #         weight = 1,
+  #         opacity = 1,
+  #         color = "red",
+  #         fillOpacity = .25,
+  #         fillColor = "orange",
+  #         highlight = highlightOptions(
+  #           weight = 3,
+  #           color = "red",
+  #           fillColor = "orange",
+  #           fillOpacity = 0.7),
+  #         data = click)
+  #     print("selecting")
+  #   }
+  #   
+  # })
+
+  # output$surveyMap <- renderLeaflet({
+  #   leaflet(map_pts) %>%
+  #     addTiles() %>%
+  #     addRectangles(
+  #       lng1 = ~ lng - .05, lng2 = ~ lng + .05,
+  #       lat1 = ~ lat - .05, lat2 = ~ lat + .05,
+  #       label = ~ paste(n_surveys, "surveys"),
+  #       popup = ~ paste0(
+  #         "<strong>Total surveys: </strong>", n_surveys, "<br/>",
+  #         "<strong>Mean visits per minute:</strong><br/>",
+  #         "Honey bees: ", hb, "<br/>",
+  #         "Wild bees: ", wb, "<br/>",
+  #         "Non-bees: ", nb),
+  #       weight = 1,
+  #       opacity = 1,
+  #       color = "orange",
+  #       fillOpacity = .25,
+  #       fillColor = "yellow",
+  #       highlight = highlightOptions(
+  #         weight = 5,
+  #         color = "red",
+  #         fillOpacity = 0.7,
+  #         bringToFront = TRUE)) %>%
+  #     addMarkers(~lng, ~lat, icon = bee_icon,
+  #       label = ~ paste(n_surveys, "surveys"),
+  #       popup = ~ paste0(
+  #         "<strong>Total surveys: </strong>", n_surveys, "<br/>",
+  #         "<strong>Mean visits per minute:</strong><br/>",
+  #         "Honey bees: ", hb, "<br/>",
+  #         "Wild bees: ", wb, "<br/>",
+  #         "Non-bees: ", nb),
+  #       clusterOptions = markerClusterOptions(showCoverageOnHover = F)
+  #     )
+  # })
+  
+  
   # Plot of daily bee averages
   output$plotByDate <- renderPlot({
     df <- filtered_surveys_long()
