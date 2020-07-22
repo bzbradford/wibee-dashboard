@@ -1,5 +1,10 @@
 #### SERVER ####
 
+library(tidyverse)
+library(shiny)
+library(leaflet)
+library(DT)
+
 server <- function(input, output, session) {
   
   filtered_by_loc <- reactive({
