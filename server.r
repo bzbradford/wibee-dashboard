@@ -2,35 +2,43 @@
 
 server <- function(input, output, session) {
   
-  surveys_spatialfilter <- reactive({
-    surveys %>%
-      filter(grid_pt %in% map_selection())
+  filtered_by_loc <- reactive({
+    surveys %>% filter(grid_pt %in% map_selection())
   })
   
+  
+  output$survey_count_loc <- renderText({
+    paste(nrow(filtered_by_loc()), " surveys selected on the map.")
+  })
+  
+  
   # filter survey data by date slider
-  surveys_datefilter <- reactive({
-    surveys_spatialfilter() %>%
+  filtered_by_date <- reactive({
+    filtered_by_loc() %>%
       filter(date >= input$date_range[1] & date <= input$date_range[2])
   })
   
+  
+  # Number of matching surveys
+  output$survey_count_date <- renderText({
+    paste(nrow(filtered_by_date()), "surveys selected from this date range.")
+  })
+  
+  
   # filter survey data by checkboxes
   filtered_surveys <- reactive({
-    surveys_datefilter() %>%
+    filtered_by_date() %>%
       filter(habitat %in% input$which_habitat) %>%
       filter(crop %in% input$which_crop) %>%
       filter(management %in% input$which_mgmt)
   })
   
-  # filter long dataset by date slider and checkboxes
-  # filtered_surveys_long <- reactive({
-  #   surveys_long %>%
-  #     filter(grid_pt %in% map_selection()) %>%
-  #     filter(date >= input$date_range[1] & date <= input$date_range[2]) %>%
-  #     filter(habitat %in% input$which_habitat) %>%
-  #     filter(crop %in% input$which_crop) %>%
-  #     filter(management %in% input$which_mgmt) %>%
-  #     filter(bee_name %in% input$which_bees)
-  # })
+  
+  # Number of matching surveys
+  output$survey_count_final <- renderText({
+    paste(nrow(filtered_surveys()), "surveys match your filter selections.")
+  })
+  
   
   filtered_surveys_long <- reactive({
     filtered_surveys() %>%
@@ -47,15 +55,15 @@ server <- function(input, output, session) {
   
   # update checkbox labels when date slider is moved
   observeEvent(list(map_selection(), input$date_range), {
-    habitat_labels <- surveys_datefilter() %>%
+    habitat_labels <- filtered_by_date() %>%
       count(habitat, .drop = F) %>%
       mutate(label = paste0(habitat, " (", n, ")")) %>%
       .$label
-    crop_labels <- surveys_datefilter() %>%
+    crop_labels <- filtered_by_date() %>%
       count(crop, .drop = F) %>%
       mutate(label = paste0(crop, " (", n, ")")) %>%
       .$label
-    mgmt_labels <- surveys_datefilter() %>%
+    mgmt_labels <- filtered_by_date() %>%
       count(management, .drop = F) %>%
       mutate(label = paste0(management, " (", n, ")")) %>%
       .$label
@@ -103,10 +111,18 @@ server <- function(input, output, session) {
     }
   }
   
-  # Number of matching surveys
-  output$n_surveys <- renderText({
-    paste(nrow(filtered_surveys()), "surveys match your filter selections.")
+  # update date slider
+  observeEvent(filtered_by_loc(), {
+    df <- filtered_by_loc()
+    updateSliderInput(session, "date_range", min = min(df$date), max = max(df$date))
   })
+  
+  
+  # reset date slider
+  observeEvent(input$reset_date, {
+    updateSliderInput(session, "date_range", value = c(min_date, max_date))
+  })
+
   
   # Reset button
   observeEvent(input$reset, {
@@ -140,7 +156,7 @@ server <- function(input, output, session) {
     {updateCheckboxGroupInput(session, "which_mgmt", selected = "")})
   
   
-  # Survey site map - not currently reactive to data filters
+  # Initial map condition
   output$map <- renderLeaflet({
     leaflet(map_pts) %>%
       addTiles() %>%
@@ -163,6 +179,28 @@ server <- function(input, output, session) {
       setView(lng = -89.7, lat = 44.8, zoom = 7)
   })
   
+  # handle adding and subtracting grids from selection
+  observeEvent(input$map_shape_click, {
+    click <- input$map_shape_click
+    grid_pt <- str_remove(click$id, " selected")
+    proxy <- leafletProxy("map")
+    
+    # on first click deselect all other grids
+    if(setequal(map_selection(), map_pts_all)) {
+      proxy %>% clearGroup("Select points")
+      map_selection(grid_pt)
+    } else if (grepl("selected", click$id, fixed = T)) {
+      proxy %>% removeShape(click$id)
+      old_sel <- map_selection()
+      new_sel <- old_sel[old_sel != grid_pt]
+      map_selection(new_sel)
+    } else {
+      new_sel <- c(map_selection(), grid_pt)
+      map_selection(new_sel)
+    }
+  })   
+  
+  # reactive portion of map showing selected grids
   observeEvent(map_selection(), {
     leafletProxy("map") %>%
       addRectangles(
@@ -171,11 +209,8 @@ server <- function(input, output, session) {
         lng1 = ~ lng_rnd - .05, lng2 = ~ lng_rnd + .05,
         lat1 = ~ lat_rnd - .05, lat2 = ~ lat_rnd + .05,
         label = ~ paste(n_surveys, "surveys"),
-        weight = 1,
-        opacity = 1,
-        color = "red",
-        fillOpacity = .25,
-        fillColor = "orange",
+        weight = 1, opacity = 1, color = "red",
+        fillOpacity = .25, fillColor = "orange",
         highlight = highlightOptions(
           weight = 3,
           color = "red",
@@ -183,43 +218,28 @@ server <- function(input, output, session) {
           fillOpacity = 0.7),
         data = filter(map_pts, grid_pt %in% map_selection()))
   })
-  
+
+  # map buttons
+  observeEvent(input$map_zoom_all, {
+    leafletProxy("map") %>% 
+      fitBounds(
+        lng1 = min(surveys$lng),
+        lat1 = min(surveys$lat),
+        lng2 = max(surveys$lng),
+        lat2 = max(surveys$lat))
+  })
+  observeEvent(input$map_zoom_wi, {
+    leafletProxy("map") %>% setView(lng = -89.7, lat = 44.8, zoom = 7)
+  })
   observeEvent(input$reset_map, {
     map_selection(map_pts_all)
     leafletProxy("map") %>% setView(lng = -89.7, lat = 44.8, zoom = 7)
   })
   
-  # observeEvent(input$map_shape_click, {print(input$map_shape_click)})
-  # observeEvent(input$map_click, {print(input$map_click)})
+
   
   
-  observeEvent(input$map_shape_click, {
-    click <- input$map_shape_click
-    print(click$id)
-    grid_pt <- str_remove(click$id, " selected")
-    proxy <- leafletProxy("map")
-    
-    if(setequal(map_selection(), map_pts_all)) {
-      print("first click")
-      proxy %>% clearGroup("Select points")
-      map_selection(grid_pt)
-      print(map_selection())
-    } else {
-      if(grepl("selected", click$id, fixed = T)) {
-        print("removing pt")
-        proxy %>% removeShape(click$id)
-        old_sel <- map_selection()
-        new_sel <- old_sel[old_sel != grid_pt]
-        map_selection(new_sel)
-        print(map_selection())
-      } else {
-        print("selecting pt")
-        map_selection(c(map_selection(), grid_pt))
-        print(map_selection())
-      }
-    }
-    
-  })
+
   
   
   
@@ -303,9 +323,7 @@ server <- function(input, output, session) {
         ggplot(aes(x = date, y = visit_rate, fill = bee_name)) +
         geom_col() +
         scale_fill_manual(values = levels(df2$bee_color)) +
-        labs(
-          title = "Pollinator visitation rate by survey date",
-          x = "Survey date", y = "Average visits per minute", fill = "") +
+        labs(x = "Survey date", y = "Average visits per minute", fill = "") +
         theme_classic() +
         theme(
           text = element_text(size = 14),
