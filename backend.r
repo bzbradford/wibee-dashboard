@@ -4,7 +4,6 @@ library(tidyverse)
 library(httr)
 
 
-
 # Load remote data --------------------------------------------------------
 
 # check when last data refresh occurred
@@ -14,7 +13,7 @@ if(file.exists("./data/refresh_time")) {
   refresh_time <- as.POSIXct("2020-01-01")
 }
 
-# update surveys at most once an hour
+# update surveys at most once an hour. Writes to local csv
 if(refresh_time < Sys.time() - 3600) {
   get_surveys <-
     content(
@@ -33,6 +32,7 @@ if(refresh_time < Sys.time() - 3600) {
   msg <- "Survey data refreshed recently."
 }
 
+# read data from local csv
 wibee_in <- read_csv("./data/surveys.csv", col_types = cols())
 
 
