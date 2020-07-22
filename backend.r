@@ -1,6 +1,11 @@
 #### BACKEND ####
 
 library(tidyverse)
+library(httr)
+
+
+
+# Load remote data --------------------------------------------------------
 
 # check when last data refresh occurred
 if(file.exists("./data/refresh_time")) {
@@ -29,6 +34,10 @@ if(refresh_time < Sys.time() - 3600) {
 }
 
 wibee_in <- read_csv("./data/surveys.csv", col_types = cols())
+
+
+
+# Define local variables --------------------------------------------------
 
 # explanatory cols to keep
 keep_cols <- c(
@@ -128,6 +137,15 @@ mgmt_types <-
     "other",
     "unknown")
 
+# set icon for leaflet
+bee_icon <- makeIcon(
+  iconUrl = "map-icon.png",
+  iconWidth = 30, iconHeight = 30,
+  iconAnchorX = 15, iconAnchorY = 15)
+
+
+
+# Process survey data -----------------------------------------------------
 
 # generate main dataset
 surveys <- wibee_in %>%
@@ -157,7 +175,7 @@ surveys <- wibee_in %>%
   mutate(grid_pt = paste(lng_rnd, lat_rnd))
 
 
-# pivot longer for plotting etc
+# pivot longer for some data analysis
 surveys_long <- surveys %>%
   pivot_longer(bee_ref$bee_type, names_to = "bee_type", values_to = "count") %>%
   left_join(bee_ref, by = "bee_type")
@@ -178,14 +196,9 @@ map_pts <- surveys %>%
     .groups = "drop") %>%
   mutate(grid_pt = paste(lng_rnd, lat_rnd))
 
+
+# get list of all grid cells for initial selection
 map_pts_all <- map_pts$grid_pt
-
-
-# set icon for leaflet
-bee_icon <- makeIcon(
-  iconUrl = "map-icon.png",
-  iconWidth = 30, iconHeight = 30,
-  iconAnchorX = 15, iconAnchorY = 15)
 
 
 # get date range of data
@@ -201,7 +214,7 @@ bee_totals <- surveys_long %>%
   mutate(pct_count = sprintf("%1.1f%%", tot_count / sum(.$tot_count) * 100))
 
 
-## generate initial filter labels ##
+# generate initial filter labels #
 habitat_labels <- {
   surveys %>%
     count(habitat, .drop = F) %>%
