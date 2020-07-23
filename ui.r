@@ -3,6 +3,7 @@
 library(tidyverse)
 library(shiny)
 library(shinythemes)
+library(shinyWidgets)
 library(leaflet)
 library(DT)
 
@@ -86,24 +87,13 @@ ui <- fixedPage(
   leafletOutput("map", height = 600),
   div(style = "padding-top:10px",
     div(actionButton("map_zoom_all", "Zoom extents"), style = "padding-right:10px; display:inline-block"),
-    div(actionButton("map_zoom_wi", "Reset map"), style = "padding-right:10px; display:inline-block"),
+    div(actionButton("map_zoom_wi", "Reset map"), style = "padding-right:20px; display:inline-block"),
     div(strong(textOutput("survey_count_loc")), style = "display:inline-block")),
+  hr(style = "margin-top:10px"),
   br(),
-  
   plotlyOutput('map_chart_all', width = '45%', inline = T),
   plotlyOutput('map_chart_selected', width = '45%', inline = T),
-  
-  
-  
-  # div("here I want a simple chart or table summarising the surveys picked on the map", style = "border:2px solid red; padding:5px; text-align:center"),
-  
-  
-  
-  
-  
-  
-  
-  
+  materialSwitch("group_wild", label = "Group wild bees together", status = "success"),
   
   
   br(),
@@ -111,21 +101,19 @@ ui <- fixedPage(
   h3("Filter selected data by date:"),
   p(em("Move the slider to select only surveys selected on the map above and also from a specific date range."), style = "margin-bottom:.5em"),
   br(),
-  fluidRow(style = "border:1px solid #ddd; background-color:#f1f1f1; border-radius:5px; padding:5px",
-    column(8,
-      sliderInput(
+  div(style = "border:1px solid #ddd; background-color:#f1f1f1; border-radius:5px; padding:15px",
+    div(sliderInput(
         "date_range",
         label = "Date range:",
         min = min_date,
         max = max_date,
         value = c(min_date, max_date),
-        width = "100%")
-    ),
-    column(4, br(), actionButton("reset_date", "Reset dates"), align = "center")
+        width = "100%")),
+    div(actionButton("reset_date", "Reset dates"), style = "padding-right:20px; display:inline-block"),
+    div(strong(textOutput("survey_count_date")), style = "display:inline-block")
   ),
-  textOutput("survey_count_date"),
-  h4("Pollinator visiation rate by day", align = "center"),
-  plotOutput("plotByDate", height = "300px"),
+  br(),
+  plotlyOutput("plotByDate"),
   br(),
   hr(),
   h3("Select desired survey characteristics:"),
@@ -138,33 +126,32 @@ ui <- fixedPage(
         choiceValues = bee_names,
         selected = bee_names),
       div(actionButton("which_bees_all", "All"), style = "display:inline-block"),
-      div(actionButton("which_bees_none", "None"), style = "display:inline-block"),
-      checkboxInput("group_wild", label = "Group wild bees together")),
+      div(actionButton("which_bees_none", "None"), style = "display:inline-block")),
     column(3,
       checkboxGroupInput(
         "which_habitat",
         label = "Habitat type:",
-        choiceNames = habitat_labels,
-        choiceValues = habitat_types,
-        selected = habitat_types),
+        choiceNames = habitats$label,
+        choiceValues = habitats$type,
+        selected = habitats$type),
       div(actionButton("which_habitat_all", "All"), style = "display:inline-block"),
       div(actionButton("which_habitat_none", "None"), style = "display:inline-block")),
     column(3,
       checkboxGroupInput(
         "which_crop",
         label = "Crop type:",
-        choiceNames = crop_labels,
-        choiceValues = crop_types,
-        selected = crop_types),
+        choiceNames = crops$label,
+        choiceValues = crops$type,
+        selected = crops$type),
       div(actionButton("which_crop_all", "All"), style = "display:inline-block"),
       div(actionButton("which_crop_none", "None"), style = "display:inline-block")),
     column(3,
       checkboxGroupInput(
         "which_mgmt",
         label = "Management type:",
-        choiceNames = mgmt_labels,
-        choiceValues = mgmt_types,
-        selected = mgmt_types),
+        choiceNames = mgmt$label,
+        choiceValues = mgmt$type,
+        selected = mgmt$type),
       div(actionButton("which_mgmt_all", "All"), style = "display:inline-block"),
       div(actionButton("which_mgmt_none", "None"), style = "display:inline-block"))
   ),
@@ -230,7 +217,7 @@ ui <- fixedPage(
     br(),
     p("developed by", a("tanuki.tech", href = "https://github.com/bzbradford", target = "_blank"), style = "font-size:small; color:grey"),
     br(),
-    p(em(paste(msg, "Last update:", as.character(refresh_time, format="%Y-%m-%d %H:%M:%S %Z"))))
+    p(em(paste("Data last updated:", as.character(refresh_time, format="%Y-%m-%d %H:%M:%S %Z"))))
   )
   
 )
