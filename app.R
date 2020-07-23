@@ -27,12 +27,12 @@ if(refresh_time < Sys.time() - 3600) {
     arrange(get_surveys, ended_at) %>% write_csv("./data/surveys.csv")
     refresh_time <- Sys.time()
     saveRDS(refresh_time, "./data/refresh_time")
-    msg <- "Survey data refreshed from remote database."
+    message("Survey data refreshed from remote database.")
   } else {
-    msg <- "Unable to refresh data from server, falling back on local cache."
+    message("Unable to refresh data from remote server.")
   }
 } else {
-  msg <- "Survey data refreshed recently."
+  message("Skipping refresh, last query < 1 hr ago.")
 }
 
 # read data from local csv
@@ -81,7 +81,7 @@ wildbee_names <- c(
 )
 
 # bee crossref
-bee_ref <-
+bees <-
   tibble(
     bee_type = c(
       "honeybee",
@@ -112,18 +112,49 @@ bee_ref <-
   )
 
 # Valid habitat types
-habitat_types <- 
-  c("corn-soybeans-alfalfa",
+# habitat_types <- 
+#   c("corn-soybeans-alfalfa",
+#     "fruit-vegetable-field",
+#     "orchard",
+#     "road-field-edge",
+#     "lawn-and-garden",
+#     "prairie",
+#     "woodland")
+
+habitats <- tibble(
+  type = c(
+    "corn-soybeans-alfalfa",
     "fruit-vegetable-field",
     "orchard",
     "road-field-edge",
     "lawn-and-garden",
     "prairie",
-    "woodland")
+    "woodland"),
+  label = c(
+    "Corn/soybeans/alfalfa",
+    "Fruit/vegetable field",
+    "Orchard",
+    "Road or field edge",
+    "Lawn and garden",
+    "Prairie",
+    "Woodland"))
+
 
 # valid crop types
-crop_types <- 
-  c("apple",
+# crop_types <- 
+#   c("apple",
+#     "cherry",
+#     "cranberry",
+#     "other berry",
+#     "cucumber",
+#     "melon",
+#     "squash",
+#     "other",
+#     "none")
+
+crops <- tibble(
+  type = c(
+    "apple",
     "cherry",
     "cranberry",
     "other berry",
@@ -131,14 +162,38 @@ crop_types <-
     "melon",
     "squash",
     "other",
-    "none")
+    "none"),
+  label = c(
+    "Apple",
+    "Cherry",
+    "Cranberry",
+    "Berries",
+    "Cucumber",
+    "Melon",
+    "Squash",
+    "Other",
+    "None"))
 
 # valid management types
-mgmt_types <- 
-  c("organic",
+# mgmt_types <- 
+#   c("organic",
+#     "conventional",
+#     "other",
+#     "unknown")
+
+mgmt <- tibble(
+  type = c(
+    "organic",
     "conventional",
     "other",
-    "unknown")
+    "unknown"),
+  label = c(
+    "Organic",
+    "Conventional",
+    "Other",
+    "Unknown"
+  )
+)
 
 # set icon for leaflet
 bee_icon <- makeIcon(
@@ -152,7 +207,7 @@ wibox = c(-92.888114, 42.491983, -86.805415, 47.080621)
 # Check if location is within Wisconsin's bounding box
 inbox <- function(x, y, box = wibox) {
   ifelse(between(x, box[1], box[3]) & between(y, box[2], box[4]), T, F)
-  }
+}
 
 
 # Process survey data -----------------------------------------------------
@@ -164,18 +219,18 @@ surveys <- wibee_in %>%
   rename(habitat = site_type, management = management_type, date = ended_at) %>%
   mutate_at(bee_cols, replace_na, 0) %>%
   mutate(wild_bee = bumble_bee + large_dark_bee + small_dark_bee + greenbee) %>%
-  mutate(habitat = factor(habitat, levels = habitat_types)) %>%
+  mutate(habitat = factor(habitat, levels = habitats$type)) %>%
   mutate(crop = tolower(crop)) %>%
   mutate(crop = factor(
     case_when(
       is.na(crop) ~ "none",
-      crop %in% crop_types ~ crop,
+      crop %in% crops$type ~ crop,
       grepl("berry", crop) ~ "other berry",
-      T ~ "other"), levels = crop_types)) %>%
+      T ~ "other"), levels = crops$type)) %>%
   mutate(management = factor(
     case_when(
-      management %in% mgmt_types ~ management,
-      T ~ "other"), levels = mgmt_types)) %>%
+      management %in% mgmt$type ~ management,
+      T ~ "other"), levels = mgmt$type)) %>%
   filter(duration == "5 minutes") %>%
   filter(date >= "2020-04-01") %>%
   drop_na(c(habitat, crop, management)) %>%
@@ -188,8 +243,8 @@ surveys <- wibee_in %>%
 
 # pivot longer for some data analysis
 surveys_long <- surveys %>%
-  pivot_longer(bee_ref$bee_type, names_to = "bee_type", values_to = "count") %>%
-  left_join(bee_ref, by = "bee_type")
+  pivot_longer(bees$bee_type, names_to = "bee_type", values_to = "count") %>%
+  left_join(bees, by = "bee_type")
 
 
 # generate grid points and summary statistics
@@ -228,24 +283,26 @@ bee_totals <- surveys_long %>%
 
 
 # generate initial filter labels #
-habitat_labels <- {
-  surveys %>%
-    count(habitat, .drop = F) %>%
-    mutate(label = paste0(habitat, " (", n, ")")) %>%
-    .$label
-}
-crop_labels <- {
-  surveys %>%
-    count(crop, .drop = F) %>%
-    mutate(label = paste0(crop, " (", n, ")")) %>%
-    .$label
-}
-mgmt_labels <- {
-  surveys %>%
-    count(management, .drop = F) %>%
-    mutate(label = paste0(management, " (", n, ")")) %>%
-    .$label
-}
+# habitat_labels <- {
+#   surveys %>%
+#     count(habitat, .drop = F) %>%
+#     mutate(label = paste0(habitat, " (", n, ")")) %>%
+#     .$label
+# }
+# crop_labels <- {
+#   surveys %>%
+#     count(crop, .drop = F) %>%
+#     mutate(label = paste0(crop, " (", n, ")")) %>%
+#     .$label
+# }
+# mgmt_labels <- {
+#   surveys %>%
+#     count(management, .drop = F) %>%
+#     mutate(label = paste0(management, " (", n, ")")) %>%
+#     .$label
+# }
+
+
 
 
 # App ---------------------------------------------------------------------
