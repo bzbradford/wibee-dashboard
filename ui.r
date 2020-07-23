@@ -86,11 +86,26 @@ ui <- fixedPage(
   leafletOutput("map", height = 600),
   div(style = "padding-top:10px",
     div(actionButton("map_zoom_all", "Zoom extents"), style = "padding-right:10px; display:inline-block"),
-    div(actionButton("map_zoom_wi", "Zoom Wisconsin"), style = "padding-right:10px; display:inline-block"),
-    div(actionButton("reset_map", "Reset map selections"), style = "padding-right:10px; display:inline-block"),
+    div(actionButton("map_zoom_wi", "Reset map"), style = "padding-right:10px; display:inline-block"),
     div(strong(textOutput("survey_count_loc")), style = "display:inline-block")),
   br(),
-  div("here I want a simple chart or table summarising the surveys picked on the map", style = "border:2px solid red; padding:5px; text-align:center"),
+  
+  plotlyOutput('map_chart_all', width = '45%', inline = T),
+  plotlyOutput('map_chart_selected', width = '45%', inline = T),
+  
+  
+  
+  # div("here I want a simple chart or table summarising the surveys picked on the map", style = "border:2px solid red; padding:5px; text-align:center"),
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
   br(),
   hr(),
   h3("Filter selected data by date:"),
