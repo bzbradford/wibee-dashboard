@@ -6,6 +6,7 @@ library(leaflet)
 library(DT)
 library(plotly)
 
+
 server <- function(input, output, session) {
   
   ## reactive values ##
@@ -34,7 +35,8 @@ server <- function(input, output, session) {
         names_to = 'bee_type',
         values_to = 'count') %>%
       left_join(bees, by = 'bee_type') %>%
-      filter(bee_name %in% input$which_bees)})
+      filter(bee_name %in% input$which_bees) %>%
+      droplevels()})
   
   
   # habitat checkbox labels and values
@@ -88,13 +90,14 @@ server <- function(input, output, session) {
       nrow(surveysByLoc()), ' surveys selected on the map.')})
   
   # Number of matching surveys after date filter
-  output$survey_count_date <- renderText({
+  output$survey_count_filters <- renderText({
     paste(nrow(surveysByLocDate()), 'out of',
-      nrow(surveysByLoc()), 'surveys selected from within date range.')})  
+      nrow(surveysByLoc()), 'surveys match your filter selections.')})  
   
   # Number of matching surveys after site characteristic filters
   output$survey_count_final <- renderText({
-    paste(nrow(filtered_surveys()), 'surveys match your filter selections.')})
+    paste(
+      nrow(filtered_surveys()), 'surveys match all of your criteria.')})
   
   
   
@@ -204,14 +207,40 @@ server <- function(input, output, session) {
         direction = 'clockwise',
         showlegend = F
         ) %>%
-      layout(title = 'All surveys')
+      add_annotations(
+        y = 1.075,
+        x = 0.5, 
+        text = paste0("<b>All surveys (", nrow(surveys), ")</b>"), 
+        showarrow = F,
+        font = list(size = 15))
   })
   
+  # output$map_chart_selected <- renderPlotly({
+  #   df <- surveys_long %>%
+  #     filter(bee_name %in% input$which_bees) %>%
+  #     droplevels() %>%
+  #     filter(grid_pt %in% map_selection()) %>%
+  #     group_by(bee_name, bee_color) %>%
+  #     summarise(mean_count = round(mean(count), 1), .groups = 'drop')
+  #   
+  #   df %>% 
+  #     plot_ly(labels = ~ bee_name, values = ~ mean_count, type = 'pie',
+  #       textposition = 'inside',
+  #       textinfo = 'label+percent',
+  #       hoverinfo = 'text',
+  #       text = ~ paste(mean_count, bee_name, 'per survey'),
+  #       marker = list(
+  #         colors = levels(df$bee_color),
+  #         line = list(color = '#ffffff', width = 1)),
+  #       sort = F,
+  #       direction = 'clockwise',
+  #       showlegend = F
+  #     ) %>%
+  #     layout(title = 'Surveys from selected map zones')
+  # })
+  
   output$map_chart_selected <- renderPlotly({
-    df <- surveys_long %>%
-      filter(bee_name %in% input$which_bees) %>%
-      droplevels() %>%
-      filter(grid_pt %in% map_selection()) %>%
+    df <- filtered_surveys_long() %>%
       group_by(bee_name, bee_color) %>%
       summarise(mean_count = round(mean(count), 1), .groups = 'drop')
     
@@ -228,10 +257,13 @@ server <- function(input, output, session) {
         direction = 'clockwise',
         showlegend = F
       ) %>%
-      layout(title = 'Surveys from selected map zones')
+      add_annotations(
+        y = 1.075, 
+        x = 0.5, 
+        text = paste0("<b>Selected surveys (", nrow(filtered_surveys()), ")</b>"), 
+        showarrow = F,
+        font = list(size = 15))
   })
-  
-  
   
   ## Date slider ##
   
@@ -259,23 +291,24 @@ server <- function(input, output, session) {
         group_by(date, bee_name, bee_color) %>%
         summarise(visit_rate = round(mean(count / 5), 1), .groups = 'drop') %>%
         droplevels() %>%
-        plot_ly(x = ~ date, y = ~ visit_rate, type = 'bar',
+        plot_ly(
+          x = ~ date,
+          y = ~ visit_rate,
+          type = 'bar',
           color = ~ bee_name,
-          colors = ~ levels(.$bee_color)) %>%
+          colors = ~ levels(.$bee_color),
+          marker = list(line = list(color = '#ffffff', width = .25))) %>%
         layout(
           barmode = 'stack',
           title = 'Daily average pollinator visitation rates',
-          xaxis = list(title = ''),
-          yaxis = list(title = 'Number of visits per survey'),
-          hovermode = 'compare')
+          xaxis = list(title = '', type = 'date', tickformat = '%b %d<br>%Y', fixedrange = T),
+          yaxis = list(title = 'Number of visits per survey', fixedrange = T),
+          hovermode = 'compare',
+          legend = list(orientation = "h"),
+          bargap = 0
+          )
     }
   })
-  
-
-    
-  
-  
-  
   
   
   # # Plot of daily bee counts
@@ -481,6 +514,7 @@ server <- function(input, output, session) {
     options = list(pageLength = 25)
   )
   
+  
   output$plotUserStats <- renderPlot({
     filtered_surveys() %>%
       group_by(user_id) %>%
@@ -503,5 +537,7 @@ server <- function(input, output, session) {
         text = element_text(size = 14),
         plot.title = element_text(face = 'bold', hjust = .5))
   })
+  
+
   
 }
