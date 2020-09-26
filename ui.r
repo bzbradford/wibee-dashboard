@@ -6,16 +6,26 @@ library(shinythemes)
 library(shinyWidgets)
 library(leaflet)
 library(DT)
+library(plotly)
 
+
+# set icon for leaflet
+# bee_icon <- makeIcon(
+#   iconUrl = "map-icon.png",
+#   iconWidth = 30, iconHeight = 30,
+#   iconAnchorX = 15, iconAnchorY = 15)
 
 
 ui <- fixedPage(
   
-  title = "WiBee Dashboard",
-  theme = shinytheme("flatly"),
+  # Google analytics
+  tags$head(includeHTML(("google-analytics.html"))),
   
   # forces fixed width page
-  HTML('<meta name="viewport" content="width=1024">'),
+  HTML('<meta name="viewport" content="width=1024">'),  
+  
+  title = "WiBee Dashboard",
+  theme = shinytheme("flatly"),
   
   
   # Page header
@@ -60,120 +70,129 @@ ui <- fixedPage(
     ),
     
     position = "right"),
-  
-  
-  # How-to use
   br(),
-  h3("How to use this dashboard"),
-  p(strong("Step 1: Choose a habitat type(s)."), "If you run an orchard and you just want to look at the collective data from other orchards in Wisconsin, filter the data by checking the “orchard” box."),
-  p(strong("Step 2: Choose a crop type(s)."), "If you want to compare your apple bloom wild bee visit rate to other apple orchards in Wisconsin, check the apple box to filter the data. Keep in mind that crops bloom at different times of year and have different inflorescences, so the bee visit rate and bee group composition will likely be different between crops."),
-  p(strong("Step 3: Choose a management type(s)."), "These categories are subjective (chosen by the survey taker) and very broad, so take any variation between conventional, organic or “other” management styles with a grain of salt."),
-  p(strong("Step 4: Explore the bee groups."), "We recommend looking at the bee data in three different combinations:"),
-  tags$ul(
-    tags$li("Visits by all the bees combined (honey bees and wild bees)"),
-    tags$li("Visits by honey bees compared to wild bees"),
-    tags$li("Visits by each individual bee group (bumble bee, honey bee, large dark bee, small dark bee, green bee)")),
-  p(strong("Step 5: Making sense of the data."), "Look at the average flower visits per minute and the composition of the bee visitors."),
-  tags$ul(
-    tags$li("How do your overall bee visits per minute and wild bee visits per minute compare to the Wisconsin average?"),
-    tags$li("What does your flower visit composition look like compared to the Wisconsin average? Do you have a lower, similar or higher percentage of wild bees compared to the Wisconsin average? Among your wild bees, how does the composition of bumble bees, large dark bees, small dark bees and green bees compare to your data?")),
+  materialSwitch("group_wild", label = "Group wild bees together", status = "success"),
   br(),
-  
   
   # Survey location map and summary data
-  hr(),
-  h3("View and filter by survey location:"),
-  p(em("Click on individual grid cell(s) to show only results from those areas. Note: some surveys may be from outside Wisconsin. Click 'Zoom extents' to see them."), style = "margin-bottom:.5em"),
-  leafletOutput("map", height = 600),
-  div(style = "padding-top:10px",
-    div(actionButton("map_zoom_all", "Zoom extents"), style = "padding-right:10px; display:inline-block"),
-    div(actionButton("map_zoom_wi", "Reset map"), style = "padding-right:20px; display:inline-block"),
-    div(strong(textOutput("survey_count_loc")), style = "display:inline-block")),
-  hr(style = "margin-top:10px"),
-  br(),
-  plotlyOutput('map_chart_all', width = '45%', inline = T),
-  plotlyOutput('map_chart_selected', width = '45%', inline = T),
-  materialSwitch("group_wild", label = "Group wild bees together", status = "success"),
+  tabsetPanel(
+    tabPanel(
+      title = "Survey locations",
+      p(em("Click on individual grid cell(s) to show only results from those areas. Note: some surveys may be from outside Wisconsin. Click 'Zoom extents' to see them."), style = "margin-top:.5em; margin-bottom:.5em"),
+      leafletOutput("map", height = 600),
+      div(style = "padding-top:10px",
+        div(actionButton("map_zoom_all", "Zoom extents"), style = "padding-right:10px; display:inline-block"),
+        div(actionButton("map_zoom_wi", "Reset map"), style = "padding-right:20px; display:inline-block"),
+        div(strong(textOutput("survey_count_loc")), style = "display:inline-block"))
+      ),
+    
+    tabPanel(
+      title = "Survey characteristics",
+      p(em("Filter survey data by selecting which habitat(s), crop(s), and management type(s) you want to see data for."), style = "margin-top:.5em; margin-bottom:.5em"),
+      div(
+        style = "border:1px solid #ddd; background-color:#f1f1f1; border-radius:5px; padding:15px",
+          sliderInput(
+          "date_range",
+          "Date range:",
+          min = min_date,
+          max = max_date,
+          value = c(min_date, max_date),
+          width = "100%"),
+        fluidRow(
+          column(3,
+            checkboxGroupInput(
+              "which_bees",
+              "Bee group:",
+              choiceNames = bee_names,
+              choiceValues = bee_names,
+              selected = bee_names),
+            div(actionButton("which_bees_all", "All"), style = "display:inline-block"),
+            div(actionButton("which_bees_none", "None"), style = "display:inline-block")),
+          column(3,
+            checkboxGroupInput(
+              "which_habitat",
+              "Habitat type:",
+              choiceNames = habitats$label,
+              choiceValues = habitats$type,
+              selected = habitats$type),
+            div(actionButton("which_habitat_all", "All"), style = "display:inline-block"),
+            div(actionButton("which_habitat_none", "None"), style = "display:inline-block")),
+          column(3,
+            checkboxGroupInput(
+              "which_crop",
+              "Crop type:",
+              choiceNames = crops$label,
+              choiceValues = crops$type,
+              selected = crops$type),
+            div(actionButton("which_crop_all", "All"), style = "display:inline-block"),
+            div(actionButton("which_crop_none", "None"), style = "display:inline-block")),
+          column(3,
+            checkboxGroupInput(
+              "which_mgmt",
+              "Management type:",
+              choiceNames = mgmt$label,
+              choiceValues = mgmt$type,
+              selected = mgmt$type),
+            div(actionButton("which_mgmt_all", "All"), style = "display:inline-block"),
+            div(actionButton("which_mgmt_none", "None"), style = "display:inline-block"),
+            div(actionButton("reset", "Reset filters"), style = "margin-top:15px")),
+          ),
+        # div(strong(textOutput("survey_count_filters")), style = "text-align:center; margin-top:15px")
+        )
+      ),
+    
+    tabPanel(
+      title = "How to use this dashboard",
+      br(),
+      p(strong("Step 1: Select geographic zones on the map."), "If you want to look only at surveys taken in a specific area, select those areas on the map tab."),
+      p(strong("Step 2: Select survey characteristics."), "Use the checkboxes to narrow down what kind of habitat, crop, or management type you want to look at. Numbers in parentheses show the number of surveys that match each characteristic."),
+      tags$ul(
+        tags$li(
+          strong("Choose a habitat type(s)."), "If you run an orchard and you just want to look at the collective data from other orchards in Wisconsin, filter the data by checking the “orchard” box."
+          ),
+        tags$li(
+          strong("Choose a crop type(s)."), "If you want to compare your apple bloom wild bee visit rate to other apple orchards in Wisconsin, check the apple box to filter the data. Keep in mind that crops bloom at different times of year and have different inflorescences, so the bee visit rate and bee group composition will likely be different between crops."), 
+        tags$li(
+          strong("Choose a management type(s)."), "These categories are subjective (chosen by the survey taker) and very broad, so take any variation between conventional, organic or “other” management styles with a grain of salt."
+        )
+      ),
+      p(strong("Step 3: Explore the bee groups."), "We recommend looking at the bee data in three different combinations:"),
+      tags$ul(
+        tags$li("Visits by all the bees combined (honey bees and wild bees)"),
+        tags$li("Visits by honey bees compared to wild bees"),
+        tags$li("Visits by each individual bee group (bumble bee, honey bee, large dark bee, small dark bee, green bee)")),
+      p(strong("Step 4: Making sense of the data."), "Look at the average flower visits per minute and the composition of the bee visitors."),
+      tags$ul(
+        tags$li("How do your overall bee visits per minute and wild bee visits per minute compare to the Wisconsin average?"),
+        tags$li("What does your flower visit composition look like compared to the Wisconsin average? Do you have a lower, similar or higher percentage of wild bees compared to the Wisconsin average? Among your wild bees, how does the composition of bumble bees, large dark bees, small dark bees and green bees compare to your data?"))
+      )
+    ),
   
-  
   br(),
-  hr(),
-  h3("Filter selected data by date:"),
-  p(em("Move the slider to select only surveys selected on the map above and also from a specific date range."), style = "margin-bottom:.5em"),
-  br(),
-  div(style = "border:1px solid #ddd; background-color:#f1f1f1; border-radius:5px; padding:15px",
-    div(sliderInput(
-        "date_range",
-        label = "Date range:",
-        min = min_date,
-        max = max_date,
-        value = c(min_date, max_date),
-        width = "100%")),
-    div(actionButton("reset_date", "Reset dates"), style = "padding-right:20px; display:inline-block"),
-    div(strong(textOutput("survey_count_date")), style = "display:inline-block")
-  ),
-  br(),
-  plotlyOutput("plotByDate"),
-  br(),
-  hr(),
-  h3("Select desired survey characteristics:"),
-  fluidRow(
-    column(3,
-      checkboxGroupInput(
-        "which_bees",
-        label = "Bee group:",
-        choiceNames = bee_names,
-        choiceValues = bee_names,
-        selected = bee_names),
-      div(actionButton("which_bees_all", "All"), style = "display:inline-block"),
-      div(actionButton("which_bees_none", "None"), style = "display:inline-block")),
-    column(3,
-      checkboxGroupInput(
-        "which_habitat",
-        label = "Habitat type:",
-        choiceNames = habitats$label,
-        choiceValues = habitats$type,
-        selected = habitats$type),
-      div(actionButton("which_habitat_all", "All"), style = "display:inline-block"),
-      div(actionButton("which_habitat_none", "None"), style = "display:inline-block")),
-    column(3,
-      checkboxGroupInput(
-        "which_crop",
-        label = "Crop type:",
-        choiceNames = crops$label,
-        choiceValues = crops$type,
-        selected = crops$type),
-      div(actionButton("which_crop_all", "All"), style = "display:inline-block"),
-      div(actionButton("which_crop_none", "None"), style = "display:inline-block")),
-    column(3,
-      checkboxGroupInput(
-        "which_mgmt",
-        label = "Management type:",
-        choiceNames = mgmt$label,
-        choiceValues = mgmt$type,
-        selected = mgmt$type),
-      div(actionButton("which_mgmt_all", "All"), style = "display:inline-block"),
-      div(actionButton("which_mgmt_none", "None"), style = "display:inline-block"))
-  ),
-  actionButton("reset", "Reset filters"),
-  br(),
-  div(strong(textOutput("survey_count_final")), style = "font-size:larger; text-align:center"),
+  div(strong(textOutput('survey_count_final')), style = "font-size:larger; text-align:center; margin-top:15px"),
   br(),
   
   
   tabsetPanel(
     
-    tabPanel("Summary data"),
+    tabPanel("Species composition",
+      br(),
+      plotlyOutput('map_chart_all', width = '45%', inline = T),
+      plotlyOutput('map_chart_selected', width = '45%', inline = T),
+      br(),
+      ),
     
-    # Plots based on filtered data
-    tabPanel("View summary charts",
+    tabPanel("Activity by date",
       br(),
-      # plotOutput("plotByDate", height = "400px"),
+      plotlyOutput("plotByDate"),
+      br()
+      ),
+    
+    tabPanel("Compare habitat/crop/management",
       br(),
-      br(),
-      br(),
-      plotOutput("plotByCat", height = "400px")
-    ),
+      plotOutput("plotByCat", height = "400px"),
+      br()
+      ),
     
     # Tabular survey data
     tabPanel("View as data table",
