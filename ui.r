@@ -148,12 +148,12 @@ ui <- fixedPage(
       p(strong("Step 2: Select survey characteristics."), "Use the checkboxes to narrow down what kind of habitat, crop, or management type you want to look at. Numbers in parentheses show the number of surveys that match each characteristic."),
       tags$ul(
         tags$li(
-          strong("Choose a habitat type(s)."), "If you run an orchard and you just want to look at the collective data from other orchards in Wisconsin, filter the data by checking the “orchard” box."
+          strong("Choose a habitat type(s)."), "If you run an orchard and you just want to look at the collective data from other orchards in Wisconsin, filter the data by checking the 'orchard' box."
           ),
         tags$li(
           strong("Choose a crop type(s)."), "If you want to compare your apple bloom wild bee visit rate to other apple orchards in Wisconsin, check the apple box to filter the data. Keep in mind that crops bloom at different times of year and have different inflorescences, so the bee visit rate and bee group composition will likely be different between crops."), 
         tags$li(
-          strong("Choose a management type(s)."), "These categories are subjective (chosen by the survey taker) and very broad, so take any variation between conventional, organic or “other” management styles with a grain of salt."
+          strong("Choose a management type(s)."), "These categories are subjective (chosen by the survey taker) and very broad, so take any variation between conventional, organic or 'other' management styles with a grain of salt."
         )
       ),
       p(strong("Step 3: Explore the bee groups."), "We recommend looking at the bee data in three different combinations:"),
