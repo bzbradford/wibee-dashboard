@@ -203,8 +203,13 @@ server <- function(input, output, session) {
           weight = 3,
           color = "red",
           fillColor = "orange",
-          fillOpacity = 0.7)) %>%
-      setView(lng = -89.7, lat = 44.8, zoom = 7)})
+          fillOpacity = 0.7))
+    })
+  
+  # zoom to WI on initial selection
+  observeEvent(map_selection(), {
+    leafletProxy("map") %>% setView(lng = -89.7, lat = 44.8, zoom = 7)
+  }, once = T)
   
   # handle adding and subtracting grids from selection
   observeEvent(input$map_shape_click, {
@@ -226,12 +231,13 @@ server <- function(input, output, session) {
       new_sel <- c(map_selection(), grid_pt)
       map_selection(new_sel)}})
   
+  
   # reactive portion of map showing selected grids
   observeEvent(map_selection(), {
     leafletProxy("map") %>%
       addRectangles(
         layerId = ~ paste(grid_pt, "selected"),
-        group = "Select points",
+        group = "Selected points",
         lng1 = ~ lng - .05, lng2 = ~ lng + .05,
         lat1 = ~ lat - .05, lat2 = ~ lat + .05,
         label = ~ paste(n_surveys, "surveys"),
@@ -242,7 +248,8 @@ server <- function(input, output, session) {
           color = "red",
           fillColor = "orange",
           fillOpacity = 0.7),
-        data = filter(map_pts, grid_pt %in% map_selection()))})
+        data = filter(map_pts, grid_pt %in% map_selection()))
+    })
   
   
   # zoom to show all data
@@ -253,7 +260,8 @@ server <- function(input, output, session) {
         lat1 = min(surveys$lat),
         lng2 = max(surveys$lng),
         lat2 = max(surveys$lat))
-    map_selection(map_pts_all)})
+    map_selection(map_pts_all)
+    })
   
   
   # select grids visible in map window
@@ -267,23 +275,23 @@ server <- function(input, output, session) {
         lat < bounds$north
       ) %>%
       pull(grid_pt)
-    leafletProxy("map") %>% clearGroup("Select points")
+    leafletProxy("map") %>% clearGroup("Selected points")
     map_selection(new_pts)
-  })
+    })
   
   
   # clear selection
   observeEvent(input$map_clear_selection, {
-    leafletProxy("map") %>% clearGroup("Select points")
+    leafletProxy("map") %>% clearGroup("Selected points")
     map_selection(c(""))
-  })
+    })
   
   
   # reset view to show and select Wisconsin points
   observeEvent(input$map_reset, {
     leafletProxy("map") %>% setView(lng = -89.7, lat = 44.8, zoom = 7)
-    map_selection(map_pts_wi)})
-  
+    map_selection(map_pts_wi)
+    })
 
 
 
