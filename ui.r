@@ -90,6 +90,7 @@ ui <- fixedPage(
       div(style = "padding-top:10px",
         div(actionButton("map_zoom_all", "Zoom extents"), style = "padding-right:10px; display:inline-block"),
         div(actionButton("map_select_visible", "Select visible"), style = "padding-right:10px; display:inline-block"),
+        div(actionButton("map_clear_selection", "Clear selection"), style = "padding-right:10px; display:inline-block"),
         div(actionButton("map_reset", "Reset map"), style = "padding-right:20px; display:inline-block"),
         div(strong(textOutput("survey_count_loc")), style = "display:inline-block"))
       ),
@@ -214,7 +215,7 @@ ui <- fixedPage(
     # Tabular survey data
     tabPanel("View as data table",
       br(),
-      p("The table below shows the average visitation rate per minute for the surveys and insect categories selected by the filters above. Check or uncheck the grouping variables to simplify or expand the summary table."),
+      p("The table below shows the average visitation rate per minute for the surveys and insect categories selected by the filters above. Check or uncheck the grouping variables to simplify or expand the summary table. Click the download button to save a copy of the data you have selected.", em("Note: this data is for personal or educational use only. Other use or use in a publication is not permitted without the consent of the team. ", a("Email us with any inquiries.", href = "mailto:pollinators@wisc.edu"))),
       br(),
       fixedRow(
         column(width = 8,

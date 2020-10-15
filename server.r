@@ -272,6 +272,13 @@ server <- function(input, output, session) {
   })
   
   
+  # clear selection
+  observeEvent(input$map_clear_selection, {
+    leafletProxy("map") %>% clearGroup("Select points")
+    map_selection(c(""))
+  })
+  
+  
   # reset view to show and select Wisconsin points
   observeEvent(input$map_reset, {
     leafletProxy("map") %>% setView(lng = -89.7, lat = 44.8, zoom = 7)
@@ -486,7 +493,6 @@ server <- function(input, output, session) {
       summarise(n = n(), .groups = "drop") %>%
       arrange(desc(n)) %>%
       mutate(rank = row_number()) %>%
-      # mutate(rank = factor(rank, levels = rank)) %>%
       mutate(label = case_when(
         n != lag(n, default = 0) ~ as.character(n),
         T ~ ""))
