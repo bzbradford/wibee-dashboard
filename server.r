@@ -486,7 +486,7 @@ server <- function(input, output, session) {
       summarise(n = n(), .groups = "drop") %>%
       arrange(desc(n)) %>%
       mutate(rank = row_number()) %>%
-      mutate(rank = factor(rank, levels = rank)) %>%
+      # mutate(rank = factor(rank, levels = rank)) %>%
       mutate(label = case_when(
         n != lag(n, default = 0) ~ as.character(n),
         T ~ ""))
@@ -497,18 +497,17 @@ server <- function(input, output, session) {
       geom_text(aes(label = label), vjust = -0.5, hjust = 0) +
       scale_fill_gradient(low = "gold", high = "darkgreen") +
       scale_y_continuous(expand = expansion(mult = c(0, .05))) +
+      scale_x_continuous(expand = c(0, 0)) +
       labs(
         title = "Number of matching surveys by user",
-        x = NULL,
+        x = "User",
         y = "Number of surveys"
       ) +
       guides(fill = "none") +
       theme_classic() +
       theme(
         text = element_text(size = 14),
-        plot.title = element_text(face = "bold", hjust = .5),
-        axis.text.x = element_blank(),
-        axis.ticks.x = element_blank())
+        plot.title = element_text(face = "bold", hjust = .5))
   })
   
 
