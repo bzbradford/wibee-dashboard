@@ -108,16 +108,7 @@ bees <-
     )
   )
 
-# Valid habitat types
-# habitat_types <- 
-#   c("corn-soybeans-alfalfa",
-#     "fruit-vegetable-field",
-#     "orchard",
-#     "road-field-edge",
-#     "lawn-and-garden",
-#     "prairie",
-#     "woodland")
-
+# Habitat types
 habitats <- tibble(
   type = c(
     "corn-soybeans-alfalfa",
@@ -137,18 +128,7 @@ habitats <- tibble(
     "Woodland"))
 
 
-# valid crop types
-# crop_types <- 
-#   c("apple",
-#     "cherry",
-#     "cranberry",
-#     "other berry",
-#     "cucumber",
-#     "melon",
-#     "squash",
-#     "other",
-#     "none")
-
+# crop types
 crops <- tibble(
   type = c(
     "apple",
@@ -171,13 +151,8 @@ crops <- tibble(
     "Other",
     "None"))
 
-# valid management types
-# mgmt_types <- 
-#   c("organic",
-#     "conventional",
-#     "other",
-#     "unknown")
 
+# management types
 mgmt <- tibble(
   type = c(
     "organic",
@@ -197,9 +172,11 @@ mgmt <- tibble(
 wibox = c(-92.888114, 42.491983, -86.805415, 47.080621)
 
 # Check if location is within Wisconsin's bounding box
-inbox <- function(x, y, box = wibox) {
+inbox <- function(y, x, box = wibox) {
   ifelse(between(x, box[1], box[3]) & between(y, box[2], box[4]), T, F)
 }
+
+
 
 
 # Process survey data -----------------------------------------------------
@@ -227,9 +204,9 @@ surveys <- wibee_in %>%
   filter(date >= "2020-04-01") %>%
   drop_na(c(habitat, crop, management)) %>%
   mutate(
-    lng_rnd = round(lng, 1),
-    lat_rnd = round(lat, 1)) %>%
-  mutate(grid_pt = paste(lng_rnd, lat_rnd)) %>%
+    lat_rnd = round(lat, 1),
+    lng_rnd = round(lng, 1)) %>%
+  mutate(grid_pt = paste(lat_rnd, lng_rnd, sep = ", ")) %>%
   mutate(inwi = inbox(lng, lat, wibox))
 
 
@@ -241,19 +218,19 @@ surveys_long <- surveys %>%
 
 # generate grid points and summary statistics
 map_pts <- surveys %>%
-  drop_na(lng, lat) %>%
+  drop_na(lat, lng) %>%
   mutate(
-    lng = round(lng, 1),
-    lat = round(lat, 1)) %>%
-  group_by(lng, lat) %>%
+    lat = round(lat, 1),
+    lng = round(lng, 1)) %>%
+  group_by(lat, lng) %>%
   summarise(
     n_surveys = n(),
     hb = round(mean(honeybee)/5,1),
     wb = round(mean(wild_bee)/5,1),
     nb = round(mean(non_bee)/5,1),
     .groups = "drop") %>%
-  mutate(grid_pt = paste(lng, lat)) %>%
-  mutate(inwi = inbox(lng, lat, wibox))
+  mutate(grid_pt = paste(lat, lng, sep = ", ")) %>%
+  mutate(inwi = inbox(lat, lng, wibox))
 
 
 # get list of all grid cells for initial selection
