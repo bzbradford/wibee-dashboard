@@ -32,9 +32,9 @@ server <- function(input, output, session) {
     filtered_surveys() %>%
       pivot_longer(
         bees$bee_type,
-        names_to = 'bee_type',
-        values_to = 'count') %>%
-      left_join(bees, by = 'bee_type') %>%
+        names_to = "bee_type",
+        values_to = "count") %>%
+      left_join(bees, by = "bee_type") %>%
       filter(bee_name %in% input$which_bees) %>%
       droplevels()})
   
@@ -51,7 +51,7 @@ server <- function(input, output, session) {
       mutate(box_label = paste0(label, " (", n, ")"))})
   
   observeEvent(habitat_labels(),{
-    updateCheckboxGroupInput(session, 'which_habitat',
+    updateCheckboxGroupInput(session, "which_habitat",
       choiceNames = habitat_labels()$box_label,
       choiceValues = habitat_labels()$type,
       selected = input$which_habitat)})
@@ -65,7 +65,7 @@ server <- function(input, output, session) {
       mutate(box_label = paste0(label, " (", n, ")"))})
   
   observeEvent(crop_labels(), {
-    updateCheckboxGroupInput(session, 'which_crop',
+    updateCheckboxGroupInput(session, "which_crop",
       choiceNames = crop_labels()$box_label,
       choiceValues = crop_labels()$type,
       selected = input$which_crop)})
@@ -79,7 +79,7 @@ server <- function(input, output, session) {
       mutate(box_label = paste0(label, " (", n, ")"))})
   
   observeEvent(mgmt_labels(), {
-    updateCheckboxGroupInput(session, 'which_mgmt',
+    updateCheckboxGroupInput(session, "which_mgmt",
       choiceNames = mgmt_labels()$box_label,
       choiceValues = mgmt_labels()$type,
       selected = input$which_mgmt)})
@@ -90,7 +90,7 @@ server <- function(input, output, session) {
     df = surveysByLoc()
     updateSliderInput(
       session,
-      'date_range',
+      "date_range",
       min = min(df$date),
       max = max(df$date),
       value = c(min(df$date), max(df$date)))
@@ -98,7 +98,7 @@ server <- function(input, output, session) {
   
   # reset date slider button
   observeEvent(input$reset_date, {
-    updateSliderInput(session, 'date_range', value = c(min_date, max_date))
+    updateSliderInput(session, "date_range", value = c(min_date, max_date))
   })
   
   
@@ -111,14 +111,14 @@ server <- function(input, output, session) {
     if(input$group_wild) {
       updateCheckboxGroupInput(
         session,
-        'which_bees',
+        "which_bees",
         choiceNames = wildbee_names,
         choiceValues = wildbee_names,
         selected = wildbee_names)
     } else {
       updateCheckboxGroupInput(
         session,
-        'which_bees',
+        "which_bees",
         choiceNames = bee_names,
         choiceValues = bee_names,
         selected = bee_names)
@@ -127,11 +127,11 @@ server <- function(input, output, session) {
   
   # Reset button
   observeEvent(input$reset, {
-    updateSliderInput(session, 'date_range', value = c(min_date, max_date))
-    updateCheckboxGroupInput(session, 'which_habitat', selected = habitats$type)
-    updateCheckboxGroupInput(session, 'which_crop', selected = crops$type)
-    updateCheckboxGroupInput(session, 'which_mgmt', selected = mgmt$type)
-    updateCheckboxInput(session, 'group_wild', value = F)
+    updateSliderInput(session, "date_range", value = c(min_date, max_date))
+    updateCheckboxGroupInput(session, "which_habitat", selected = habitats$type)
+    updateCheckboxGroupInput(session, "which_crop", selected = crops$type)
+    updateCheckboxGroupInput(session, "which_mgmt", selected = mgmt$type)
+    updateCheckboxInput(session, "group_wild", value = F)
     reset_bees()
   })
   
@@ -141,19 +141,19 @@ server <- function(input, output, session) {
   # All/None buttons
   observeEvent(input$which_bees_all, reset_bees())
   observeEvent(input$which_bees_none,
-    {updateCheckboxGroupInput(session, 'which_bees', selected = '')})
+    {updateCheckboxGroupInput(session, "which_bees", selected = "")})
   observeEvent(input$which_habitat_all,
-    {updateCheckboxGroupInput(session, 'which_habitat', selected = habitats$type)})
+    {updateCheckboxGroupInput(session, "which_habitat", selected = habitats$type)})
   observeEvent(input$which_habitat_none,
-    {updateCheckboxGroupInput(session, 'which_habitat', selected = '')})
+    {updateCheckboxGroupInput(session, "which_habitat", selected = "")})
   observeEvent(input$which_crop_all,
-    {updateCheckboxGroupInput(session, 'which_crop', selected = crops$type)})
+    {updateCheckboxGroupInput(session, "which_crop", selected = crops$type)})
   observeEvent(input$which_crop_none,
-    {updateCheckboxGroupInput(session, 'which_crop', selected = '')})
+    {updateCheckboxGroupInput(session, "which_crop", selected = "")})
   observeEvent(input$which_mgmt_all,
-    {updateCheckboxGroupInput(session, 'which_mgmt', selected = mgmt$type)})
+    {updateCheckboxGroupInput(session, "which_mgmt", selected = mgmt$type)})
   observeEvent(input$which_mgmt_none,
-    {updateCheckboxGroupInput(session, 'which_mgmt', selected = '')})
+    {updateCheckboxGroupInput(session, "which_mgmt", selected = "")})
   
   
   
@@ -163,18 +163,18 @@ server <- function(input, output, session) {
   # number of matching surveys after map filter
   output$survey_count_loc <- renderText({
     paste(
-      length(map_selection()), 'zones and ',
-      nrow(surveysByLoc()), ' surveys selected on the map.')})
+      length(map_selection()), "zones and ",
+      nrow(surveysByLoc()), " surveys selected on the map.")})
   
   # Number of matching surveys after date filter
   output$survey_count_filters <- renderText({
-    paste(nrow(surveysByLocDate()), 'out of',
-      nrow(surveysByLoc()), 'surveys match your filter selections.')})  
+    paste(nrow(surveysByLocDate()), "out of",
+      nrow(surveysByLoc()), "surveys match your filter selections.")})  
   
   # Number of matching surveys after site characteristic filters
   output$survey_count_final <- renderText({
     paste(
-      nrow(filtered_surveys()), 'surveys match all of your criteria.')})
+      nrow(filtered_surveys()), "out of", nrow(surveys), "total surveys match all of your criteria.")})
   
   
   
@@ -192,31 +192,31 @@ server <- function(input, output, session) {
         lng1 = ~ lng - .05, lng2 = ~ lng + .05,
         lat1 = ~ lat - .05, lat2 = ~ lat + .05,
         layerId = ~ grid_pt,
-        group = 'All points',
-        label = ~ paste(n_surveys, 'surveys'),
+        group = "All points",
+        label = ~ paste(n_surveys, "surveys"),
         weight = 1,
         opacity = 1,
-        color = 'orange',
+        color = "orange",
         fillOpacity = .25,
-        fillColor = 'yellow',
+        fillColor = "yellow",
         highlight = highlightOptions(
           weight = 3,
-          color = 'red',
-          fillColor = 'orange',
+          color = "red",
+          fillColor = "orange",
           fillOpacity = 0.7)) %>%
       setView(lng = -89.7, lat = 44.8, zoom = 7)})
   
   # handle adding and subtracting grids from selection
   observeEvent(input$map_shape_click, {
     click <- input$map_shape_click
-    grid_pt <- str_remove(click$id, ' selected')
-    proxy <- leafletProxy('map')
+    grid_pt <- str_remove(click$id, " selected")
+    proxy <- leafletProxy("map")
     
     # on first click deselect all other grids
     if(setequal(map_selection(), map_pts_all) | setequal(map_selection(), map_pts_wi)) {
-      proxy %>% clearGroup('Select points')
+      proxy %>% clearGroup("Select points")
       map_selection(grid_pt)
-    } else if (grepl('selected', click$id, fixed = T)) {
+    } else if (grepl("selected", click$id, fixed = T)) {
       if(length(map_selection()) == 1) {return()}
       proxy %>% removeShape(click$id)
       old_sel <- map_selection()
@@ -228,25 +228,26 @@ server <- function(input, output, session) {
   
   # reactive portion of map showing selected grids
   observeEvent(map_selection(), {
-    leafletProxy('map') %>%
+    leafletProxy("map") %>%
       addRectangles(
-        layerId = ~ paste(grid_pt, 'selected'),
-        group = 'Select points',
+        layerId = ~ paste(grid_pt, "selected"),
+        group = "Select points",
         lng1 = ~ lng - .05, lng2 = ~ lng + .05,
         lat1 = ~ lat - .05, lat2 = ~ lat + .05,
-        label = ~ paste(n_surveys, 'surveys'),
-        weight = 1, opacity = 1, color = 'red',
-        fillOpacity = .25, fillColor = 'orange',
+        label = ~ paste(n_surveys, "surveys"),
+        weight = 1, opacity = 1, color = "red",
+        fillOpacity = .25, fillColor = "orange",
         highlight = highlightOptions(
           weight = 3,
-          color = 'red',
-          fillColor = 'orange',
+          color = "red",
+          fillColor = "orange",
           fillOpacity = 0.7),
         data = filter(map_pts, grid_pt %in% map_selection()))})
   
+  
   # zoom to show all data
   observeEvent(input$map_zoom_all, {
-    leafletProxy('map') %>% 
+    leafletProxy("map") %>% 
       fitBounds(
         lng1 = min(surveys$lng),
         lat1 = min(surveys$lat),
@@ -254,9 +255,26 @@ server <- function(input, output, session) {
         lat2 = max(surveys$lat))
     map_selection(map_pts_all)})
   
-  # zoom to show Wisconsin
-  observeEvent(input$map_zoom_wi, {
-    leafletProxy('map') %>% setView(lng = -89.7, lat = 44.8, zoom = 7)
+  
+  # select grids visible in map window
+  observeEvent(input$map_select_visible, {
+    bounds <- input$map_bounds
+    new_pts <- map_pts %>%
+      filter(
+        lng > bounds$west,
+        lng < bounds$east,
+        lat > bounds$south,
+        lat < bounds$north
+      ) %>%
+      pull(grid_pt)
+    leafletProxy("map") %>% clearGroup("Select points")
+    map_selection(new_pts)
+  })
+  
+  
+  # reset view to show and select Wisconsin points
+  observeEvent(input$map_reset, {
+    leafletProxy("map") %>% setView(lng = -89.7, lat = 44.8, zoom = 7)
     map_selection(map_pts_wi)})
   
 
@@ -270,19 +288,19 @@ server <- function(input, output, session) {
       filter(bee_name %in% input$which_bees) %>%
       droplevels() %>%
       group_by(bee_name, bee_color) %>%
-      summarise(mean_count = round(mean(count), 1), .groups = 'drop')
+      summarise(mean_count = round(mean(count), 1), .groups = "drop")
     
     df %>% 
-      plot_ly(labels = ~ bee_name, values = ~ mean_count, type = 'pie',
-        textposition = 'inside',
-        textinfo = 'label+percent',
-        hoverinfo = 'text',
-        text = ~ paste(mean_count, bee_name, 'per survey'),
+      plot_ly(labels = ~ bee_name, values = ~ mean_count, type = "pie",
+        textposition = "inside",
+        textinfo = "label+percent",
+        hoverinfo = "text",
+        text = ~ paste(mean_count, bee_name, "per survey"),
         marker = list(
           colors = levels(df$bee_color),
-          line = list(color = '#ffffff', width = 1)),
+          line = list(color = "#ffffff", width = 1)),
         sort = F,
-        direction = 'clockwise',
+        direction = "clockwise",
         showlegend = F
         ) %>%
       add_annotations(
@@ -297,19 +315,19 @@ server <- function(input, output, session) {
   output$map_chart_selected <- renderPlotly({
     df <- filtered_surveys_long() %>%
       group_by(bee_name, bee_color) %>%
-      summarise(mean_count = round(mean(count), 1), .groups = 'drop')
+      summarise(mean_count = round(mean(count), 1), .groups = "drop")
     
     df %>% 
-      plot_ly(labels = ~ bee_name, values = ~ mean_count, type = 'pie',
-        textposition = 'inside',
-        textinfo = 'label+percent',
-        hoverinfo = 'text',
-        text = ~ paste(mean_count, bee_name, 'per survey'),
+      plot_ly(labels = ~ bee_name, values = ~ mean_count, type = "pie",
+        textposition = "inside",
+        textinfo = "label+percent",
+        hoverinfo = "text",
+        text = ~ paste(mean_count, bee_name, "per survey"),
         marker = list(
           colors = levels(df$bee_color),
-          line = list(color = '#ffffff', width = 1)),
+          line = list(color = "#ffffff", width = 1)),
         sort = F,
-        direction = 'clockwise',
+        direction = "clockwise",
         showlegend = F
       ) %>%
       add_annotations(
@@ -331,21 +349,21 @@ server <- function(input, output, session) {
     if (nrow(df) > 0) {
       df %>%
         group_by(date, bee_name, bee_color) %>%
-        summarise(visit_rate = round(mean(count / 5), 1), .groups = 'drop') %>%
+        summarise(visit_rate = round(mean(count / 5), 1), .groups = "drop") %>%
         droplevels() %>%
         plot_ly(
           x = ~ date,
           y = ~ visit_rate,
-          type = 'bar',
+          type = "bar",
           color = ~ bee_name,
           colors = ~ levels(.$bee_color),
-          marker = list(line = list(color = '#ffffff', width = .25))) %>%
+          marker = list(line = list(color = "#ffffff", width = .25))) %>%
         layout(
-          barmode = 'stack',
-          title = 'Daily average pollinator visitation rates',
-          xaxis = list(title = '', type = 'date', tickformat = '%b %d<br>%Y', fixedrange = T),
-          yaxis = list(title = 'Number of visits per survey', fixedrange = T),
-          hovermode = 'compare',
+          barmode = "stack",
+          title = "Daily average pollinator visitation rates",
+          xaxis = list(title = "", type = "date", tickformat = "%b %d<br>%Y", fixedrange = T),
+          yaxis = list(title = "Number of visits per survey", fixedrange = T),
+          hovermode = "compare",
           legend = list(orientation = "h"),
           bargap = 0
           )
@@ -370,18 +388,18 @@ server <- function(input, output, session) {
           `By habitat` = habitat,
           `By management` = management) %>%
         pivot_longer(
-          cols = c('By habitat', 'By crop', 'By management'),
-          names_to = 'category') %>%
-        mutate(category = factor(category, c('By habitat', 'By crop', 'By management'))) %>%
+          cols = c("By habitat", "By crop", "By management"),
+          names_to = "category") %>%
+        mutate(category = factor(category, c("By habitat", "By crop", "By management"))) %>%
         group_by(category, value, bee_name, bee_color) %>%
-        summarise(visit_rate = mean(count) / 5, n = n(), .groups = 'drop') %>%
+        summarise(visit_rate = mean(count) / 5, n = n(), .groups = "drop") %>%
         droplevels()
       
       # get matching surveys counts by category
       survey_count <-
         df2 %>%
         group_by(category, value) %>%
-        summarise(n = mean(n), .groups = 'drop')
+        summarise(n = mean(n), .groups = "drop")
       
       # plot
       df2 %>%
@@ -389,18 +407,18 @@ server <- function(input, output, session) {
         geom_col(aes(x = value, y = visit_rate, fill = bee_name)) +
         geom_text(
           data = survey_count,
-          aes(x = value, y = 0, label = paste0('(', n, ')')),
+          aes(x = value, y = 0, label = paste0("(", n, ")")),
           size = 3, vjust = 1) +
         scale_fill_manual(values = levels(df2$bee_color)) +
         labs(
-          title = 'Pollinator visitation rate by site characteristics',
-          x = '', y = 'Average visits per minute', fill = '') +
-        facet_grid(. ~ category, scales = 'free_x') +
+          title = "Pollinator visitation rate by site characteristics",
+          x = "", y = "Average visits per minute", fill = "") +
+        facet_grid(. ~ category, scales = "free_x") +
         theme_bw() +
         theme(
           axis.text.x = element_text(angle = 90, vjust = .5, hjust = 1),
           text = element_text(size = 14),
-          plot.title = element_text(face = 'bold', hjust = .5))
+          plot.title = element_text(face = "bold", hjust = .5))
     }
   })
   
@@ -422,7 +440,7 @@ server <- function(input, output, session) {
   #       geom_histogram(bins = 20) +
   #       facet_wrap( ~ bee_name) +
   #       scale_fill_manual(values = levels(df2$bee_color)) +
-  #       labs(x = 'Number of flower visits per survey', y = 'Number of surveys', fill = '')
+  #       labs(x = "Number of flower visits per survey", y = "Number of surveys", fill = "")
   #   }
   # })
   
@@ -438,12 +456,12 @@ server <- function(input, output, session) {
       summarise(
         n = n(),
         visit_rate = round(mean(count) / 5, 1),
-        .groups = 'drop_last') %>%
-      mutate('Total rate' = sum(visit_rate)) %>%
+        .groups = "drop_last") %>%
+      mutate("Total rate" = sum(visit_rate)) %>%
       ungroup() %>%
       pivot_wider(names_from = bee_name, values_from = visit_rate) %>%
-      mutate('row' = row_number()) %>%
-      select('row', everything())
+      mutate("row" = row_number()) %>%
+      select("row", everything())
   })
   
   output$summaryTable <- renderDT(
@@ -463,26 +481,34 @@ server <- function(input, output, session) {
 # Plot of user statistics -------------------------------------------------
 
   output$plotUserStats <- renderPlot({
-    filtered_surveys() %>%
+    df <- filtered_surveys() %>%
       group_by(user_id) %>%
-      summarise(n = n(), .groups = 'drop') %>%
+      summarise(n = n(), .groups = "drop") %>%
       arrange(desc(n)) %>%
       mutate(rank = row_number()) %>%
       mutate(rank = factor(rank, levels = rank)) %>%
+      mutate(label = case_when(
+        n != lag(n, default = 0) ~ as.character(n),
+        T ~ ""))
+    
+    df %>%
       ggplot(aes(x = rank, y = n, fill = as.integer(n))) +
-      geom_col() +
-      geom_text(aes(label = n), vjust = -0.5) +
-      scale_fill_gradient(low = 'gold', high = 'darkgreen') +
+      geom_col(color = "black", size = .5, width = 1) +
+      geom_text(aes(label = label), vjust = -0.5, hjust = 0) +
+      scale_fill_gradient(low = "gold", high = "darkgreen") +
+      scale_y_continuous(expand = expansion(mult = c(0, .05))) +
       labs(
-        title = 'Number of matching surveys by user',
-        x = 'User rank',
-        y = 'Number of surveys'
+        title = "Number of matching surveys by user",
+        x = NULL,
+        y = "Number of surveys"
       ) +
-      guides(fill = 'none') +
+      guides(fill = "none") +
       theme_classic() +
       theme(
         text = element_text(size = 14),
-        plot.title = element_text(face = 'bold', hjust = .5))
+        plot.title = element_text(face = "bold", hjust = .5),
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank())
   })
   
 
