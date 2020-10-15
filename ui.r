@@ -74,7 +74,7 @@ ui <- fixedPage(
     
     position = "right"),
   br(),
-  materialSwitch("group_wild", label = "Group wild bees together", status = "success"),
+  
   br(),
   
 
@@ -84,17 +84,18 @@ ui <- fixedPage(
 
   tabsetPanel(
     tabPanel(
-      title = "Survey locations",
+      title = "Filter by survey location",
       p(em("Click on individual grid cell(s) to show only results from those areas. Note: some surveys may be from outside Wisconsin. Click 'Zoom extents' to see them."), style = "margin-top:.5em; margin-bottom:.5em"),
       leafletOutput("map", height = 600),
       div(style = "padding-top:10px",
         div(actionButton("map_zoom_all", "Zoom extents"), style = "padding-right:10px; display:inline-block"),
-        div(actionButton("map_zoom_wi", "Reset map"), style = "padding-right:20px; display:inline-block"),
+        div(actionButton("map_select_visible", "Select visible"), style = "padding-right:10px; display:inline-block"),
+        div(actionButton("map_reset", "Reset map"), style = "padding-right:20px; display:inline-block"),
         div(strong(textOutput("survey_count_loc")), style = "display:inline-block"))
       ),
     
     tabPanel(
-      title = "Survey characteristics",
+      title = "Filter by survey characteristics",
       p(em("Filter survey data by selecting which habitat(s), crop(s), and management type(s) you want to see data for."), style = "margin-top:.5em; margin-bottom:.5em"),
       div(
         style = "border:1px solid #ddd; background-color:#f1f1f1; border-radius:5px; padding:15px",
@@ -107,6 +108,7 @@ ui <- fixedPage(
           width = "100%"),
         fixedRow(
           column(width = 3,
+            materialSwitch("group_wild", label = "Group wild bees together", status = "success"),
             checkboxGroupInput(
               "which_bees",
               "Bee group:",
@@ -175,8 +177,12 @@ ui <- fixedPage(
       )
     ),
   
+
+# Number of selected surveys ----------------------------------------------
+
   br(),
   div(strong(textOutput('survey_count_final')), style = "font-size:larger; text-align:center; margin-top:15px"),
+  br(),
   br(),
   
   
