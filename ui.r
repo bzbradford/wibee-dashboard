@@ -41,7 +41,10 @@ ui <- fixedPage(
   br(),
   
   
-  # Introduction and project summary
+  
+
+# Introduction and project summary ----------------------------------------
+
   sidebarLayout(
     mainPanel = mainPanel(
       h3("What is the WiBee app?", style = "margin-top:0px"),
@@ -74,7 +77,11 @@ ui <- fixedPage(
   materialSwitch("group_wild", label = "Group wild bees together", status = "success"),
   br(),
   
-  # Survey location map and summary data
+
+  
+  
+# Tabs with map, filters, and how-to --------------------------------------
+
   tabsetPanel(
     tabPanel(
       title = "Survey locations",
@@ -98,8 +105,8 @@ ui <- fixedPage(
           max = max_date,
           value = c(min_date, max_date),
           width = "100%"),
-        fluidRow(
-          column(3,
+        fixedRow(
+          column(width = 3,
             checkboxGroupInput(
               "which_bees",
               "Bee group:",
@@ -108,7 +115,7 @@ ui <- fixedPage(
               selected = bee_names),
             div(actionButton("which_bees_all", "All"), style = "display:inline-block"),
             div(actionButton("which_bees_none", "None"), style = "display:inline-block")),
-          column(3,
+          column(width = 3,
             checkboxGroupInput(
               "which_habitat",
               "Habitat type:",
@@ -117,7 +124,7 @@ ui <- fixedPage(
               selected = habitats$type),
             div(actionButton("which_habitat_all", "All"), style = "display:inline-block"),
             div(actionButton("which_habitat_none", "None"), style = "display:inline-block")),
-          column(3,
+          column(width = 3,
             checkboxGroupInput(
               "which_crop",
               "Crop type:",
@@ -126,7 +133,7 @@ ui <- fixedPage(
               selected = crops$type),
             div(actionButton("which_crop_all", "All"), style = "display:inline-block"),
             div(actionButton("which_crop_none", "None"), style = "display:inline-block")),
-          column(3,
+          column(width = 3,
             checkboxGroupInput(
               "which_mgmt",
               "Management type:",
@@ -173,6 +180,10 @@ ui <- fixedPage(
   br(),
   
   
+  
+
+# Tabs with plot and data table displays ----------------------------------------
+
   tabsetPanel(
     
     tabPanel("Species composition",
@@ -199,13 +210,18 @@ ui <- fixedPage(
       br(),
       p("The table below shows the average visitation rate per minute for the surveys and insect categories selected by the filters above. Check or uncheck the grouping variables to simplify or expand the summary table."),
       br(),
-      checkboxGroupInput(
+      fixedRow(
+        column(width = 8,
+          checkboxGroupInput(
         "dtGroups",
         label = "Select which variables to include in table:",
-        choiceNames = c("Date", "Habitat", "Crop", "Management"),
-        choiceValues = c("date", "habitat", "crop", "management"),
+        choiceNames = c("Date", "Location", "Habitat", "Crop", "Management"),
+        choiceValues = c("date", "grid_pt", "habitat", "crop", "management"),
         selected = c("habitat", "crop", "management"),
-        inline = T
+        inline = T)
+          ),
+        column(width = 4, align = "right",
+          downloadButton("download_data", "Download data"))
       ),
       DTOutput("summaryTable")
     ),
@@ -218,7 +234,8 @@ ui <- fixedPage(
   ),
   
   
-  ## Credits ##
+
+# Credits -----------------------------------------------------------------
   
   br(),
   hr(),
