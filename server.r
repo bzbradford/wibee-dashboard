@@ -9,7 +9,7 @@ library(plotly)
 
 server <- function(input, output, session) {
   
-  ## reactive values ##
+# Reactive values ---------------------------------------------------------
   
   # first filter - by map grid cell
   surveysByLoc <- reactive({
@@ -39,7 +39,11 @@ server <- function(input, output, session) {
       droplevels()})
   
   
-  # habitat checkbox labels and values
+  
+
+# Filter checkboxes -------------------------------------------------------
+
+  # Habitat checkbox labels and values
   habitat_labels <- reactive({
     left_join(habitats,
       count(surveysByLocDate(), habitat, .drop = F),
@@ -53,7 +57,7 @@ server <- function(input, output, session) {
       selected = input$which_habitat)})
   
   
-  # crop checkbox labels and values
+  # Crop checkbox labels and values
   crop_labels <- reactive({
     left_join(crops,
       count(surveysByLocDate(), crop, .drop = F),
@@ -66,7 +70,8 @@ server <- function(input, output, session) {
       choiceValues = crop_labels()$type,
       selected = input$which_crop)})
   
-  # management checkbox labels and values
+  
+  # Management checkbox labels and values
   mgmt_labels <- reactive({
     left_join(mgmt,
       count(surveysByLocDate(), management, .drop = F),
@@ -78,10 +83,82 @@ server <- function(input, output, session) {
       choiceNames = mgmt_labels()$box_label,
       choiceValues = mgmt_labels()$type,
       selected = input$which_mgmt)})
-    
   
   
-  ## Text outputs ##
+  # Date slider
+  observeEvent(surveysByLoc(), {
+    df = surveysByLoc()
+    updateSliderInput(
+      session,
+      'date_range',
+      min = min(df$date),
+      max = max(df$date),
+      value = c(min(df$date), max(df$date)))
+  })
+  
+  # reset date slider button
+  observeEvent(input$reset_date, {
+    updateSliderInput(session, 'date_range', value = c(min_date, max_date))
+  })
+  
+  
+  
+  
+# Reset buttons -----------------------------------------------------------
+  
+  # Refresh bee selection checkbox, depending on yes/no wild bee grouping selection
+  reset_bees <- function() {
+    if(input$group_wild) {
+      updateCheckboxGroupInput(
+        session,
+        'which_bees',
+        choiceNames = wildbee_names,
+        choiceValues = wildbee_names,
+        selected = wildbee_names)
+    } else {
+      updateCheckboxGroupInput(
+        session,
+        'which_bees',
+        choiceNames = bee_names,
+        choiceValues = bee_names,
+        selected = bee_names)
+    }
+  }
+  
+  # Reset button
+  observeEvent(input$reset, {
+    updateSliderInput(session, 'date_range', value = c(min_date, max_date))
+    updateCheckboxGroupInput(session, 'which_habitat', selected = habitats$type)
+    updateCheckboxGroupInput(session, 'which_crop', selected = crops$type)
+    updateCheckboxGroupInput(session, 'which_mgmt', selected = mgmt$type)
+    updateCheckboxInput(session, 'group_wild', value = F)
+    reset_bees()
+  })
+  
+  # Group wild bees together
+  observeEvent(input$group_wild, reset_bees())
+  
+  # All/None buttons
+  observeEvent(input$which_bees_all, reset_bees())
+  observeEvent(input$which_bees_none,
+    {updateCheckboxGroupInput(session, 'which_bees', selected = '')})
+  observeEvent(input$which_habitat_all,
+    {updateCheckboxGroupInput(session, 'which_habitat', selected = habitats$type)})
+  observeEvent(input$which_habitat_none,
+    {updateCheckboxGroupInput(session, 'which_habitat', selected = '')})
+  observeEvent(input$which_crop_all,
+    {updateCheckboxGroupInput(session, 'which_crop', selected = crops$type)})
+  observeEvent(input$which_crop_none,
+    {updateCheckboxGroupInput(session, 'which_crop', selected = '')})
+  observeEvent(input$which_mgmt_all,
+    {updateCheckboxGroupInput(session, 'which_mgmt', selected = mgmt$type)})
+  observeEvent(input$which_mgmt_none,
+    {updateCheckboxGroupInput(session, 'which_mgmt', selected = '')})
+  
+  
+  
+
+# Text outputs ------------------------------------------------------------
   
   # number of matching surveys after map filter
   output$survey_count_loc <- renderText({
@@ -101,8 +178,8 @@ server <- function(input, output, session) {
   
   
   
-  
-  ## Map and map filtering ##
+
+# Map and map filtering ---------------------------------------------------
   
   # initialize map selection list, with all in WI selected
   map_selection <- reactiveVal(value = map_pts_wi)
@@ -184,9 +261,10 @@ server <- function(input, output, session) {
   
 
 
+
+# Pie charts --------------------------------------------------------------
   
-  
-  # map data summary
+  # left pie chart: whole dataset
   output$map_chart_all <- renderPlotly({
     df <- surveys_long %>%
       filter(bee_name %in% input$which_bees) %>%
@@ -215,30 +293,7 @@ server <- function(input, output, session) {
         font = list(size = 15))
   })
   
-  # output$map_chart_selected <- renderPlotly({
-  #   df <- surveys_long %>%
-  #     filter(bee_name %in% input$which_bees) %>%
-  #     droplevels() %>%
-  #     filter(grid_pt %in% map_selection()) %>%
-  #     group_by(bee_name, bee_color) %>%
-  #     summarise(mean_count = round(mean(count), 1), .groups = 'drop')
-  #   
-  #   df %>% 
-  #     plot_ly(labels = ~ bee_name, values = ~ mean_count, type = 'pie',
-  #       textposition = 'inside',
-  #       textinfo = 'label+percent',
-  #       hoverinfo = 'text',
-  #       text = ~ paste(mean_count, bee_name, 'per survey'),
-  #       marker = list(
-  #         colors = levels(df$bee_color),
-  #         line = list(color = '#ffffff', width = 1)),
-  #       sort = F,
-  #       direction = 'clockwise',
-  #       showlegend = F
-  #     ) %>%
-  #     layout(title = 'Surveys from selected map zones')
-  # })
-  
+  # right pie chart: selected data
   output$map_chart_selected <- renderPlotly({
     df <- filtered_surveys_long() %>%
       group_by(bee_name, bee_color) %>%
@@ -264,25 +319,12 @@ server <- function(input, output, session) {
         showarrow = F,
         font = list(size = 15))
   })
+
   
-  ## Date slider ##
   
-  # update date slider
-  observeEvent(surveysByLoc(), {
-    df = surveysByLoc()
-    updateSliderInput(
-      session,
-      'date_range',
-      min = min(df$date),
-      max = max(df$date),
-      value = c(min(df$date), max(df$date)))
-  })
-  
-  # reset date slider
-  observeEvent(input$reset_date, {
-    updateSliderInput(session, 'date_range', value = c(min_date, max_date))
-  })
-  
+
+# Plot by date ------------------------------------------------------------
+
   # Plot of daily bee counts
   output$plotByDate <- renderPlotly({
     df <- filtered_surveys_long()
@@ -311,126 +353,11 @@ server <- function(input, output, session) {
   })
   
   
-  # # Plot of daily bee counts
-  # output$plotByDate <- renderPlotly({
-  #   df <- filtered_surveys_long()
-  #   if (nrow(df) > 0) {
-  #     df2 <- df %>%
-  #       group_by(date, bee_name, bee_color) %>%
-  #       summarise(visit_rate = mean(count / 5), .groups = 'drop') %>%
-  #       droplevels()
-  #     df2 %>%
-  #       ggplot(aes(x = date, y = visit_rate, fill = bee_name)) +
-  #       geom_col() +
-  #       scale_fill_manual(values = levels(df2$bee_color)) +
-  #       labs(x = 'Survey date', y = 'Average visits per minute', fill = '') +
-  #       theme_classic() +
-  #       theme(
-  #         text = element_text(size = 14),
-  #         plot.title = element_text(face = 'bold', hjust = .5))
-  #   }
-  # })
-  
-  
-  
-  # # update checkbox labels when map or date slider is adjusted
-  # observeEvent(list(map_selection(), input$date_range), {
-  #   
-  #   habitat_labels <- surveysByLocDate() %>%
-  #     count(habitat, .drop = F) %>%
-  #     mutate(label = paste0(habitat, ' (', n, ')')) %>%
-  #     .$label
-  #   
-  #   crop_labels <- surveysByLocDate() %>%
-  #     count(crop, .drop = F) %>%
-  #     mutate(label = paste0(crop, ' (', n, ')')) %>%
-  #     .$label
-  #   
-  #   mgmt_labels <- surveysByLocDate() %>%
-  #     count(management, .drop = F) %>%
-  #     mutate(label = paste0(management, ' (', n, ')')) %>%
-  #     .$label
-  #   
-  #   updateCheckboxGroupInput(
-  #     session,
-  #     'which_habitat',
-  #     choiceNames = habitat_labels,
-  #     choiceValues = habitat_types,
-  #     selected = input$which_habitat)
-  #   
-  #   updateCheckboxGroupInput(
-  #     session,
-  #     'which_crop',
-  #     choiceNames = crop_labels,
-  #     choiceValues = crop_types,
-  #     selected = input$which_crop)
-  #   
-  #   updateCheckboxGroupInput(
-  #     session,
-  #     'which_mgmt',
-  #     choiceNames = mgmt_labels,
-  #     choiceValues = mgmt_types,
-  #     selected = input$which_mgmt)
-  # })
-  
-  
-  
-  # Refresh bee selection checkbox, depending on yes/no wild bee grouping selection
-  reset_bees <- function() {
-    if(input$group_wild) {
-      updateCheckboxGroupInput(
-        session,
-        'which_bees',
-        choiceNames = wildbee_names,
-        choiceValues = wildbee_names,
-        selected = wildbee_names)
-    } else {
-      updateCheckboxGroupInput(
-        session,
-        'which_bees',
-        choiceNames = bee_names,
-        choiceValues = bee_names,
-        selected = bee_names)
-    }
-  }
   
 
+# Plot by site characteristics --------------------------------------------
 
-  
-  # Reset button
-  observeEvent(input$reset, {
-    updateSliderInput(session, 'date_range', value = c(min_date, max_date))
-    updateCheckboxGroupInput(session, 'which_habitat', selected = habitats$type)
-    updateCheckboxGroupInput(session, 'which_crop', selected = crops$type)
-    updateCheckboxGroupInput(session, 'which_mgmt', selected = mgmt$type)
-    updateCheckboxInput(session, 'group_wild', value = F)
-    reset_bees()
-  })
-  
-  # Group wild bees together
-  observeEvent(input$group_wild, reset_bees())
-  
-  # All/None buttons
-  observeEvent(input$which_bees_all, reset_bees())
-  observeEvent(input$which_bees_none,
-    {updateCheckboxGroupInput(session, 'which_bees', selected = '')})
-  observeEvent(input$which_habitat_all,
-    {updateCheckboxGroupInput(session, 'which_habitat', selected = habitats$type)})
-  observeEvent(input$which_habitat_none,
-    {updateCheckboxGroupInput(session, 'which_habitat', selected = '')})
-  observeEvent(input$which_crop_all,
-    {updateCheckboxGroupInput(session, 'which_crop', selected = crops$type)})
-  observeEvent(input$which_crop_none,
-    {updateCheckboxGroupInput(session, 'which_crop', selected = '')})
-  observeEvent(input$which_mgmt_all,
-    {updateCheckboxGroupInput(session, 'which_mgmt', selected = mgmt$type)})
-  observeEvent(input$which_mgmt_none,
-    {updateCheckboxGroupInput(session, 'which_mgmt', selected = '')})
-  
-
-  
-
-  
+  ## Convert this plot to plotly! ##
   
   # Plot of bee activity averages by site characteristics
   output$plotByCat <- renderPlot({
@@ -479,6 +406,9 @@ server <- function(input, output, session) {
   
   
   
+
+# Histogram plot (not used) ----------------------------------------------------------
+  
   ## histograms of total insect counts per survey
   # output$beePlot3 <- renderPlot({
   #   df <- filtered_surveys_long()
@@ -496,7 +426,11 @@ server <- function(input, output, session) {
   #   }
   # })
   
-  output$summaryTable <- renderDT({
+  
+
+# Data table --------------------------------------------------------------
+
+  filteredTable <- reactive({
     filtered_surveys_long() %>%
       mutate(date = as.character(date)) %>%
       group_by_at(input$dtGroups) %>%
@@ -509,12 +443,25 @@ server <- function(input, output, session) {
       ungroup() %>%
       pivot_wider(names_from = bee_name, values_from = visit_rate) %>%
       mutate('row' = row_number()) %>%
-      select('row', everything())},
+      select('row', everything())
+  })
+  
+  output$summaryTable <- renderDT(
+    filteredTable(),
     rownames = F,
     options = list(pageLength = 25)
   )
   
+  output$download_data <- downloadHandler(
+    filename = "wibee_data.csv",
+    content = function(file) {
+      write_csv(filteredTable(), file)
+    }
+  )
   
+  
+# Plot of user statistics -------------------------------------------------
+
   output$plotUserStats <- renderPlot({
     filtered_surveys() %>%
       group_by(user_id) %>%
