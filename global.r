@@ -40,73 +40,76 @@ wibee_in <- read_csv("./data/surveys.csv", col_types = cols())
 # Define local variables --------------------------------------------------
 
 # explanatory cols to keep
-keep_cols <- c(
-  "id",
-  "user_id",
-  "lat",
-  "lng",
-  "ended_at",
-  "duration",
-  "site_type",
-  "crop",
-  "management_type")
+keep_cols <-
+  c(
+    "id",
+    "user_id",
+    "lat",
+    "lng",
+    "ended_at",
+    "duration",
+    "site_type",
+    "crop",
+    "management_type"
+  )
 
 # bee count column names
-bee_cols <- c(
-  "honeybee",
-  "bumble_bee",
-  "large_dark_bee",
-  "small_dark_bee",
-  "greenbee",
-  "non_bee"
-)
+bee_cols <-
+  c("honeybee",
+    "bumble_bee",
+    "large_dark_bee",
+    "small_dark_bee",
+    "greenbee",
+    "non_bee")
 
 # formatted bee names for ungrouped
-bee_names <- c(
-  "Honey bees",
-  "Bumble bees",
-  "Large dark bees",
-  "Small dark bees",
-  "Green bees",
-  "Non-bees")
+bee_names <-
+  c(
+    "Honey bees",
+    "Bumble bees",
+    "Large dark bees",
+    "Small dark bees",
+    "Green bees",
+    "Non-bees"
+  )
 
 # formatted names for wild bee grouping
-wildbee_names <- c(
-  "Honey bees",
-  "Wild bees",
-  "Non-bees"
-)
+wildbee_names <- c("Honey bees", "Wild bees", "Non-bees")
 
 # bee crossref
-bees <-
-  tibble(
-    bee_type = c(
-      "honeybee",
-      "bumble_bee",
-      "large_dark_bee",
-      "small_dark_bee",
-      "greenbee",
-      "wild_bee",
-      "non_bee"),
-    bee_name = fct_inorder(c(
+bee_types <- tibble(
+  bee_type = c(
+    "honeybee",
+    "bumble_bee",
+    "large_dark_bee",
+    "small_dark_bee",
+    "greenbee",
+    "wild_bee",
+    "non_bee"
+  ),
+  bee_name = fct_inorder(
+    c(
       "Honey bees",
       "Bumble bees",
       "Large dark bees",
       "Small dark bees",
       "Green bees",
       "Wild bees",
-      "Non-bees")
-    ),
-    bee_color = fct_inorder(c(
+      "Non-bees"
+    )
+  ),
+  bee_color = fct_inorder(
+    c(
       "#eca500",
       "#d86d27",
       "#758BFD",
       "#AEB8FE",
       "#99b5aa",
       "#5f8475",
-      "#949494")
+      "#949494"
     )
   )
+)
 
 # Habitat types
 habitats <- tibble(
@@ -117,7 +120,8 @@ habitats <- tibble(
     "road-field-edge",
     "lawn-and-garden",
     "prairie",
-    "woodland"),
+    "woodland"
+  ),
   label = c(
     "Corn/soybeans/alfalfa",
     "Fruit/vegetable field",
@@ -125,10 +129,11 @@ habitats <- tibble(
     "Road or field edge",
     "Lawn and garden",
     "Prairie",
-    "Woodland"))
+    "Woodland"
+  )
+)
 
-
-# crop types
+# Crop types
 crops <- tibble(
   type = c(
     "apple",
@@ -139,7 +144,8 @@ crops <- tibble(
     "melon",
     "squash",
     "other",
-    "none"),
+    "none"
+  ),
   label = c(
     "Apple",
     "Cherry",
@@ -149,7 +155,9 @@ crops <- tibble(
     "Melon",
     "Squash",
     "Other",
-    "None"))
+    "None"
+  )
+)
 
 
 # management types
@@ -163,8 +171,7 @@ mgmt <- tibble(
     "Organic",
     "Conventional",
     "Other",
-    "Unknown"
-  )
+    "Unknown")
 )
 
 
@@ -172,10 +179,9 @@ mgmt <- tibble(
 wibox = c(-92.888114, 42.491983, -86.805415, 47.080621)
 
 # Check if location is within Wisconsin's bounding box
-inbox <- function(y, x, box = wibox) {
+inBox <- function(y, x, box = wibox) {
   ifelse(between(x, box[1], box[3]) & between(y, box[2], box[4]), T, F)
 }
-
 
 
 
@@ -207,13 +213,14 @@ surveys <- wibee_in %>%
     lat_rnd = round(lat, 1),
     lng_rnd = round(lng, 1)) %>%
   mutate(grid_pt = paste(lat_rnd, lng_rnd, sep = ", ")) %>%
-  mutate(inwi = inbox(lng, lat, wibox))
+  mutate(inwi = inBox(lng, lat, wibox)) %>%
+  mutate(id = 1:length(id))
 
 
 # pivot longer for some data analysis
 surveys_long <- surveys %>%
-  pivot_longer(bees$bee_type, names_to = "bee_type", values_to = "count") %>%
-  left_join(bees, by = "bee_type")
+  pivot_longer(bee_types$bee_type, names_to = "bee_type", values_to = "count") %>%
+  left_join(bee_types, by = "bee_type")
 
 
 # generate grid points and summary statistics
@@ -230,7 +237,7 @@ map_pts <- surveys %>%
     nb = round(mean(non_bee)/5,1),
     .groups = "drop") %>%
   mutate(grid_pt = paste(lat, lng, sep = ", ")) %>%
-  mutate(inwi = inbox(lat, lng, wibox))
+  mutate(inwi = inBox(lat, lng, wibox))
 
 
 # get list of all grid cells for initial selection
