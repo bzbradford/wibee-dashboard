@@ -9,12 +9,6 @@ library(DT)
 library(plotly)
 
 
-# set icon for leaflet
-# bee_icon <- makeIcon(
-#   iconUrl = "map-icon.png",
-#   iconWidth = 30, iconHeight = 30,
-#   iconAnchorX = 15, iconAnchorY = 15)
-
 
 ui <- fixedPage(
   
@@ -54,21 +48,21 @@ ui <- fixedPage(
     
     sidebarPanel = sidebarPanel(
       p(strong("Project summary")),
-      p("Unique users: ", length(unique(surveys$user_id))),
-      p("Total completed surveys: ", nrow(surveys)),
+      p("Unique users: ", format(length(unique(surveys$user_id)), big.mark = ",")),
+      p("Total completed surveys: ", format(nrow(surveys), big.mark = ",")),
       p("Most recent survey: ", max(surveys$date)),
-      p("Total insect observations: ", sum(surveys_long$count)),
+      p("Total insect observations: ", format(sum(surveys_long$count), big.mark = ",")),
       tags$ul(tags$li({
         x = filter(bee_totals, bee_name == "Honey bees")
-        paste0("Honey bees: ", x$tot_count, " (", x$pct_count, ")")
+        paste0("Honey bees: ", format(x$tot_count, big.mark = ","), " (", x$pct_count, ")")
       }),
         tags$li({
           x = filter(bee_totals, bee_name == "Wild bees")
-          paste0("Wild bees: ", x$tot_count, " (", x$pct_count, ")")
+          paste0("Wild bees: ", format(x$tot_count, big.mark = ","), " (", x$pct_count, ")")
         }),
         tags$li({
           x = filter(bee_totals, bee_name == "Non-bees")
-          paste0("Non-bees: ", x$tot_count, " (", x$pct_count, ")")
+          paste0("Non-bees: ", format(x$tot_count, big.mark = ","), " (", x$pct_count, ")")
         }))
     ),
     
@@ -222,8 +216,8 @@ ui <- fixedPage(
           checkboxGroupInput(
         "dtGroups",
         label = "Select which variables to include in table:",
-        choiceNames = c("Date", "Location", "Habitat", "Crop", "Management"),
-        choiceValues = c("date", "grid_pt", "habitat", "crop", "management"),
+        choiceNames = c("Survey ID", "Date", "Location", "Habitat", "Crop", "Management"),
+        choiceValues = c("id", "date", "grid_pt", "habitat", "crop", "management"),
         selected = c("habitat", "crop", "management"),
         inline = T)
           ),
@@ -258,7 +252,8 @@ ui <- fixedPage(
       " - ", a("Send feedback", href = "https://forms.gle/6qy9qJLwCxSTTPNT8", target = "_blank")
     ),
     br(),
-    p("developed by", a("tanuki.tech", href = "https://github.com/bzbradford", target = "_blank"), style = "font-size:small; color:grey"),
+    p("dashboard developed by", a("tanuki.tech", href = "https://github.com/bzbradford", target = "_blank"), style = "font-size:small; color:grey"),
+    p("WiBee app developed by", a("caracal.tech", href = "https://caracal.tech/", target = "_blank"), style = "font-size:small; color:grey"),
     br(),
     p(em(paste("Data last updated:", as.character(refresh_time, format="%Y-%m-%d %H:%M:%S %Z"))))
   )
