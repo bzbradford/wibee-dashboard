@@ -7,6 +7,7 @@ library(DT)
 library(plotly)
 
 
+
 server <- function(input, output, session) {
   
 # Reactive values ---------------------------------------------------------
@@ -21,20 +22,20 @@ server <- function(input, output, session) {
       filter(date >= input$date_range[1] & date <= input$date_range[2])})
   
   # filter survey data by site characteristics
-  filtered_surveys <- reactive({
+  filteredSurveys <- reactive({
     surveysByLocDate() %>%
       filter(habitat %in% input$which_habitat) %>%
       filter(crop %in% input$which_crop) %>%
       filter(management %in% input$which_mgmt)})
   
   # pivot filtered survey list long
-  filtered_surveys_long <- reactive({
-    filtered_surveys() %>%
+  filteredSurveysLong <- reactive({
+    filteredSurveys() %>%
       pivot_longer(
-        bees$bee_type,
+        bee_types$bee_type,
         names_to = "bee_type",
         values_to = "count") %>%
-      left_join(bees, by = "bee_type") %>%
+      left_join(bee_types, by = "bee_type") %>%
       filter(bee_name %in% input$which_bees) %>%
       droplevels()})
   
@@ -107,7 +108,7 @@ server <- function(input, output, session) {
 # Reset buttons -----------------------------------------------------------
   
   # Refresh bee selection checkbox, depending on yes/no wild bee grouping selection
-  reset_bees <- function() {
+  resetBees <- function() {
     if(input$group_wild) {
       updateCheckboxGroupInput(
         session,
@@ -132,14 +133,14 @@ server <- function(input, output, session) {
     updateCheckboxGroupInput(session, "which_crop", selected = crops$type)
     updateCheckboxGroupInput(session, "which_mgmt", selected = mgmt$type)
     updateCheckboxInput(session, "group_wild", value = F)
-    reset_bees()
+    resetBees()
   })
   
   # Group wild bees together
-  observeEvent(input$group_wild, reset_bees())
+  observeEvent(input$group_wild, resetBees())
   
   # All/None buttons
-  observeEvent(input$which_bees_all, reset_bees())
+  observeEvent(input$which_bees_all, resetBees())
   observeEvent(input$which_bees_none,
     {updateCheckboxGroupInput(session, "which_bees", selected = "")})
   observeEvent(input$which_habitat_all,
@@ -174,7 +175,7 @@ server <- function(input, output, session) {
   # Number of matching surveys after site characteristic filters
   output$survey_count_final <- renderText({
     paste(
-      nrow(filtered_surveys()), "out of", nrow(surveys), "total surveys match all of your criteria.")})
+      nrow(filteredSurveys()), "out of", nrow(surveys), "total surveys match all of your criteria.")})
   
   
   
@@ -219,7 +220,7 @@ server <- function(input, output, session) {
     
     # on first click deselect all other grids
     if(setequal(map_selection(), map_pts_all) | setequal(map_selection(), map_pts_wi)) {
-      proxy %>% clearGroup("Select points")
+      proxy %>% clearGroup("Selected points")
       map_selection(grid_pt)
     } else if (grepl("selected", click$id, fixed = T)) {
       if(length(map_selection()) == 1) {return()}
@@ -328,7 +329,7 @@ server <- function(input, output, session) {
   
   # right pie chart: selected data
   output$map_chart_selected <- renderPlotly({
-    df <- filtered_surveys_long() %>%
+    df <- filteredSurveysLong() %>%
       group_by(bee_name, bee_color) %>%
       summarise(mean_count = round(mean(count), 1), .groups = "drop")
     
@@ -348,7 +349,7 @@ server <- function(input, output, session) {
       add_annotations(
         y = 1.075, 
         x = 0.5, 
-        text = paste0("<b>Selected surveys (", nrow(filtered_surveys()), ")</b>"), 
+        text = paste0("<b>Selected surveys (", nrow(filteredSurveys()), ")</b>"), 
         showarrow = F,
         font = list(size = 15))
   })
@@ -360,7 +361,7 @@ server <- function(input, output, session) {
 
   # Plot of daily bee counts
   output$plotByDate <- renderPlotly({
-    df <- filtered_surveys_long()
+    df <- filteredSurveysLong()
     if (nrow(df) > 0) {
       df %>%
         group_by(date, bee_name, bee_color) %>%
@@ -394,7 +395,7 @@ server <- function(input, output, session) {
   
   # Plot of bee activity averages by site characteristics
   output$plotByCat <- renderPlot({
-    df <- filtered_surveys_long()
+    df <- filteredSurveysLong()
     if (nrow(df) > 0) {
       # create working dataset
       df2 <- df %>%
@@ -444,7 +445,7 @@ server <- function(input, output, session) {
   
   ## histograms of total insect counts per survey
   # output$beePlot3 <- renderPlot({
-  #   df <- filtered_surveys_long()
+  #   df <- filteredSurveysLong()
   #   if (nrow(df) > 0) {
   #     # exclude zero-counts from histograms
   #     df2 <- df %>%
@@ -464,7 +465,7 @@ server <- function(input, output, session) {
 # Data table --------------------------------------------------------------
 
   filteredTable <- reactive({
-    filtered_surveys_long() %>%
+    filteredSurveysLong() %>%
       mutate(date = as.character(date)) %>%
       group_by_at(input$dtGroups) %>%
       group_by(bee_name, .add = T) %>%
@@ -496,7 +497,7 @@ server <- function(input, output, session) {
 # Plot of user statistics -------------------------------------------------
 
   output$plotUserStats <- renderPlot({
-    df <- filtered_surveys() %>%
+    df <- filteredSurveys() %>%
       group_by(user_id) %>%
       summarise(n = n(), .groups = "drop") %>%
       arrange(desc(n)) %>%
