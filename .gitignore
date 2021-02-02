@@ -1,5 +1,4 @@
 ## .gitignore
-
 .RData
 .Rhistory
 .Rproj.user
@@ -8,4 +7,5 @@ desktop.ini
 etc
 shiny-logs/
 rsconnect
-
+.Renviron
+data
