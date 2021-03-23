@@ -1,8 +1,10 @@
-#### GLOBAL ####
+#---- GLOBAL ----#
 
 library(tidyverse)
 library(httr)
 library(shiny)
+
+
 
 # Load remote data --------------------------------------------------------
 

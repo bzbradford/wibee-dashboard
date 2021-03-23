@@ -1,4 +1,4 @@
-#### UI ####
+#---- UI ----#
 
 library(tidyverse)
 library(shiny)
@@ -9,6 +9,8 @@ library(DT)
 library(plotly)
 
 
+
+# Define UI ---------------------------------------------------------------
 
 ui <- fixedPage(
   
@@ -35,9 +37,8 @@ ui <- fixedPage(
   br(),
   
   
-  
 
-# Introduction and project summary ----------------------------------------
+## Introduction and project summary ----------------------------------------
 
   sidebarLayout(
     mainPanel = mainPanel(
@@ -73,8 +74,7 @@ ui <- fixedPage(
   
 
   
-  
-# Tabs with map, filters, and how-to --------------------------------------
+## Tabs with map, filters, and how-to --------------------------------------
 
   tabsetPanel(
     tabPanel(
@@ -172,8 +172,9 @@ ui <- fixedPage(
       )
     ),
   
-
-# Number of selected surveys ----------------------------------------------
+  
+  
+## Number of selected surveys ----------------------------------------------
 
   br(),
   div(strong(textOutput('survey_count_final')), style = "font-size:larger; text-align:center; margin-top:15px"),
@@ -181,9 +182,8 @@ ui <- fixedPage(
   br(),
   
   
-  
 
-# Tabs with plot and data table displays ----------------------------------------
+## Tabs with plot and data table displays ----------------------------------------
 
   tabsetPanel(
     
@@ -230,13 +230,13 @@ ui <- fixedPage(
     # user stats
     tabPanel("User statistics",
       br(),
-      plotOutput("plotUserStats", height = "400px")
+      plotlyOutput("plotUserStats", height = "400px")
     )
   ),
   
   
 
-# Credits -----------------------------------------------------------------
+## Credits -----------------------------------------------------------------
   
   br(),
   hr(),
