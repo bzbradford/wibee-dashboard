@@ -230,7 +230,7 @@ ui <- fixedPage(
     # user stats
     tabPanel("User statistics",
       br(),
-      plotlyOutput("plotUserStats", height = "400px")
+      plotlyOutput("plotUserStats", height = "600px")
     )
   ),
   
@@ -244,7 +244,7 @@ ui <- fixedPage(
   div(
     align = "center",
     style = "font-size:small; color:grey; border-top:2px darkgrey",    
-    p(strong("©2020 University of Wisconsin Board of Regents"), style = "font-size:small; color:grey"),
+    p(strong("©2021 University of Wisconsin Board of Regents"), style = "font-size:small; color:grey"),
     p(
       a("More information", href = "http://www.pollinators.wisc.edu/wibee", target = "_blank"),
       " - ", a("Email us", href = "mailto:pollinators@wisc.edu"),
