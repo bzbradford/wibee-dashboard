@@ -1,6 +1,5 @@
 #---- UI ----#
 
-library(tidyverse)
 library(shiny)
 library(shinythemes)
 library(shinyWidgets)
@@ -76,14 +75,15 @@ ui <- fixedPage(
   
 ## Tabs with map, filters, and how-to --------------------------------------
 
+  h4(em("Browse and filter surveys by location or attribute:"), style = "border-bottom: 1px solid grey"),
   tabsetPanel(
     tabPanel(
       title = "Filter by survey location",
       p(em("Click on individual grid cell(s) to show only results from those areas. Note: some surveys may be from outside Wisconsin. Click 'Zoom extents' to see them."), style = "margin-top:.5em; margin-bottom:.5em"),
       leafletOutput("map", height = 600),
-      div(style = "padding-top:10px",
-        div(actionButton("map_zoom_all", "Zoom extents"), style = "padding-right:10px; display:inline-block"),
+      div(style = "margin-top: 5px;",
         div(actionButton("map_select_visible", "Select visible"), style = "padding-right:10px; display:inline-block"),
+        div(actionButton("map_zoom_all", "Select all"), style = "padding-right:10px; display:inline-block"),
         div(actionButton("map_clear_selection", "Clear selection"), style = "padding-right:10px; display:inline-block"),
         div(actionButton("map_reset", "Reset map"), style = "padding-right:20px; display:inline-block"),
         div(strong(textOutput("survey_count_loc")), style = "display:inline-block"))
@@ -134,14 +134,13 @@ ui <- fixedPage(
             checkboxGroupInput(
               "which_mgmt",
               "Management type:",
-              choiceNames = mgmt$label,
-              choiceValues = mgmt$type,
-              selected = mgmt$type),
+              choiceNames = managements$label,
+              choiceValues = managements$type,
+              selected = managements$type),
             div(actionButton("which_mgmt_all", "All"), style = "display:inline-block"),
             div(actionButton("which_mgmt_none", "None"), style = "display:inline-block"),
             div(actionButton("reset", "Reset filters"), style = "margin-top:15px")),
           ),
-        # div(strong(textOutput("survey_count_filters")), style = "text-align:center; margin-top:15px")
         )
       ),
     
@@ -151,14 +150,9 @@ ui <- fixedPage(
       p(strong("Step 1: Select geographic zones on the map."), "If you want to look only at surveys taken in a specific area, select those areas on the map tab."),
       p(strong("Step 2: Select survey characteristics."), "Use the checkboxes to narrow down what kind of habitat, crop, or management type you want to look at. Numbers in parentheses show the number of surveys that match each characteristic."),
       tags$ul(
-        tags$li(
-          strong("Choose a habitat type(s)."), "If you run an orchard and you just want to look at the collective data from other orchards in Wisconsin, filter the data by checking the 'orchard' box."
-          ),
-        tags$li(
-          strong("Choose a crop type(s)."), "If you want to compare your apple bloom wild bee visit rate to other apple orchards in Wisconsin, check the apple box to filter the data. Keep in mind that crops bloom at different times of year and have different inflorescences, so the bee visit rate and bee group composition will likely be different between crops."), 
-        tags$li(
-          strong("Choose a management type(s)."), "These categories are subjective (chosen by the survey taker) and very broad, so take any variation between conventional, organic or 'other' management styles with a grain of salt."
-        )
+        tags$li(strong("Choose a habitat type(s)."), "If you run an orchard and you just want to look at the collective data from other orchards in Wisconsin, filter the data by checking the 'orchard' box."),
+        tags$li(strong("Choose a crop type(s)."), "If you want to compare your apple bloom wild bee visit rate to other apple orchards in Wisconsin, check the apple box to filter the data. Keep in mind that crops bloom at different times of year and have different inflorescences, so the bee visit rate and bee group composition will likely be different between crops."),
+        tags$li(strong("Choose a management type(s)."), "These categories are subjective (chosen by the survey taker) and very broad, so take any variation between conventional, organic or 'other' management styles with a grain of salt.")
       ),
       p(strong("Step 3: Explore the bee groups."), "We recommend looking at the bee data in three different combinations:"),
       tags$ul(
@@ -177,7 +171,8 @@ ui <- fixedPage(
 ## Number of selected surveys ----------------------------------------------
 
   br(),
-  div(strong(textOutput('survey_count_final')), style = "font-size:larger; text-align:center; margin-top:15px"),
+  br(),
+  div(strong(textOutput('survey_count_final')), style = "font-size:larger; text-align:center; border:1px solid #ddd; background-color:#f1f1f1; border-radius:5px; padding:15px;"),
   br(),
   br(),
   
@@ -185,26 +180,34 @@ ui <- fixedPage(
 
 ## Tabs with plot and data table displays ----------------------------------------
 
+  h4(em("View or download survey data:"), style = "border-bottom: 1px solid grey"),
   tabsetPanel(
     
     tabPanel("Species composition",
       br(),
-      plotlyOutput('map_chart_all', width = '45%', inline = T),
-      plotlyOutput('map_chart_selected', width = '45%', inline = T),
-      br(),
-      ),
+      plotlyOutput("map_chart_all", width = "45%", inline = T),
+      plotlyOutput("map_chart_selected", width = "45%", inline = T),
+      br()),
     
     tabPanel("Activity by date",
       br(),
       plotlyOutput("plotByDate"),
-      br()
-      ),
+      br()),
     
-    tabPanel("Compare habitat/crop/management",
+    tabPanel("Compare habitat types",
       br(),
-      plotOutput("plotByCat", height = "400px"),
-      br()
-      ),
+      plotlyOutput("plotByHabitat"),
+      br()),
+    
+    tabPanel("Compare crop types",
+      br(),
+      plotlyOutput("plotByCrop"),
+      br()),
+    
+    tabPanel("Compare management types",
+      br(),
+      plotlyOutput("plotByMgmt"),
+      br()),
     
     # Tabular survey data
     tabPanel("View as data table",
@@ -224,14 +227,12 @@ ui <- fixedPage(
         column(width = 4, align = "right",
           downloadButton("download_data", "Download data"))
       ),
-      DTOutput("summaryTable")
-    ),
+      DTOutput("summaryTable")),
     
     # user stats
     tabPanel("User statistics",
       br(),
-      plotlyOutput("plotUserStats", height = "600px")
-    )
+      plotlyOutput("plotUserStats", height = "600px"))
   ),
   
   
