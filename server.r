@@ -14,19 +14,22 @@ server <- function(input, output, session) {
   
   # first filter - by map grid cell
   surveys_by_loc <- reactive({
-    surveys %>% filter(grid_pt %in% map_selection())})
+    filter(surveys, grid_pt %in% map_selection())
+    })
   
   # filter survey data by date slider
   surveys_by_loc_date <- reactive({
-    surveys_by_loc() %>%
-      filter(date >= input$date_range[1] & date <= input$date_range[2])})
+    filter(surveys_by_loc(), date >= input$date_range[1] & date <= input$date_range[2])
+    })
   
   # filter survey data by site characteristics
   filtered_surveys <- reactive({
-    surveys_by_loc_date() %>%
-      filter(habitat %in% input$which_habitat) %>%
-      filter(crop %in% input$which_crop) %>%
-      filter(management %in% input$which_mgmt)})
+    filter(
+      surveys_by_loc_date(),
+      habitat %in% input$which_habitat,
+      crop %in% input$which_crop,
+      management %in% input$which_mgmt)
+    })
   
   # pivot filtered survey list long
   filtered_surveys_long <- reactive({
@@ -37,7 +40,8 @@ server <- function(input, output, session) {
         values_to = "count") %>%
       left_join(bee_types, by = "bee_type") %>%
       filter(bee_name %in% input$which_bees) %>%
-      droplevels()})
+      droplevels()
+    })
   
   
   
@@ -46,59 +50,78 @@ server <- function(input, output, session) {
 
   # Habitat checkbox labels and values
   habitat_labels <- reactive({
-    left_join(habitats,
-      count(surveys_by_loc_date(), habitat, .drop = F),
-      by = c("type" = "habitat")) %>%
-      mutate(box_label = paste0(label, " (", n, ")"))})
+    habitats %>%
+      left_join(
+        count(surveys_by_loc_date(), habitat, .drop = F),
+        by = c("type" = "habitat")) %>%
+      mutate(
+        n = replace_na(n, 0),
+        box_label = paste0(label, " (", n, ")"))
+    })
   
   observeEvent(habitat_labels(),{
     updateCheckboxGroupInput(session, "which_habitat",
       choiceNames = habitat_labels()$box_label,
       choiceValues = habitat_labels()$type,
-      selected = input$which_habitat)})
+      selected = input$which_habitat)
+    })
   
   
   # Crop checkbox labels and values
   crop_labels <- reactive({
-    left_join(crops,
-      count(surveys_by_loc_date(), crop, .drop = F),
-      by = c("type" = "crop")) %>%
-      mutate(box_label = paste0(label, " (", n, ")"))})
+    crops %>%
+      left_join(
+        count(surveys_by_loc_date(), crop, .drop = F),
+        by = c("type" = "crop")) %>%
+      mutate(
+        n = replace_na(n, 0),
+        box_label = paste0(label, " (", n, ")"))
+    })
   
   observeEvent(crop_labels(), {
     updateCheckboxGroupInput(session, "which_crop",
       choiceNames = crop_labels()$box_label,
       choiceValues = crop_labels()$type,
-      selected = input$which_crop)})
+      selected = input$which_crop)
+    })
   
   
   # Management checkbox labels and values
   mgmt_labels <- reactive({
-    left_join(mgmt,
-      count(surveys_by_loc_date(), management, .drop = F),
-      by = c("type" = "management")) %>%
-      mutate(box_label = paste0(label, " (", n, ")"))})
+    managements %>%
+      left_join(
+        count(surveys_by_loc_date(), management, .drop = F),
+        by = c("type" = "management")) %>%
+      mutate(
+        n = replace_na(n, 0),
+        box_label = paste0(label, " (", n, ")"))
+    })
   
   observeEvent(mgmt_labels(), {
     updateCheckboxGroupInput(session, "which_mgmt",
       choiceNames = mgmt_labels()$box_label,
       choiceValues = mgmt_labels()$type,
-      selected = input$which_mgmt)})
+      selected = input$which_mgmt)
+    })
   
   
   # Date slider
   observeEvent(surveys_by_loc(), {
     df <- surveys_by_loc()
-    updateSliderInput(
-      session,
-      "date_range",
-      min = min(df$date),
-      max = max(df$date),
-      value = c(min(df$date), max(df$date)))})
+    if (nrow(df) > 0) {
+      updateSliderInput(
+        session,
+        "date_range",
+        min = min(df$date),
+        max = max(df$date),
+        value = c(min(df$date), max(df$date)))
+      }
+    })
   
   # reset date slider button
   observeEvent(input$reset_date, {
-    updateSliderInput(session, "date_range", value = c(min_date, max_date))})
+    updateSliderInput(session, "date_range", value = c(min_date, max_date))
+    })
   
   
   
@@ -129,7 +152,7 @@ server <- function(input, output, session) {
     updateSliderInput(session, "date_range", value = c(min_date, max_date))
     updateCheckboxGroupInput(session, "which_habitat", selected = habitats$type)
     updateCheckboxGroupInput(session, "which_crop", selected = crops$type)
-    updateCheckboxGroupInput(session, "which_mgmt", selected = mgmt$type)
+    updateCheckboxGroupInput(session, "which_mgmt", selected = managements$type)
     updateCheckboxInput(session, "group_wild", value = F)
     resetBees()
   })
@@ -150,7 +173,7 @@ server <- function(input, output, session) {
   observeEvent(input$which_crop_none,
     updateCheckboxGroupInput(session, "which_crop", selected = ""))
   observeEvent(input$which_mgmt_all,
-    updateCheckboxGroupInput(session, "which_mgmt", selected = mgmt$type))
+    updateCheckboxGroupInput(session, "which_mgmt", selected = managements$type))
   observeEvent(input$which_mgmt_none,
     updateCheckboxGroupInput(session, "which_mgmt", selected = ""))
   
@@ -161,10 +184,14 @@ server <- function(input, output, session) {
   
   # number of matching surveys after map filter
   output$survey_count_loc <- renderText({
-    paste(
-      length(map_selection()), "zones and ",
-      nrow(surveys_by_loc()), " surveys selected on the map.")
-    })
+    if (is.null(map_selection())) {
+      "0 zones and 0 surveys selected on the map."
+    } else {
+      paste(
+        length(map_selection()), "zones and ",
+        nrow(surveys_by_loc()), " surveys selected on the map.")
+    }
+  })
   
   # Number of matching surveys after date filter
   output$survey_count_filters <- renderText({
@@ -197,7 +224,7 @@ server <- function(input, output, session) {
         lat1 = ~ lat - .05, lat2 = ~ lat + .05,
         layerId = ~ grid_pt,
         group = "All points",
-        label = ~ paste(n_surveys, "surveys"),
+        label = ~ paste(n_surveys, "surveys by", n_users, "users"),
         weight = 1,
         opacity = 1,
         color = "orange",
@@ -245,7 +272,7 @@ server <- function(input, output, session) {
         group = "Selected points",
         lng1 = ~ lng - .05, lng2 = ~ lng + .05,
         lat1 = ~ lat - .05, lat2 = ~ lat + .05,
-        label = ~ paste(n_surveys, "surveys"),
+        label = ~ paste(n_surveys, "surveys by", n_users, "users"),
         weight = 1, opacity = 1, color = "red",
         fillOpacity = .25, fillColor = "orange",
         highlight = highlightOptions(
@@ -288,7 +315,7 @@ server <- function(input, output, session) {
   # clear selection
   observeEvent(input$map_clear_selection, {
     leafletProxy("map") %>% clearGroup("Selected points")
-    map_selection(c(""))
+    map_selection(NULL)
     })
   
   
@@ -380,7 +407,7 @@ server <- function(input, output, session) {
           marker = list(line = list(color = "#ffffff", width = .25))) %>%
         layout(
           barmode = "stack",
-          title = "Daily average pollinator visitation rates",
+          title = list(text = "<b>Daily average pollinator visitation rates</b>", font = list(size = 15)),
           xaxis = list(title = "", type = "date", tickformat = "%b %d<br>%Y", fixedrange = T),
           yaxis = list(title = "Number of visits per survey", fixedrange = T),
           hovermode = "compare",
@@ -394,52 +421,80 @@ server <- function(input, output, session) {
   
 
 # Plot by site characteristics --------------------------------------------
-
-  ## Convert this plot to plotly! ##
   
-  # Plot of bee activity averages by site characteristics
-  output$plotByCat <- renderPlot({
-    df <- filtered_surveys_long()
-    if (nrow(df) > 0) {
-      # create working dataset
-      df2 <- df %>%
-        rename(
-          `By crop` = crop,
-          `By habitat` = habitat,
-          `By management` = management) %>%
-        pivot_longer(
-          cols = c("By habitat", "By crop", "By management"),
-          names_to = "category") %>%
-        mutate(category = factor(category, c("By habitat", "By crop", "By management"))) %>%
-        group_by(category, value, bee_name, bee_color) %>%
-        summarise(visit_rate = mean(count) / 5, n = n(), .groups = "drop") %>%
-        droplevels()
-      
-      # get matching surveys counts by category
-      survey_count <-
-        df2 %>%
-        group_by(category, value) %>%
-        summarise(n = mean(n), .groups = "drop")
-      
-      # plot
-      df2 %>%
-        ggplot() +
-        geom_col(aes(x = value, y = visit_rate, fill = bee_name)) +
-        geom_text(
-          data = survey_count,
-          aes(x = value, y = 0, label = paste0("(", n, ")")),
-          size = 3, vjust = 1) +
-        scale_fill_manual(values = levels(df2$bee_color)) +
-        labs(
-          title = "Pollinator visitation rate by site characteristics",
-          x = "", y = "Average visits per minute", fill = "") +
-        facet_grid(. ~ category, scales = "free_x") +
-        theme_bw() +
-        theme(
-          axis.text.x = element_text(angle = 90, vjust = .5, hjust = 1),
-          text = element_text(size = 14),
-          plot.title = element_text(face = "bold", hjust = .5))
-    }
+  output$plotByHabitat <- renderPlotly({
+    filtered_surveys_long() %>%
+      group_by(habitat_name, bee_name, bee_color) %>%
+      summarise(
+        visit_rate = round(mean(count), 2),
+        n = n(),
+        .groups = "drop") %>%
+      droplevels() %>%
+      mutate(x = fct_inorder(paste0("(", n, ") ", habitat_name))) %>%
+      plot_ly(
+        type = "bar",
+        x = ~ x,
+        y = ~ visit_rate,
+        color = ~ bee_name,
+        colors = ~ levels(.$bee_color),
+        marker = list(line = list(color = "#ffffff", width = .25))) %>%
+      layout(
+        barmode = "stack",
+        title = list(text = "<b>Pollinator visitation rates by habitat type</b>", font = list(size = 15)),
+        xaxis = list(title = "", fixedrange = T),
+        yaxis = list(title = "Number of visits per survey", fixedrange = T),
+        hovermode = "compare"
+      )
+  })
+  
+  output$plotByCrop <- renderPlotly({
+    filtered_surveys_long() %>%
+      group_by(crop_name, bee_name, bee_color) %>%
+      summarise(
+        visit_rate = round(mean(count), 2),
+        n = n(),
+        .groups = "drop") %>%
+      droplevels() %>%
+      mutate(x = fct_inorder(paste0("(", n, ") ", crop_name))) %>%
+      plot_ly(
+        type = "bar",
+        x = ~ x,
+        y = ~ visit_rate,
+        color = ~ bee_name,
+        colors = ~ levels(.$bee_color),
+        marker = list(line = list(color = "#ffffff", width = .25))) %>%
+      layout(
+        barmode = "stack",
+        title = list(text = "<b>Pollinator visitation rates by crop type</b>", font = list(size = 15)),
+        xaxis = list(title = "", fixedrange = T),
+        yaxis = list(title = "Number of visits per survey", fixedrange = T),
+        hovermode = "compare"
+      )
+  })
+  
+  output$plotByMgmt <- renderPlotly({
+    filtered_surveys_long() %>%
+      group_by(management_name, bee_name, bee_color) %>%
+      summarise(
+        visit_rate = round(mean(count), 2),
+        n = n(),
+        .groups = "drop") %>%
+      droplevels() %>%
+      mutate(x = fct_inorder(paste0("(", n, ") ", management_name))) %>%
+      plot_ly(
+        type = "bar",
+        x = ~ x,
+        y = ~ visit_rate,
+        color = ~ bee_name,
+        colors = ~ levels(.$bee_color),
+        marker = list(line = list(color = "#ffffff", width = .25))) %>%
+      layout(
+        barmode = "stack",
+        title = list(text = "<b>Pollinator visitation rates by management type</b>", font = list(size = 15)),
+        xaxis = list(title = "", fixedrange = T),
+        yaxis = list(title = "Number of visits per survey", fixedrange = T),
+        hovermode = "compare"
+      )
   })
   
   
