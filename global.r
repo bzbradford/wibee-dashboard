@@ -2,7 +2,6 @@
 
 library(tidyverse)
 library(httr)
-library(shiny)
 
 
 
@@ -163,7 +162,7 @@ crops <- tibble(
 
 
 # management types
-mgmt <- tibble(
+managements <- tibble(
   type = c(
     "organic",
     "conventional",
@@ -177,15 +176,6 @@ mgmt <- tibble(
 )
 
 
-# wisconsin bounding box
-wibox = c(-92.888114, 42.491983, -86.805415, 47.080621)
-
-# Check if location is within Wisconsin's bounding box
-inBox <- function(y, x, box = wibox) {
-  ifelse(between(x, box[1], box[3]) & between(y, box[2], box[4]), T, F)
-}
-
-
 
 # Process survey data -----------------------------------------------------
 
@@ -194,29 +184,35 @@ surveys <- wibee_in %>%
   select(all_of(c(keep_cols, bee_cols))) %>%
   mutate(ended_at = as.Date(ended_at)) %>%
   rename(habitat = site_type, management = management_type, date = ended_at) %>%
-  mutate_at(bee_cols, replace_na, 0) %>%
-  mutate(wild_bee = bumble_bee + large_dark_bee + small_dark_bee + greenbee) %>%
-  mutate(habitat = factor(habitat, levels = habitats$type)) %>%
-  mutate(crop = tolower(crop)) %>%
-  mutate(crop = factor(
-    case_when(
-      is.na(crop) ~ "none",
-      crop %in% crops$type ~ crop,
-      grepl("berry", crop) ~ "other berry",
-      T ~ "other"), levels = crops$type)) %>%
-  mutate(management = factor(
-    case_when(
-      management %in% mgmt$type ~ management,
-      T ~ "other"), levels = mgmt$type)) %>%
-  filter(duration == "5 minutes") %>%
-  filter(date >= "2020-04-01") %>%
+  mutate(
+    across(all_of(bee_cols), replace_na, 0),
+    wild_bee = bumble_bee + large_dark_bee + small_dark_bee + greenbee,
+    habitat = factor(habitat, levels = habitats$type),
+    crop = tolower(crop),
+    crop = factor(
+      case_when(
+        is.na(crop) ~ "none",
+        crop %in% crops$type ~ crop,
+        grepl("berry", crop) ~ "other berry",
+        T ~ "other"),
+      levels = crops$type),
+    management = factor(
+      case_when(
+        management %in% managements$type ~ management,
+        T ~ "other"),
+      levels = managements$type)
+    ) %>%
+  filter(duration == "5 minutes", date >= "2020-04-01") %>%
   drop_na(c(habitat, crop, management)) %>%
+  left_join(rename(habitats, habitat = type, habitat_name = label), by = "habitat") %>%
+  left_join(rename(crops, crop = type, crop_name = label), by = "crop") %>%
+  left_join(rename(managements, management = type, management_name = label), by = "management") %>%
   mutate(
     lat_rnd = round(lat, 1),
-    lng_rnd = round(lng, 1)) %>%
-  mutate(grid_pt = paste(lat_rnd, lng_rnd, sep = ", ")) %>%
-  mutate(inwi = inBox(lng, lat, wibox)) %>%
-  mutate(id = 1:length(id))
+    lng_rnd = round(lng, 1),
+    grid_pt = paste(lat_rnd, lng_rnd, sep = ", "),
+    inwi = between(lat, 42.49, 47.08) & between(lng, -92.89, -86.80),
+    id = 1:length(id))
 
 
 # pivot longer for some data analysis
@@ -231,15 +227,15 @@ map_pts <- surveys %>%
   mutate(
     lat = round(lat, 1),
     lng = round(lng, 1)) %>%
-  group_by(lat, lng) %>%
+  group_by(lat, lng, inwi) %>%
   summarise(
     n_surveys = n(),
+    n_users = n_distinct(user_id),
     hb = round(mean(honeybee)/5,1),
     wb = round(mean(wild_bee)/5,1),
     nb = round(mean(non_bee)/5,1),
     .groups = "drop") %>%
-  mutate(grid_pt = paste(lat, lng, sep = ", ")) %>%
-  mutate(inwi = inBox(lat, lng, wibox))
+  mutate(grid_pt = paste(lat, lng, sep = ", "))
 
 
 # get list of all grid cells for initial selection
