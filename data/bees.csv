@@ -1,0 +1,8 @@
+type,label,color,category
+honeybee,Honey bees,#eca500,Honey bees
+bumble_bee,Bumble bees,#d86d27,Wild bees
+large_dark_bee,Large dark bees,#758BFD,Wild bees
+small_dark_bee,Small dark bees,#AEB8FE,Wild bees
+greenbee,Green bees,#99b5aa,Wild bees
+wild_bee,Wild bees,#5f8475,Wild bees
+non_bee,Non-bees,#949494,Non-bees

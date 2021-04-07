@@ -1,0 +1,24 @@
+type,label,category
+apple,Apple,Crops
+cranberry,Cranberry,Crops
+other-berry,Other berry,Crops
+cucumber,Cucumber,Crops
+melon,Melon,Crops
+squash,Squash,Crops
+tomato,Tomato,Crops
+soybean,Soybean,Crops
+alfalfa,Alfalfa,Crops
+corn,Corn,Crops
+clover,Clover,Wildflowers
+creeping-charlie,Creeping Charlie,Wildflowers
+cup-plant,Cup plant,Wildflowers
+dandelion,Dandelion,Wildflowers
+goldenrod,Goldenrod,Wildflowers
+leadplant,Leadplant,Wildflowers
+milkweed,Milkweed,Wildflowers
+wild-bergamot,Wild bergamot,Wildflowers
+american-gromwell,American gromwell,Wildflowers
+forked-aster,Forked Aster,Wildflowers
+lesser-purple-finged-orchid,Lesser purple-finged orchid,Wildflowers
+lesser-yellow-lady-slipper,Lesser yellow lady slipper,Wildflowers
+other,Other,Other
