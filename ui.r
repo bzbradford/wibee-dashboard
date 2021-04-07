@@ -42,7 +42,7 @@ ui <- fixedPage(
   sidebarLayout(
     mainPanel = mainPanel(
       h3("What is the WiBee app?", style = "margin-top:0px"),
-      p("WiBee (pronounced Wee-bee) is a new smartphone app developed by the", a("Gratton Lab", href = "https://gratton.entomology.wisc.edu/", target = "_blank"), "at the University of Wisconsin-Madison. We invite growers and interested citizen scientists to use the app during the growing season to collect high quality data on wild bee abundance and diversity on Wisconsin’s fruit and vegetable farms. The app can also be used in your home garden, or at prairies, parks, woodlands, or anywhere else you see pollinator activity, whether or not you live in Wisconsin. All are welcome to contribute."),
+      p("WiBee (pronounced We-bee) is a new smartphone app developed by the", a("Gratton Lab", href = "https://gratton.entomology.wisc.edu/", target = "_blank"), "at the University of Wisconsin-Madison. We invite growers and interested citizen scientists to use the app during the growing season to collect high quality data on wild bee abundance and diversity on Wisconsin’s fruit and vegetable farms. The app can also be used in your home garden, or at prairies, parks, woodlands, or anywhere else you see pollinator activity, whether or not you live in Wisconsin. All are welcome to contribute."),
       p("WiBee is a citizen science project, so all the data here is collected by people like you going out and completing surveys with the WiBee App. We invite you to explore the data to see what wild bee populations and their flower visit rates look like across Wisconsin. You can also compare your own data in the WiBee app to the summary data presented here in this dashboard to help you make decisions about managing your local pollinator community or track any change over time. As you explore the data below, remember that this dashboard is a work in progress. If you have specific suggestions, please contact us!"),
       p("To join the project and help collect data, download the WiBee app today or visit", a("pollinators.wisc.edu/wibee", href = "http://www.pollinators.wisc.edu/wibee", target = "_blank"), "to learn more. Questions?", a("Email us.", href = "mailto:pollinators@wisc.edu"), "Comments?", a("Send feedback.", href = "https://forms.gle/6qy9qJLwCxSTTPNT8", target = "_blank"), "Want to stay in the loop?", a("Sign up for our newsletter.", href = "http://eepurl.com/gMqRdr", target = "_blank"), "Thank you for participating!")),
     
@@ -75,7 +75,7 @@ ui <- fixedPage(
   
 ## Tabs with map, filters, and how-to --------------------------------------
 
-  h4(em("Browse and filter surveys by location or attribute:"), style = "border-bottom: 1px solid grey"),
+  h4(em("Browse and filter surveys by location or attribute:")),
   tabsetPanel(
     tabPanel(
       title = "Filter by survey location",
@@ -103,43 +103,47 @@ ui <- fixedPage(
           width = "100%"),
         fixedRow(
           column(width = 3,
-            materialSwitch("group_wild", label = "Group wild bees together", status = "success"),
             checkboxGroupInput(
               "which_bees",
               "Bee group:",
               choiceNames = bee_names,
               choiceValues = bee_names,
               selected = bee_names),
+            materialSwitch("group_wild", label = "Group wild bees together", status = "success"),
             div(actionButton("which_bees_all", "All"), style = "display:inline-block"),
-            div(actionButton("which_bees_none", "None"), style = "display:inline-block")),
+            div(actionButton("which_bees_none", "None"), style = "display:inline-block"),
+            ),
           column(width = 3,
             checkboxGroupInput(
               "which_habitat",
-              "Habitat type:",
-              choiceNames = habitats$label,
+              "Habitat:",
+              choiceNames = levels(habitats$label),
               choiceValues = habitats$type,
               selected = habitats$type),
             div(actionButton("which_habitat_all", "All"), style = "display:inline-block"),
-            div(actionButton("which_habitat_none", "None"), style = "display:inline-block")),
+            div(actionButton("which_habitat_none", "None"), style = "display:inline-block"),
+            ),
           column(width = 3,
             checkboxGroupInput(
               "which_crop",
-              "Crop type:",
-              choiceNames = crops$label,
+              "Crop/Wildflower:",
+              choiceNames = levels(crops$label),
               choiceValues = crops$type,
               selected = crops$type),
             div(actionButton("which_crop_all", "All"), style = "display:inline-block"),
-            div(actionButton("which_crop_none", "None"), style = "display:inline-block")),
+            div(actionButton("which_crop_none", "None"), style = "display:inline-block"),
+            ),
           column(width = 3,
             checkboxGroupInput(
               "which_mgmt",
-              "Management type:",
-              choiceNames = managements$label,
+              "Management:",
+              choiceNames = levels(managements$label),
               choiceValues = managements$type,
               selected = managements$type),
             div(actionButton("which_mgmt_all", "All"), style = "display:inline-block"),
             div(actionButton("which_mgmt_none", "None"), style = "display:inline-block"),
-            div(actionButton("reset", "Reset filters"), style = "margin-top:15px")),
+            div(actionButton("reset", "Reset filters"), style = "margin-top:15px"),
+            ),
           ),
         )
       ),
@@ -180,7 +184,7 @@ ui <- fixedPage(
 
 ## Tabs with plot and data table displays ----------------------------------------
 
-  h4(em("View or download survey data:"), style = "border-bottom: 1px solid grey"),
+  h4(em("View or download survey data:")),
   tabsetPanel(
     
     tabPanel("Species composition",
@@ -194,17 +198,17 @@ ui <- fixedPage(
       plotlyOutput("plotByDate"),
       br()),
     
-    tabPanel("Compare habitat types",
+    tabPanel("Compare habitats",
       br(),
       plotlyOutput("plotByHabitat"),
       br()),
     
-    tabPanel("Compare crop types",
+    tabPanel("Compare crops/flowers",
       br(),
       plotlyOutput("plotByCrop"),
       br()),
     
-    tabPanel("Compare management types",
+    tabPanel("Compare managements",
       br(),
       plotlyOutput("plotByMgmt"),
       br()),

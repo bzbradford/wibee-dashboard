@@ -17,10 +17,12 @@ server <- function(input, output, session) {
     filter(surveys, grid_pt %in% map_selection())
     })
   
+  
   # filter survey data by date slider
   surveys_by_loc_date <- reactive({
-    filter(surveys_by_loc(), date >= input$date_range[1] & date <= input$date_range[2])
+    filter(surveys_by_loc(), between(date, input$date_range[1], input$date_range[2]))
     })
+  
   
   # filter survey data by site characteristics
   filtered_surveys <- reactive({
@@ -28,18 +30,22 @@ server <- function(input, output, session) {
       surveys_by_loc_date(),
       habitat %in% input$which_habitat,
       crop %in% input$which_crop,
-      management %in% input$which_mgmt)
-    })
+      management %in% input$which_mgmt) %>%
+    droplevels()
+    }) 
   
+
   # pivot filtered survey list long
   filtered_surveys_long <- reactive({
-    filtered_surveys() %>%
-      pivot_longer(
-        bee_types$bee_type,
-        names_to = "bee_type",
-        values_to = "count") %>%
-      left_join(bee_types, by = "bee_type") %>%
-      filter(bee_name %in% input$which_bees) %>%
+    surveys_long %>%
+      filter(
+        grid_pt %in% map_selection(),
+        between(date, input$date_range[1], input$date_range[2]),
+        habitat %in% input$which_habitat,
+        crop %in% input$which_crop,
+        management %in% input$which_mgmt,
+        bee_name %in% input$which_bees
+      ) %>%
       droplevels()
     })
   

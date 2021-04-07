@@ -8,172 +8,82 @@ library(httr)
 # Load remote data --------------------------------------------------------
 
 # check when last data refresh occurred
-if(file.exists("./data/refresh_time")) {
-  refresh_time <- readRDS("./data/refresh_time")
+if(file.exists('./data/refresh_time')) {
+  refresh_time <- readRDS('./data/refresh_time')
 } else {
-  refresh_time <- as.POSIXct("2020-01-01")
+  refresh_time <- as.POSIXct('2020-01-01')
 }
+
 
 # update surveys at most once an hour. Writes to local csv
 if(refresh_time < Sys.time() - 3600) {
   get_surveys <-
     content(
-      GET(url = "https://wibee.caracal.tech/api/data/survey-summaries",
-        config = add_headers(Authorization = Sys.getenv("caracal_token")))
+      GET(url = 'https://wibee.caracal.tech/api/data/survey-summaries',
+        config = add_headers(Authorization = Sys.getenv('caracal_token')))
     )
   if(is.data.frame(get_surveys)) {
-    arrange(get_surveys, ended_at) %>% write_csv("./data/surveys.csv")
+    arrange(get_surveys, ended_at) %>% write_csv('./data/surveys.csv')
     refresh_time <- Sys.time()
-    saveRDS(refresh_time, "./data/refresh_time")
-    message("Survey data refreshed from remote database.")
+    saveRDS(refresh_time, './data/refresh_time')
+    message('Survey data refreshed from remote database.')
   } else {
-    message("Unable to refresh data from remote server.")
+    message('Unable to refresh data from remote server.')
   }
 } else {
-  message("Skipping refresh, last query < 1 hr ago.")
+  message('Skipping refresh, last query < 1 hr ago.')
 }
-
-# read data from local csv
-wibee_in <- read_csv("./data/surveys.csv", col_types = cols())
 
 
 
 # Define local variables --------------------------------------------------
 
-# explanatory cols to keep
-keep_cols <-
-  c(
-    "id",
-    "user_id",
-    "lat",
-    "lng",
-    "ended_at",
-    "duration",
-    "site_type",
-    "crop",
-    "management_type"
-  )
+# read data from local csv
+wibee_in <- read_csv('./data/surveys.csv', col_types = cols())
 
-# bee count column names
-bee_cols <-
-  c("honeybee",
-    "bumble_bee",
-    "large_dark_bee",
-    "small_dark_bee",
-    "greenbee",
-    "non_bee")
+
+# survey attribute cols to keep
+keep_cols <- c(
+  'id',
+  'user_id',
+  'lat',
+  'lng',
+  'ended_at',
+  'duration',
+  'site_type',
+  'crop',
+  'management_type')
+
+
+# bee cols to pivot
+bee_cols <- c(
+  'honeybee',
+  'bumble_bee',
+  'large_dark_bee',
+  'small_dark_bee',
+  'greenbee',
+  'non_bee')
+
+
+# load types and labels
+bees <- read_csv('data/bees.csv', col_types = cols()) %>% mutate_all(fct_inorder)
+habitats <- read_csv('data/habitats.csv', col_types = cols()) %>% mutate_all(fct_inorder)
+crops <- read_csv('data/crops.csv', col_types = cols()) %>% mutate_all(fct_inorder)
+managements <- read_csv('data/managements.csv', col_types = cols()) %>% mutate_all(fct_inorder)
+
 
 # formatted bee names for ungrouped
-bee_names <-
-  c(
-    "Honey bees",
-    "Bumble bees",
-    "Large dark bees",
-    "Small dark bees",
-    "Green bees",
-    "Non-bees"
-  )
+bee_names <- c(
+  'Honey bees',
+  'Bumble bees',
+  'Large dark bees',
+  'Small dark bees',
+  'Green bees',
+  'Non-bees')
+
 
 # formatted names for wild bee grouping
-wildbee_names <- c("Honey bees", "Wild bees", "Non-bees")
-
-# bee crossref
-bee_types <- tibble(
-  bee_type = c(
-    "honeybee",
-    "bumble_bee",
-    "large_dark_bee",
-    "small_dark_bee",
-    "greenbee",
-    "wild_bee",
-    "non_bee"
-  ),
-  bee_name = fct_inorder(
-    c(
-      "Honey bees",
-      "Bumble bees",
-      "Large dark bees",
-      "Small dark bees",
-      "Green bees",
-      "Wild bees",
-      "Non-bees"
-    )
-  ),
-  bee_color = fct_inorder(
-    c(
-      "#eca500",
-      "#d86d27",
-      "#758BFD",
-      "#AEB8FE",
-      "#99b5aa",
-      "#5f8475",
-      "#949494"
-    )
-  )
-)
-
-# Habitat types
-habitats <- tibble(
-  type = c(
-    "corn-soybeans-alfalfa",
-    "fruit-vegetable-field",
-    "orchard",
-    "road-field-edge",
-    "lawn-and-garden",
-    "prairie",
-    "woodland"
-  ),
-  label = c(
-    "Corn/soybeans/alfalfa",
-    "Fruit/vegetable field",
-    "Orchard",
-    "Road or field edge",
-    "Lawn and garden",
-    "Prairie",
-    "Woodland"
-  )
-)
-
-# Crop types
-crops <- tibble(
-  type = c(
-    "apple",
-    "cherry",
-    "cranberry",
-    "other berry",
-    "cucumber",
-    "melon",
-    "squash",
-    "other",
-    "none"
-  ),
-  label = c(
-    "Apple",
-    "Cherry",
-    "Cranberry",
-    "Berries",
-    "Cucumber",
-    "Melon",
-    "Squash",
-    "Other",
-    "None"
-  )
-)
-
-
-# management types
-managements <- tibble(
-  type = c(
-    "organic",
-    "conventional",
-    "other",
-    "unknown"),
-  label = c(
-    "Organic",
-    "Conventional",
-    "Other",
-    "Unknown")
-)
+wildbee_names <- c('Honey bees', 'Wild bees', 'Non-bees')
 
 
 
@@ -182,44 +92,63 @@ managements <- tibble(
 # generate main dataset
 surveys <- wibee_in %>%
   select(all_of(c(keep_cols, bee_cols))) %>%
-  mutate(ended_at = as.Date(ended_at)) %>%
   rename(habitat = site_type, management = management_type, date = ended_at) %>%
-  mutate(
-    across(all_of(bee_cols), replace_na, 0),
-    wild_bee = bumble_bee + large_dark_bee + small_dark_bee + greenbee,
-    habitat = factor(habitat, levels = habitats$type),
-    crop = tolower(crop),
-    crop = factor(
-      case_when(
-        is.na(crop) ~ "none",
-        crop %in% crops$type ~ crop,
-        grepl("berry", crop) ~ "other berry",
-        T ~ "other"),
-      levels = crops$type),
-    management = factor(
-      case_when(
-        management %in% managements$type ~ management,
-        T ~ "other"),
-      levels = managements$type)
-    ) %>%
-  filter(duration == "5 minutes", date >= "2020-04-01") %>%
-  drop_na(c(habitat, crop, management)) %>%
-  left_join(rename(habitats, habitat = type, habitat_name = label), by = "habitat") %>%
-  left_join(rename(crops, crop = type, crop_name = label), by = "crop") %>%
-  left_join(rename(managements, management = type, management_name = label), by = "management") %>%
+  mutate(date = as.Date(date)) %>%
+  filter(duration == '5 minutes', date >= '2020-04-01') %>%
+  mutate(across(all_of(bee_cols), replace_na, 0)) %>%
+  mutate(wild_bee = bumble_bee + large_dark_bee + small_dark_bee + greenbee) %>%
+  mutate(habitat = replace_na(habitat, 'other')) %>%
+  mutate(habitat = case_when(
+    habitat %in% habitats$type ~ habitat,
+    T ~ 'other')) %>%
+  mutate(habitat = factor(habitat, levels = habitats$type)) %>%
+  mutate(crop = tolower(crop)) %>%
+  mutate(crop = case_when(
+    crop %in% crops$type ~ crop,
+    grepl('berry', crop) ~ 'other-berry',
+    T ~ 'other')) %>%
+  mutate(crop = factor(crop, levels = crops$type)) %>%
+  mutate(management = replace_na(management, 'none')) %>%
+  mutate(management = case_when(
+    management %in% managements$type ~ management,
+    grepl('organic', management) ~ 'organic',
+    grepl('conventional', management) ~ 'conventional',
+    T ~ 'other')) %>%
+  mutate(management = factor(management, levels = managements$type)) %>%
+  left_join(
+    rename(habitats, habitat = type, habitat_name = label),
+    by = 'habitat') %>%
+  left_join(
+    rename(crops, crop = type, crop_name = label),
+    by = 'crop') %>%
+  left_join(
+    rename(managements, management = type, management_name = label),
+    by = 'management') %>%
   mutate(
     lat_rnd = round(lat, 1),
     lng_rnd = round(lng, 1),
-    grid_pt = paste(lat_rnd, lng_rnd, sep = ", "),
+    grid_pt = paste(lat_rnd, lng_rnd, sep = ', '),
     inwi = between(lat, 42.49, 47.08) & between(lng, -92.89, -86.80),
-    id = 1:length(id))
+    id = 1:length(id)) %>%
+  droplevels()
+
+
+# keep only attributes that have occurred at least once
+habitats <- filter(habitats, type %in% levels(surveys$habitat)) %>% droplevels()
+crops <- filter(crops, type %in% levels(surveys$crop)) %>% droplevels()
+managements <- filter(managements, type %in% levels(surveys$management)) %>% droplevels()
 
 
 # pivot longer for some data analysis
 surveys_long <- surveys %>%
-  pivot_longer(bee_types$bee_type, names_to = "bee_type", values_to = "count") %>%
-  left_join(bee_types, by = "bee_type")
+  pivot_longer(cols = bees$type, names_to = 'bee', values_to = 'count') %>%
+  left_join(
+    rename(bees, bee = type, bee_name = label, bee_color = color, bee_category = category),
+    by = 'bee')
 
+
+
+# Map data and other summaries --------------------------------------------
 
 # generate grid points and summary statistics
 map_pts <- surveys %>%
@@ -234,8 +163,8 @@ map_pts <- surveys %>%
     hb = round(mean(honeybee)/5,1),
     wb = round(mean(wild_bee)/5,1),
     nb = round(mean(non_bee)/5,1),
-    .groups = "drop") %>%
-  mutate(grid_pt = paste(lat, lng, sep = ", "))
+    .groups = 'drop') %>%
+  mutate(grid_pt = paste(lat, lng, sep = ', '))
 
 
 # get list of all grid cells for initial selection
@@ -252,5 +181,6 @@ max_date <- max(surveys$date)
 bee_totals <- surveys_long %>%
   filter(bee_name %in% wildbee_names) %>%
   group_by(bee_name) %>%
-  summarise(tot_count = sum(count), .groups = "drop") %>%
-  mutate(pct_count = sprintf("%1.1f%%", tot_count / sum(.$tot_count) * 100))
+  summarise(tot_count = sum(count), .groups = 'drop') %>%
+  mutate(pct_count = sprintf('%1.1f%%', tot_count / sum(.$tot_count) * 100))
+
