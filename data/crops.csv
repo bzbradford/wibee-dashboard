@@ -5,20 +5,26 @@ other-berry,Other berry,Crops
 cucumber,Cucumber,Crops
 melon,Melon,Crops
 squash,Squash,Crops
+zucchini,Zucchini,Crops
+potato,Potato,Crops
 tomato,Tomato,Crops
-soybean,Soybean,Crops
+asparagus,Asparagus,Crops
+cherry,Cherry,Crops
 alfalfa,Alfalfa,Crops
 corn,Corn,Crops
-clover,Clover,Wildflowers
-creeping-charlie,Creeping Charlie,Wildflowers
-cup-plant,Cup plant,Wildflowers
-dandelion,Dandelion,Wildflowers
-goldenrod,Goldenrod,Wildflowers
-leadplant,Leadplant,Wildflowers
-milkweed,Milkweed,Wildflowers
-wild-bergamot,Wild bergamot,Wildflowers
-american-gromwell,American gromwell,Wildflowers
-forked-aster,Forked Aster,Wildflowers
-lesser-purple-finged-orchid,Lesser purple-finged orchid,Wildflowers
-lesser-yellow-lady-slipper,Lesser yellow lady slipper,Wildflowers
+soybean,Soybean,Crops
+clover,Clover,Common wildflowers
+creeping-charlie,Creeping Charlie,Common wildflowers
+cup-plant,Cup plant,Common wildflowers
+dandelion,Dandelion,Common wildflowers
+goldenrod,Goldenrod,Common wildflowers
+leadplant,Leadplant,Common wildflowers
+milkweed,Milkweed,Common wildflowers
+wild-bergamot,Wild bergamot,Common wildflowers
+american-gromwell,American gromwell,Uncommon wildflowers
+forked-aster,Forked Aster,Uncommon wildflowers
+lesser-purple-finged-orchid,Lesser purple-finged orchid,Uncommon wildflowers
+lesser-yellow-lady-slipper,Lesser yellow lady slipper,Uncommon wildflowers
+flowers,Mixed flowers,Mixed flowers
+native-flowers,Native wildflowers,Common wildflowers
 other,Other,Other

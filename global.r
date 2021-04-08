@@ -106,6 +106,8 @@ surveys <- wibee_in %>%
   mutate(crop = case_when(
     crop %in% crops$type ~ crop,
     grepl('berry', crop) ~ 'other-berry',
+    grepl('flower', crop) ~ 'flowers',
+    grepl('native', crop) ~ 'native-flowers',
     T ~ 'other')) %>%
   mutate(crop = factor(crop, levels = crops$type)) %>%
   mutate(management = replace_na(management, 'none')) %>%
