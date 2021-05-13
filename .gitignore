@@ -7,3 +7,4 @@ desktop.ini
 shiny-logs/
 rsconnect
 .Renviron
+renv
