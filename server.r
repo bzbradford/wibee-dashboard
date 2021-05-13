@@ -155,7 +155,7 @@ server <- function(input, output, session) {
   
   # Reset button
   observeEvent(input$reset, {
-    updateSliderInput(session, "date_range", value = c(min_date, max_date))
+    # updateSliderInput(session, "date_range", value = c(min_date, max_date))
     updateCheckboxGroupInput(session, "which_habitat", selected = habitats$type)
     updateCheckboxGroupInput(session, "which_crop", selected = crops$type)
     updateCheckboxGroupInput(session, "which_mgmt", selected = managements$type)
