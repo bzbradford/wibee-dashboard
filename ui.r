@@ -77,22 +77,21 @@ ui <- fixedPage(
   bsCollapse(
     bsCollapsePanel(
       title = "Click for help on how to use this dashboard",
+      p("This dashboard has two main sections: ", strong("selecting surveys"), " and ", strong("viewing survey data.")),
       p(strong("Step 1: Select geographic zones on the map."), "If you want to look only at surveys taken in a specific area, select those areas on the map tab."),
-      p(strong("Step 2: Select survey characteristics."), "Use the checkboxes to narrow down what kind of habitat, crop, or management type you want to look at. Numbers in parentheses show the number of surveys that match each characteristic."),
+      p(strong("Step 2: Select date range."), "If you want to look at surveys from a specific year, or over a specific date range, specify those in the date tab."),
+      p(strong("Step 3: Select survey characteristics."), "Use the checkboxes to narrow down what kind of habitat, crop, flower or management type you want to look at. Numbers in parentheses show the number of surveys that match each characteristic. You can also group wild bees together, or select specific kinds of bees to show in the plots."),
       tags$ul(
-        tags$li(strong("Choose a habitat type(s)."), "If you run an orchard and you just want to look at the collective data from other orchards in Wisconsin, filter the data by checking the 'orchard' box."),
-        tags$li(strong("Choose a crop type(s)."), "If you want to compare your apple bloom wild bee visit rate to other apple orchards in Wisconsin, check the apple box to filter the data. Keep in mind that crops bloom at different times of year and have different inflorescences, so the bee visit rate and bee group composition will likely be different between crops."),
-        tags$li(strong("Choose a management type(s)."), "These categories are subjective (chosen by the survey taker) and very broad, so take any variation between conventional, organic or 'other' management styles with a grain of salt.")
+        tags$li(strong("Choose a habitat type(s)."), "If you run an orchard and you just want to look at the collective data from other orchards, filter the data by checking the 'orchard' box."),
+        tags$li(strong("Choose a crop or flower type(s)."), "If you want to compare your apple bloom wild bee visit rate to other apple orchards, check the apple box to filter the data. Keep in mind that crops bloom at different times of year and have different inflorescences, so the bee visit rate and bee group composition will likely be different between crops."),
+        tags$li(strong("Choose a management type(s)."), "These categories are subjective (chosen by the survey taker) and very broad, so take any variation between management types with a grain of salt."),
+        tags$li(strong("Select or group bee types."), " This is optional, but you can group wild bees together (bumble bees, dark bees, and green bees), or select specific bee groups to show on the plots."),
       ),
-      p(strong("Step 3: Explore the bee groups."), "We recommend looking at the bee data in three different combinations:"),
-      tags$ul(
-        tags$li("Visits by all the bees combined (honey bees and wild bees)"),
-        tags$li("Visits by honey bees compared to wild bees"),
-        tags$li("Visits by each individual bee group (bumble bee, honey bee, large dark bee, small dark bee, green bee)")),
       p(strong("Step 4: Making sense of the data."), "Look at the average flower visits per minute and the composition of the bee visitors."),
       tags$ul(
-        tags$li("How do your overall bee visits per minute and wild bee visits per minute compare to the Wisconsin average?"),
-        tags$li("What does your flower visit composition look like compared to the Wisconsin average? Do you have a lower, similar or higher percentage of wild bees compared to the Wisconsin average? Among your wild bees, how does the composition of bumble bees, large dark bees, small dark bees and green bees compare to your data?"))
+        tags$li("How do your overall bee visits per minute and wild bee visits per minute compare to the overall average?"),
+        tags$li("What does your flower visit composition look like compared to the overall average? Do you have a lower, similar or higher percentage of wild bees compared to the overall average? Among your wild bees, how does the composition of bumble bees, large dark bees, small dark bees and green bees compare to your data?"),
+        tags$li("You can make comparisons within this dashboard between select surveys and the overall averages, or you can look at your WiBee app survey data and compare individual surveys to the data you see here in the dashboard."))
     )
   ),
   br(),
@@ -207,7 +206,7 @@ ui <- fixedPage(
   
   bsCollapse(
     bsCollapsePanel(
-      style = "info",
+      style = "primary",
       title = "2) Filter by date range",
       p(em("Filter survey data by selecting which date range you want to see data for."), style = "margin-top:.5em; margin-bottom:.5em"),
       div(
@@ -238,7 +237,7 @@ ui <- fixedPage(
   
   bsCollapse(
     bsCollapsePanel(
-      style = "success",
+      style = "primary",
       title = "3) Filter by habitat, plant, or management type",
       p(em("Filter survey data by selecting which habitats, crops, flowers, and management types you want to see data for. You can also group wild bees together or show only specific bee types."), style = "margin-top:.5em; margin-bottom:.5em"),
       div(
