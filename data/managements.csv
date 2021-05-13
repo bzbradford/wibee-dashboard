@@ -1,5 +1,8 @@
 type,label
 organic,Organic
 conventional,Conventional
+ipm,IPM
+low spray,Low spray
+no spray,No spray
 unknown,Unknown
-other,Other/None
+other,Other
