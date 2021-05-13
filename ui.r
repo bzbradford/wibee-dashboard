@@ -97,10 +97,102 @@ ui <- fixedPage(
   ),
   br(),
   
+  # h4("Select and filter bee surveys:"),
+  # tabsetPanel(
+  #   tabPanel(
+  #     title = "Filter by survey location",
+  #     p(em("Click on individual grid cell(s) to show only results from those areas. Note: some surveys are from outside Wisconsin. Click 'Zoom all' to see them."), style = "margin-top:.5em; margin-bottom:.5em"),
+  #     leafletOutput("map", height = 600),
+  #     div(style = "margin-top: 5px;",
+  #       div(actionButton("map_select_visible", "Select visible"), style = "padding-right:10px; display:inline-block"),
+  #       div(actionButton("map_zoom_all", "Select all"), style = "padding-right:10px; display:inline-block"),
+  #       div(actionButton("map_clear_selection", "Clear selection"), style = "padding-right:10px; display:inline-block"),
+  #       div(actionButton("map_reset", "Reset map"), style = "padding-right:20px; display:inline-block"),
+  #       div(strong(textOutput("survey_count_loc")), style = "display:inline-block")
+  #     )
+  #   ),
+  #   
+  #   tabPanel(
+  #     title = "Filter by date range",
+  #     p(em("Filter survey data by selecting which date range you want to see data for."), style = "margin-top:.5em; margin-bottom:.5em"),
+  #     div(
+  #       class = "well",
+  #       checkboxGroupButtons(
+  #         "years",
+  #         "Surveys from year:",
+  #         choices = years,
+  #         selected = years
+  #       ),
+  #       sliderInput(
+  #         "date_range",
+  #         "Date range:",
+  #         min = min_date,
+  #         max = max_date,
+  #         value = c(min_date, max_date),
+  #         width = "100%"),
+  #       div(actionButton("reset_date", "Reset date"), style = "margin-top:15px"),
+  #     ),
+  #   ),
+  #   
+  #   tabPanel(
+  #     title = "Filter by habitat, crop, or management type",
+  #     p(em("Filter survey data by selecting which habitat(s), crop(s), and management type(s) you want to see data for. You can also group wild bees together or show only specific bee types."), style = "margin-top:.5em; margin-bottom:.5em"),
+  #     div(
+  #       class = "well",
+  #       fixedRow(
+  #         column(3,
+  #           checkboxGroupInput(
+  #             "which_bees",
+  #             "Bee group:",
+  #             choiceNames = bee_names,
+  #             choiceValues = bee_names,
+  #             selected = bee_names),
+  #           materialSwitch("group_wild", label = "Group wild bees together", status = "success"),
+  #           div(actionButton("which_bees_all", "All"), style = "display:inline-block"),
+  #           div(actionButton("which_bees_none", "None"), style = "display:inline-block"),
+  #         ),
+  #         column(3,
+  #           checkboxGroupInput(
+  #             "which_habitat",
+  #             "Habitat:",
+  #             choiceNames = levels(habitats$label),
+  #             choiceValues = habitats$type,
+  #             selected = habitats$type),
+  #           div(actionButton("which_habitat_all", "All"), style = "display:inline-block"),
+  #           div(actionButton("which_habitat_none", "None"), style = "display:inline-block"),
+  #         ),
+  #         column(3,
+  #           checkboxGroupInput(
+  #             "which_crop",
+  #             "Crop/Flower:",
+  #             choiceNames = levels(crops$label),
+  #             choiceValues = crops$type,
+  #             selected = crops$type),
+  #           div(actionButton("which_crop_all", "All"), style = "display:inline-block"),
+  #           div(actionButton("which_crop_none", "None"), style = "display:inline-block"),
+  #         ),
+  #         column(3,
+  #           checkboxGroupInput(
+  #             "which_mgmt",
+  #             "Management:",
+  #             choiceNames = levels(managements$label),
+  #             choiceValues = managements$type,
+  #             selected = managements$type),
+  #           div(actionButton("which_mgmt_all", "All"), style = "display:inline-block"),
+  #           div(actionButton("which_mgmt_none", "None"), style = "display:inline-block"),
+  #           div(actionButton("reset", "Reset filters"), style = "margin-top:15px"),
+  #         )
+  #       )
+  #     )
+  #   )
+  
   h4("Select and filter bee surveys:"),
-  tabsetPanel(
-    tabPanel(
-      title = "Filter by survey location",
+  bsCollapse(
+    open = "map",
+    bsCollapsePanel(
+      style = "primary",
+      value = "map",
+      title = "1) Filter by survey location",
       p(em("Click on individual grid cell(s) to show only results from those areas. Note: some surveys are from outside Wisconsin. Click 'Zoom all' to see them."), style = "margin-top:.5em; margin-bottom:.5em"),
       leafletOutput("map", height = 600),
       div(style = "margin-top: 5px;",
@@ -110,16 +202,49 @@ ui <- fixedPage(
         div(actionButton("map_reset", "Reset map"), style = "padding-right:20px; display:inline-block"),
         div(strong(textOutput("survey_count_loc")), style = "display:inline-block")
       )
-    ),
-    
-    tabPanel(
-      title = "Filter by habitat, crop, or management type",
-      p(em("Filter survey data by selecting which habitat(s), crop(s), and management type(s) you want to see data for. You can also group wild bees together or show only specific bee types."), style = "margin-top:.5em; margin-bottom:.5em"),
+    )
+  ),
+  
+  bsCollapse(
+    bsCollapsePanel(
+      style = "info",
+      title = "2) Filter by date range",
+      p(em("Filter survey data by selecting which date range you want to see data for."), style = "margin-top:.5em; margin-bottom:.5em"),
+      div(
+        class = "well",
+        checkboxGroupButtons(
+          "years",
+          label = "Surveys from year:",
+          choices = years,
+          selected = years,
+          individual = TRUE,
+          checkIcon = list(
+            yes = icon("check-square"),
+            no = icon("square-o")
+          )
+        ),
+        sliderInput(
+          "date_range",
+          label = "Date range:",
+          min = min_date,
+          max = max_date,
+          value = c(min_date, max_date),
+          width = "100%"),
+        div(actionButton("reset_date", "Reset date"), style = "margin-top:15px"),
+      ),
+      div(style = "text-align: center; font-weight: bold;", textOutput("survey_count_date"))
+    )
+  ),
+  
+  bsCollapse(
+    bsCollapsePanel(
+      style = "success",
+      title = "3) Filter by habitat, plant, or management type",
+      p(em("Filter survey data by selecting which habitats, crops, flowers, and management types you want to see data for. You can also group wild bees together or show only specific bee types."), style = "margin-top:.5em; margin-bottom:.5em"),
       div(
         class = "well",
         fixedRow(
-          column(
-            width = 3,
+          column(3,
             checkboxGroupInput(
               "which_bees",
               "Bee group:",
@@ -130,8 +255,7 @@ ui <- fixedPage(
             div(actionButton("which_bees_all", "All"), style = "display:inline-block"),
             div(actionButton("which_bees_none", "None"), style = "display:inline-block"),
           ),
-          column(
-            width = 3,
+          column(3,
             checkboxGroupInput(
               "which_habitat",
               "Habitat:",
@@ -141,19 +265,17 @@ ui <- fixedPage(
             div(actionButton("which_habitat_all", "All"), style = "display:inline-block"),
             div(actionButton("which_habitat_none", "None"), style = "display:inline-block"),
           ),
-          column(
-            width = 3,
+          column(3,
             checkboxGroupInput(
               "which_crop",
-              "Crop/Wildflower:",
+              "Crop/Flower:",
               choiceNames = levels(crops$label),
               choiceValues = crops$type,
               selected = crops$type),
             div(actionButton("which_crop_all", "All"), style = "display:inline-block"),
             div(actionButton("which_crop_none", "None"), style = "display:inline-block"),
           ),
-          column(
-            width = 3,
+          column(3,
             checkboxGroupInput(
               "which_mgmt",
               "Management:",
@@ -165,24 +287,8 @@ ui <- fixedPage(
             div(actionButton("reset", "Reset filters"), style = "margin-top:15px"),
           )
         )
-      )
-    ),
-    
-    tabPanel(
-      title = "Filter by date range",
-      p(em("Filter survey data by selecting which date range you want to see data for."), style = "margin-top:.5em; margin-bottom:.5em"),
-      div(
-        class = "well",
-        # style = "border:1px solid #ddd; background-color:#f1f1f1; border-radius:5px; padding:15px",
-        sliderInput(
-          "date_range",
-          "Date range:",
-          min = min_date,
-          max = max_date,
-          value = c(min_date, max_date),
-          width = "100%"),
-        div(actionButton("reset_date", "Reset date"), style = "margin-top:15px"),
       ),
+      div(style = "text-align: center; font-weight: bold;", textOutput("survey_count_filters"))
     )
     
   ),
@@ -191,7 +297,6 @@ ui <- fixedPage(
   
 ## Number of selected surveys ----------------------------------------------
 
-  br(),
   div(
     class = "well",
     style = "text-align: center; font-size: larger;",

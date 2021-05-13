@@ -20,7 +20,9 @@ server <- function(input, output, session) {
   
   # filter survey data by date slider
   surveys_by_loc_date <- reactive({
-    filter(surveys_by_loc(), between(date, input$date_range[1], input$date_range[2]))
+    surveys_by_loc() %>%
+      filter(year %in% input$years) %>%
+      filter(between(date, input$date_range[1], input$date_range[2]))
     })
   
   
@@ -112,20 +114,34 @@ server <- function(input, output, session) {
   
   
   # Date slider
-  observeEvent(surveys_by_loc(), {
-    df <- surveys_by_loc()
-    if (nrow(df) > 0) {
-      updateSliderInput(
-        session,
-        "date_range",
-        min = min(df$date),
-        max = max(df$date),
-        value = c(min(df$date), max(df$date)))
-      }
+  # observeEvent(surveys_by_loc(), {
+  #   df <- surveys_by_loc()
+  #   if (nrow(df) > 0) {
+  #     updateSliderInput(
+  #       session,
+  #       "date_range",
+  #       min = min(df$date),
+  #       max = max(df$date),
+  #       value = c(min(df$date), max(df$date)))
+  #     }
+  #   })
+  
+  observeEvent(input$years, {
+    df <- surveys %>%
+      select(year, date) %>%
+      filter(year %in% input$years)
+    updateSliderInput(
+      session,
+      "date_range",
+      min = min(df$date),
+      max = max(df$date),
+      value = c(min(df$date), max(df$date)))
     })
+  
   
   # reset date slider button
   observeEvent(input$reset_date, {
+    updateCheckboxGroupButtons(session, "years", selected = years)
     updateSliderInput(session, "date_range", value = c(min_date, max_date))
     })
   
@@ -200,11 +216,18 @@ server <- function(input, output, session) {
   })
   
   # Number of matching surveys after date filter
-  output$survey_count_filters <- renderText({
+  output$survey_count_date <- renderText({
     paste(
       nrow(surveys_by_loc_date()), "out of",
-      nrow(surveys_by_loc()), "surveys match your filter selections.")
-    })  
+      nrow(surveys_by_loc()), "surveys match your date selections.")
+  })
+  
+  # Number of matching surveys after date filter
+  output$survey_count_filters <- renderText({
+    paste(
+      nrow(filtered_surveys()), "out of",
+      nrow(surveys_by_loc_date()), "surveys match your filter selections.")
+    })
   
   # Number of matching surveys after site characteristic filters
   output$survey_count_final <- renderText({
@@ -420,8 +443,9 @@ server <- function(input, output, session) {
           legend = list(orientation = "h"),
           bargap = 0
           )
-    }
-  })
+      }
+    }) %>%
+    bindCache(filtered_surveys_long())
   
   
   
@@ -451,7 +475,8 @@ server <- function(input, output, session) {
         yaxis = list(title = "Number of visits per survey", fixedrange = T),
         hovermode = "compare"
       )
-  })
+    }) %>%
+    bindCache(filtered_surveys_long())
   
   output$plotByCrop <- renderPlotly({
     filtered_surveys_long() %>%
@@ -476,7 +501,8 @@ server <- function(input, output, session) {
         yaxis = list(title = "Number of visits per survey", fixedrange = T),
         hovermode = "compare"
       )
-  })
+    }) %>%
+    bindCache(filtered_surveys_long())
   
   output$plotByMgmt <- renderPlotly({
     filtered_surveys_long() %>%
@@ -501,7 +527,8 @@ server <- function(input, output, session) {
         yaxis = list(title = "Number of visits per survey", fixedrange = T),
         hovermode = "compare"
       )
-  })
+    }) %>%
+    bindCache(filtered_surveys_long())
   
   
 
@@ -521,20 +548,21 @@ server <- function(input, output, session) {
       pivot_wider(names_from = bee_name, values_from = visit_rate) %>%
       mutate("row" = row_number()) %>%
       select("row", everything())
-  })
+    }) %>%
+    bindCache(filtered_surveys_long(), input$dtGroups)
   
   output$summaryTable <- renderDT(
     filteredTable(),
     rownames = F,
     options = list(pageLength = 25)
-  )
+    )
   
   output$download_data <- downloadHandler(
     filename = "wibee_data.csv",
     content = function(file) {
       write_csv(filteredTable(), file)
-    }
-  )
+      }
+    )
   
   
   
@@ -581,6 +609,7 @@ server <- function(input, output, session) {
         marker = list(colorscale = "Greens", reversescale = T),
         branchvalues = "total"
       )
-  })
+    }) %>%
+    bindCache(filtered_surveys())
   
 }

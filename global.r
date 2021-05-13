@@ -54,7 +54,8 @@ keep_cols <- c(
   "site_type",
   "crop",
   "management_type",
-  "centerpiece_type"
+  "centerpiece_type",
+  "picture_url"
   )
 
 
@@ -105,15 +106,18 @@ managements <- read_csv("data/managements.csv", col_types = cols()) %>% mutate_a
 # Process survey data -----------------------------------------------------
 
 # generate main dataset
-surveys <- wibee_in %>%
+wibee <- wibee_in %>%
   select(all_of(c(keep_cols, bee_cols))) %>%
   rename(
     date = ended_at,
     habitat = site_type,
     management = management_type,
     crop_category = centerpiece_type) %>%
-  mutate(date = as.Date(date)) %>%
   filter(duration == "5 minutes", date >= "2020-04-01") %>%
+  mutate(
+    date = as.Date(date),
+    year = lubridate::year(date),
+    .after = "date") %>%
   mutate(across(all_of(bee_cols), replace_na, 0)) %>%
   mutate(wild_bee = bumble_bee + large_dark_bee + small_dark_bee + greenbee) %>%
   mutate(
@@ -157,8 +161,15 @@ surveys <- wibee_in %>%
     lng_rnd = round(lng, 1),
     grid_pt = paste(lat_rnd, lng_rnd, sep = ", "),
     inwi = between(lat, 42.49, 47.08) & between(lng, -92.89, -86.80),
+    remote_id = id,
     id = 1:length(id)) %>%
   droplevels()
+
+
+# separate surveys and ids for picture downloads
+# the ids will change if the filter is changed in the block above
+surveys <- wibee %>% select(-c("remote_id", "picture_url"))
+# images <- wibee %>% select(c("id", "remote_id", "picture_url"))
 
 
 # keep only attributes that have occurred at least once
@@ -203,6 +214,7 @@ map_pts_wi <- filter(map_pts, inwi == T)$grid_pt
 # get date range of data
 min_date <- min(surveys$date)
 max_date <- max(surveys$date)
+years <- unique(format(surveys$date, "%Y"))
 
 
 # total counts for project summary
