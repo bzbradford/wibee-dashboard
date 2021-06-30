@@ -31,8 +31,8 @@ server <- function(input, output, session) {
     filter(
       surveys_by_loc_date(),
       habitat %in% input$which_habitat,
-      crop %in% input$which_crop,
-      management %in% input$which_mgmt) %>%
+      management %in% input$which_mgmt,
+      plant_id %in% input$which_crop || plant_id %in% input$which_noncrop) %>%
     droplevels()
     }) 
   
@@ -44,8 +44,8 @@ server <- function(input, output, session) {
         grid_pt %in% map_selection(),
         between(date, input$date_range[1], input$date_range[2]),
         habitat %in% input$which_habitat,
-        crop %in% input$which_crop,
         management %in% input$which_mgmt,
+        plant_id %in% input$which_crop || plant_id %in% input$which_noncrop,
         bee_name %in% input$which_bees
       ) %>%
       droplevels()
@@ -75,25 +75,6 @@ server <- function(input, output, session) {
     })
   
   
-  # Crop checkbox labels and values
-  crop_labels <- reactive({
-    crops %>%
-      left_join(
-        count(surveys_by_loc_date(), crop, .drop = F),
-        by = c("type" = "crop")) %>%
-      mutate(
-        n = replace_na(n, 0),
-        box_label = paste0(label, " (", n, ")"))
-    })
-  
-  observeEvent(crop_labels(), {
-    updateCheckboxGroupInput(session, "which_crop",
-      choiceNames = crop_labels()$box_label,
-      choiceValues = crop_labels()$type,
-      selected = input$which_crop)
-    })
-  
-  
   # Management checkbox labels and values
   mgmt_labels <- reactive({
     managements %>%
@@ -111,6 +92,43 @@ server <- function(input, output, session) {
       choiceValues = mgmt_labels()$type,
       selected = input$which_mgmt)
     })
+  
+  
+  # Crop checkbox labels and values
+  crop_labels <- reactive({
+    top_crops %>%
+      left_join(
+        count(surveys_by_loc_date(), plant_id, .drop = F),
+        by = "plant_id") %>%
+      mutate(
+        n = replace_na(n, 0),
+        box_label = paste0(label, " (", n, ")"))
+  })
+  
+  observeEvent(crop_labels(), {
+    updateCheckboxGroupInput(session, "which_crop",
+      choiceNames = crop_labels()$box_label,
+      choiceValues = crop_labels()$plant_type,
+      selected = input$which_crop)
+  })
+  
+  # Non-crop checkbox labels and values
+  noncrop_labels <- reactive({
+    top_noncrops %>%
+      left_join(
+        count(surveys_by_loc_date(), plant_id, .drop = F),
+        by = "plant_id") %>%
+      mutate(
+        n = replace_na(n, 0),
+        box_label = paste0(label, " (", n, ")"))
+  })
+  
+  observeEvent(noncrop_labels(), {
+    updateCheckboxGroupInput(session, "which_noncrop",
+      choiceNames = noncrop_labels()$box_label,
+      choiceValues = noncrop_labels()$plant_type,
+      selected = input$which_noncrop)
+  })
   
   
   # Date slider
@@ -152,7 +170,7 @@ server <- function(input, output, session) {
   
   # Refresh bee selection checkbox, depending on yes/no wild bee grouping selection
   resetBees <- function() {
-    if(input$group_wild) {
+    if (input$group_wild) {
       updateCheckboxGroupInput(
         session,
         "which_bees",
@@ -173,7 +191,8 @@ server <- function(input, output, session) {
   observeEvent(input$reset, {
     # updateSliderInput(session, "date_range", value = c(min_date, max_date))
     updateCheckboxGroupInput(session, "which_habitat", selected = habitats$type)
-    updateCheckboxGroupInput(session, "which_crop", selected = crops$type)
+    updateCheckboxGroupInput(session, "which_crop", selected = top_crops$plant_id)
+    updateCheckboxGroupInput(session, "which_noncrop", selected = top_noncrops$plant_id)
     updateCheckboxGroupInput(session, "which_mgmt", selected = managements$type)
     updateCheckboxInput(session, "group_wild", value = F)
     resetBees()
@@ -191,9 +210,13 @@ server <- function(input, output, session) {
   observeEvent(input$which_habitat_none,
     updateCheckboxGroupInput(session, "which_habitat", selected = ""))
   observeEvent(input$which_crop_all,
-    updateCheckboxGroupInput(session, "which_crop", selected = crops$type))
+    updateCheckboxGroupInput(session, "which_crop", selected = top_crops$plant_id))
   observeEvent(input$which_crop_none,
     updateCheckboxGroupInput(session, "which_crop", selected = ""))
+  observeEvent(input$which_noncrop_all,
+    updateCheckboxGroupInput(session, "which_noncrop", selected = top_noncrops$plant_id))
+  observeEvent(input$which_noncrop_none,
+    updateCheckboxGroupInput(session, "which_noncrop", selected = ""))
   observeEvent(input$which_mgmt_all,
     updateCheckboxGroupInput(session, "which_mgmt", selected = managements$type))
   observeEvent(input$which_mgmt_none,
@@ -278,11 +301,11 @@ server <- function(input, output, session) {
     proxy <- leafletProxy("map")
     
     # on first click deselect all other grids
-    if(setequal(map_selection(), map_pts_all) | setequal(map_selection(), map_pts_wi)) {
+    if (setequal(map_selection(), map_pts_all) | setequal(map_selection(), map_pts_wi)) {
       proxy %>% clearGroup("Selected points")
       map_selection(grid_pt)
     } else if (grepl("selected", click$id, fixed = T)) {
-      if(length(map_selection()) == 1) {return()}
+      if (length(map_selection()) == 1) {return()}
       proxy %>% removeShape(click$id)
       old_sel <- map_selection()
       new_sel <- old_sel[old_sel != grid_pt]
@@ -434,7 +457,7 @@ server <- function(input, output, session) {
           color = ~ bee_name,
           colors = ~ levels(.$bee_color),
           marker = list(line = list(color = "#ffffff", width = .25))) %>%
-        layout(
+        plotly::layout(
           barmode = "stack",
           title = list(text = "<b>Daily average pollinator visitation rates</b>", font = list(size = 15)),
           xaxis = list(title = "", type = "date", tickformat = "%b %d<br>%Y", fixedrange = T),
@@ -468,7 +491,7 @@ server <- function(input, output, session) {
         color = ~ bee_name,
         colors = ~ levels(.$bee_color),
         marker = list(line = list(color = "#ffffff", width = .25))) %>%
-      layout(
+      plotly::layout(
         barmode = "stack",
         title = list(text = "<b>Pollinator visitation rates by habitat type</b>", font = list(size = 15)),
         xaxis = list(title = "", fixedrange = T),
@@ -494,7 +517,7 @@ server <- function(input, output, session) {
         color = ~ bee_name,
         colors = ~ levels(.$bee_color),
         marker = list(line = list(color = "#ffffff", width = .25))) %>%
-      layout(
+      plotly::layout(
         barmode = "stack",
         title = list(text = "<b>Pollinator visitation rates by crop type</b>", font = list(size = 15)),
         xaxis = list(title = "", fixedrange = T),
@@ -520,7 +543,7 @@ server <- function(input, output, session) {
         color = ~ bee_name,
         colors = ~ levels(.$bee_color),
         marker = list(line = list(color = "#ffffff", width = .25))) %>%
-      layout(
+      plotly::layout(
         barmode = "stack",
         title = list(text = "<b>Pollinator visitation rates by management type</b>", font = list(size = 15)),
         xaxis = list(title = "", fixedrange = T),

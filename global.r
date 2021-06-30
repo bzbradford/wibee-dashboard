@@ -10,8 +10,8 @@ kebab <- function(s) {
 # Load remote data --------------------------------------------------------
 
 # check when last data refresh occurred
-if (file.exists("./data/refresh_time")) {
-  refresh_time <- readRDS("./data/refresh_time")
+if (file.exists("./refresh_time")) {
+  refresh_time <- readRDS("./refresh_time")
 } else {
   refresh_time <- as.POSIXct("2020-01-01")
 }
@@ -27,7 +27,7 @@ if (refresh_time < Sys.time() - 3600) {
   if (is.data.frame(get_surveys)) {
     arrange(get_surveys, ended_at) %>% write_csv("./data/surveys.csv")
     refresh_time <- Sys.time()
-    saveRDS(refresh_time, "./data/refresh_time")
+    saveRDS(refresh_time, "./refresh_time")
     message("Survey data refreshed from remote database.")
   } else {
     message("Unable to refresh data from remote server.")
@@ -157,11 +157,13 @@ images <- wibee %>%
 
 habitats <- surveys %>%
   group_by(habitat, habitat_name) %>%
-  summarise(surveys = n(), .groups = "drop")
+  summarise(surveys = n(), .groups = "drop") %>%
+  rename(type = habitat, label = habitat_name)
 
 managements <- surveys %>%
   group_by(management, management_name) %>%
-  summarise(surveys = n(), .groups = "drop")
+  summarise(surveys = n(), .groups = "drop") %>%
+  rename(type = management, label = management_name)
 
 plants <- surveys %>%
   group_by(plant_type, plant_id, plant_name, plant_common_name) %>%
@@ -169,7 +171,13 @@ plants <- surveys %>%
 
 top_plants <- plants %>%
   group_by(plant_type) %>%
-  slice_max(surveys, n = 15)
+  slice_max(surveys, n = 15) %>%
+  ungroup() %>%
+  mutate_if(is.factor, as.character) %>%
+  mutate_if(is.character, fct_inorder)
+
+top_crops <- top_plants %>% filter(plant_type == "crop")
+top_noncrops <- top_plants %>% filter(plant_type == "non-crop")
 
 
 # pivot longer for some data analysis
@@ -217,4 +225,3 @@ bee_totals <- surveys_long %>%
   group_by(bee_name) %>%
   summarise(tot_count = sum(count), .groups = "drop") %>%
   mutate(pct_count = sprintf("%1.1f%%", tot_count / sum(.$tot_count) * 100))
-

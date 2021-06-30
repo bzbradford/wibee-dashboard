@@ -8,3 +8,5 @@ shiny-logs/
 rsconnect
 .Renviron
 renv
+data/surveys.csv
+refresh_time

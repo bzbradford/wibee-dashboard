@@ -96,95 +96,6 @@ ui <- fixedPage(
   ),
   br(),
   
-  # h4("Select and filter bee surveys:"),
-  # tabsetPanel(
-  #   tabPanel(
-  #     title = "Filter by survey location",
-  #     p(em("Click on individual grid cell(s) to show only results from those areas. Note: some surveys are from outside Wisconsin. Click 'Zoom all' to see them."), style = "margin-top:.5em; margin-bottom:.5em"),
-  #     leafletOutput("map", height = 600),
-  #     div(style = "margin-top: 5px;",
-  #       div(actionButton("map_select_visible", "Select visible"), style = "padding-right:10px; display:inline-block"),
-  #       div(actionButton("map_zoom_all", "Select all"), style = "padding-right:10px; display:inline-block"),
-  #       div(actionButton("map_clear_selection", "Clear selection"), style = "padding-right:10px; display:inline-block"),
-  #       div(actionButton("map_reset", "Reset map"), style = "padding-right:20px; display:inline-block"),
-  #       div(strong(textOutput("survey_count_loc")), style = "display:inline-block")
-  #     )
-  #   ),
-  #   
-  #   tabPanel(
-  #     title = "Filter by date range",
-  #     p(em("Filter survey data by selecting which date range you want to see data for."), style = "margin-top:.5em; margin-bottom:.5em"),
-  #     div(
-  #       class = "well",
-  #       checkboxGroupButtons(
-  #         "years",
-  #         "Surveys from year:",
-  #         choices = years,
-  #         selected = years
-  #       ),
-  #       sliderInput(
-  #         "date_range",
-  #         "Date range:",
-  #         min = min_date,
-  #         max = max_date,
-  #         value = c(min_date, max_date),
-  #         width = "100%"),
-  #       div(actionButton("reset_date", "Reset date"), style = "margin-top:15px"),
-  #     ),
-  #   ),
-  #   
-  #   tabPanel(
-  #     title = "Filter by habitat, crop, or management type",
-  #     p(em("Filter survey data by selecting which habitat(s), crop(s), and management type(s) you want to see data for. You can also group wild bees together or show only specific bee types."), style = "margin-top:.5em; margin-bottom:.5em"),
-  #     div(
-  #       class = "well",
-  #       fixedRow(
-  #         column(3,
-  #           checkboxGroupInput(
-  #             "which_bees",
-  #             "Bee group:",
-  #             choiceNames = bee_names,
-  #             choiceValues = bee_names,
-  #             selected = bee_names),
-  #           materialSwitch("group_wild", label = "Group wild bees together", status = "success"),
-  #           div(actionButton("which_bees_all", "All"), style = "display:inline-block"),
-  #           div(actionButton("which_bees_none", "None"), style = "display:inline-block"),
-  #         ),
-  #         column(3,
-  #           checkboxGroupInput(
-  #             "which_habitat",
-  #             "Habitat:",
-  #             choiceNames = levels(habitats$label),
-  #             choiceValues = habitats$type,
-  #             selected = habitats$type),
-  #           div(actionButton("which_habitat_all", "All"), style = "display:inline-block"),
-  #           div(actionButton("which_habitat_none", "None"), style = "display:inline-block"),
-  #         ),
-  #         column(3,
-  #           checkboxGroupInput(
-  #             "which_crop",
-  #             "Crop/Flower:",
-  #             choiceNames = levels(crops$label),
-  #             choiceValues = crops$type,
-  #             selected = crops$type),
-  #           div(actionButton("which_crop_all", "All"), style = "display:inline-block"),
-  #           div(actionButton("which_crop_none", "None"), style = "display:inline-block"),
-  #         ),
-  #         column(3,
-  #           checkboxGroupInput(
-  #             "which_mgmt",
-  #             "Management:",
-  #             choiceNames = levels(managements$label),
-  #             choiceValues = managements$type,
-  #             selected = managements$type),
-  #           div(actionButton("which_mgmt_all", "All"), style = "display:inline-block"),
-  #           div(actionButton("which_mgmt_none", "None"), style = "display:inline-block"),
-  #           div(actionButton("reset", "Reset filters"), style = "margin-top:15px"),
-  #         )
-  #       )
-  #     )
-  #   )
-  
   h4("Select and filter bee surveys:"),
   bsCollapse(
     open = "map",
@@ -207,7 +118,7 @@ ui <- fixedPage(
   bsCollapse(
     bsCollapsePanel(
       style = "primary",
-      title = "2) Filter by date range",
+      title = "2) Select date range",
       p(em("Filter survey data by selecting which date range you want to see data for."), style = "margin-top:.5em; margin-bottom:.5em"),
       div(
         class = "well",
@@ -238,7 +149,7 @@ ui <- fixedPage(
   bsCollapse(
     bsCollapsePanel(
       style = "primary",
-      title = "3) Filter by habitat, plant, or management type",
+      title = "3) Select by habitat or management type",
       p(em("Filter survey data by selecting which habitats, crops, flowers, and management types you want to see data for. You can also group wild bees together or show only specific bee types."), style = "margin-top:.5em; margin-bottom:.5em"),
       div(
         class = "well",
@@ -249,7 +160,8 @@ ui <- fixedPage(
               "Bee group:",
               choiceNames = bee_names,
               choiceValues = bee_names,
-              selected = bee_names),
+              selected = bee_names
+            ),
             materialSwitch("group_wild", label = "Group wild bees together", status = "success"),
             div(actionButton("which_bees_all", "All"), style = "display:inline-block"),
             div(actionButton("which_bees_none", "None"), style = "display:inline-block"),
@@ -258,38 +170,53 @@ ui <- fixedPage(
             checkboxGroupInput(
               "which_habitat",
               "Habitat:",
-              choiceNames = levels(habitats$label),
+              choiceNames = habitats$label,
               choiceValues = habitats$type,
-              selected = habitats$type),
+              selected = habitats$type
+            ),
             div(actionButton("which_habitat_all", "All"), style = "display:inline-block"),
             div(actionButton("which_habitat_none", "None"), style = "display:inline-block"),
           ),
           column(3,
             checkboxGroupInput(
-              "which_crop",
-              "Crop/Flower:",
-              choiceNames = levels(crops$label),
-              choiceValues = crops$type,
-              selected = crops$type),
-            div(actionButton("which_crop_all", "All"), style = "display:inline-block"),
-            div(actionButton("which_crop_none", "None"), style = "display:inline-block"),
-          ),
-          column(3,
-            checkboxGroupInput(
               "which_mgmt",
               "Management:",
-              choiceNames = levels(managements$label),
+              choiceNames = managements$label,
               choiceValues = managements$type,
-              selected = managements$type),
+              selected = managements$type
+            ),
             div(actionButton("which_mgmt_all", "All"), style = "display:inline-block"),
             div(actionButton("which_mgmt_none", "None"), style = "display:inline-block"),
             div(actionButton("reset", "Reset filters"), style = "margin-top:15px"),
           )
+        ),
+        fixedRow(
+          column(3,
+            checkboxGroupInput(
+              "which_crop",
+              "Crop:",
+              choiceNames = top_crops$plant_common_name,
+              choiceValues = top_crops$plant_id,
+              selected = top_crops$plant_id
+            ),
+            div(actionButton("which_crop_all", "All"), style = "display:inline-block"),
+            div(actionButton("which_crop_none", "None"), style = "display:inline-block")
+          ),
+          column(3,
+            checkboxGroupInput(
+              "which_noncrop",
+              "Flowering plant:",
+              choiceNames = top_noncrops$plant_common_name,
+              choiceValues = top_noncrops$plant_id,
+              selected = top_noncrops$plant_id
+            ),
+            div(actionButton("which_noncrop_all", "All"), style = "display:inline-block"),
+            div(actionButton("which_noncrop_none", "None"), style = "display:inline-block")
+          )
         )
       ),
-      div(style = "text-align: center; font-weight: bold;", textOutput("survey_count_filters"))
+    div(style = "text-align: center; font-weight: bold;", textOutput("survey_count_filters"))
     )
-    
   ),
   
   
