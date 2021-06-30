@@ -3,12 +3,14 @@
 library(tidyverse)
 library(httr)
 
-
+kebab <- function(s) {
+  gsub(" ", "-", tolower(s))
+}
 
 # Load remote data --------------------------------------------------------
 
 # check when last data refresh occurred
-if(file.exists("./data/refresh_time")) {
+if (file.exists("./data/refresh_time")) {
   refresh_time <- readRDS("./data/refresh_time")
 } else {
   refresh_time <- as.POSIXct("2020-01-01")
@@ -16,13 +18,13 @@ if(file.exists("./data/refresh_time")) {
 
 
 # update surveys at most once an hour. Writes to local csv
-if(refresh_time < Sys.time() - 3600) {
+if (refresh_time < Sys.time() - 3600) {
   get_surveys <-
     content(
       GET(url = "https://wibee.caracal.tech/api/data/survey-summaries",
         config = add_headers(Authorization = Sys.getenv("caracal_token")))
     )
-  if(is.data.frame(get_surveys)) {
+  if (is.data.frame(get_surveys)) {
     arrange(get_surveys, ended_at) %>% write_csv("./data/surveys.csv")
     refresh_time <- Sys.time()
     saveRDS(refresh_time, "./data/refresh_time")
@@ -54,7 +56,6 @@ keep_cols <- c(
   "site_type",
   "crop",
   "management_type",
-  "centerpiece_type",
   "picture_url"
   )
 
@@ -71,27 +72,22 @@ bee_cols <- c(
 
 
 # bee names
-bees <- tibble(
-  type = c("honeybee", "bumble_bee", "large_dark_bee", "small_dark_bee", "greenbee", "wild_bee", "non_bee"),
-  label = c("Honey bees", "Bumble bees", "Large dark bees", "Small dark bees", "Green bees", "Wild bees", "Non-bees"),
-  color = c("#eca500", "#d86d27", "#758BFD", "#AEB8FE", "#99b5aa", "#5f8475", "#949494"),
-  group = c("Honey bees", "Wild bees", "Wild bees","Wild bees","Wild bees","Wild bees", "Non-bees")
-) %>% mutate_all(fct_inorder)
-# bees %>% write_csv("data/bees.csv")
-
+bees <- read_csv("data/bees.csv", col_types = cols()) %>% mutate_all(fct_inorder)
 
 # formatted bee names for ungrouped
 bee_names <- bees %>% filter(type != "wild_bee") %>% pull(label) %>% as.character()
 
-
 # formatted names for wild bee grouping
 wildbee_names <- levels(bees$group)
 
+# load habitat types
+habitat_list <- read_csv("data/habitats.csv", col_types = cols()) %>% mutate_all(fct_inorder)
 
-# load other types
-habitats <- read_csv("data/habitats.csv", col_types = cols()) %>% mutate_all(fct_inorder)
-crops <- read_csv("data/crops.csv", col_types = cols()) %>% mutate_all(fct_inorder)
-managements <- read_csv("data/managements.csv", col_types = cols()) %>% mutate_all(fct_inorder)
+# load management types
+management_list <- read_csv("data/managements.csv", col_types = cols()) %>% mutate_all(fct_inorder)
+
+# load plant list
+plant_list <- read_csv("data/plant-list.csv", col_types = cols()) %>% mutate_all(fct_inorder)
 
 
 
@@ -111,8 +107,7 @@ wibee <- wibee_in %>%
   rename(
     date = ended_at,
     habitat = site_type,
-    management = management_type,
-    crop_category = centerpiece_type) %>%
+    management = management_type) %>%
   filter(duration == "5 minutes", date >= "2020-04-01") %>%
   mutate(
     date = as.Date(date),
@@ -123,44 +118,30 @@ wibee <- wibee_in %>%
   mutate(
     habitat = replace_na(habitat, "other"),
     habitat = case_when(
-      habitat %in% habitats$type ~ habitat,
+      habitat %in% habitat_list$type ~ habitat,
       grepl("lawn", habitat) || grepl("garden", habitat) ~ "lawn-and-garden",
       T ~ "other"),
-    habitat = factor(habitat, levels = habitats$type)) %>%
-  mutate(
-    crop = tolower(crop),
-    crop = case_when(
-      crop %in% crops$type ~ crop,
-      grepl("berry", crop) ~ "other-berry",
-      grepl("flower", crop) ~ "flowers",
-      grepl("native", crop) ~ "native-flowers",
-      T ~ "other"),
-    crop = factor(crop, levels = crops$type)) %>%
+    habitat = factor(habitat, levels = habitat_list$type)) %>%
+  left_join(rename(habitat_list, habitat = type, habitat_name = label)) %>%
   mutate(
     management = replace_na(management, "none"),
     management = case_when(
-      management %in% managements$type ~ management,
+      management %in% management_list$type ~ management,
       grepl("organic", management) ~ "organic",
       grepl("conventional", management) ~ "conventional",
       grepl("ipm", management) ~ "ipm",
       grepl("spray", management) && grepl("low", management) ~ "low spray",
       grepl("spray", management) && grepl("no", management) ~ "no spray",
       T ~ "other"),
-    management = factor(management, levels = managements$type)) %>%
-  left_join(
-    rename(habitats, habitat = type, habitat_name = label),
-    by = "habitat") %>%
-  left_join(
-    rename(crops, crop = type, crop_name = label),
-    by = "crop") %>%
-  left_join(
-    rename(managements, management = type, management_name = label),
-    by = "management") %>%
+    management = factor(management, levels = management_list$type)) %>%
+  left_join(rename(management_list, management = type, management_name = label)) %>%
+  left_join(plant_list) %>%
   mutate(
     lat_rnd = round(lat, 1),
     lng_rnd = round(lng, 1),
     grid_pt = paste(lat_rnd, lng_rnd, sep = ", "),
-    inwi = between(lat, 42.49, 47.08) & between(lng, -92.89, -86.80),
+    inwi = between(lat, 42.49, 47.08) & between(lng, -92.89, -86.80)) %>%
+  mutate(
     remote_id = id,
     id = 1:length(id)) %>%
   droplevels()
@@ -169,13 +150,26 @@ wibee <- wibee_in %>%
 # separate surveys and ids for picture downloads
 # the ids will change if the filter is changed in the block above
 surveys <- wibee %>% select(-c("remote_id", "picture_url"))
-# images <- wibee %>% select(c("id", "remote_id", "picture_url"))
+images <- wibee %>%
+  select(c("id", "remote_id", "picture_url")) %>%
+  filter(!is.na(picture_url))
 
 
-# keep only attributes that have occurred at least once
-habitats <- habitats %>% filter(type %in% levels(surveys$habitat)) %>% droplevels()
-crops <- crops %>% filter(type %in% levels(surveys$crop)) %>% droplevels()
-managements <- managements %>% filter(type %in% levels(surveys$management)) %>% droplevels()
+habitats <- surveys %>%
+  group_by(habitat, habitat_name) %>%
+  summarise(surveys = n(), .groups = "drop")
+
+managements <- surveys %>%
+  group_by(management, management_name) %>%
+  summarise(surveys = n(), .groups = "drop")
+
+plants <- surveys %>%
+  group_by(plant_type, plant_id, plant_name, plant_common_name) %>%
+  summarise(surveys = n(), .groups = "drop")
+
+top_plants <- plants %>%
+  group_by(plant_type) %>%
+  slice_max(surveys, n = 15)
 
 
 # pivot longer for some data analysis

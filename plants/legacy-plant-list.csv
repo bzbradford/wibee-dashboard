@@ -1,0 +1,125 @@
+crop,PlantType,PlantID
+angle‘s trumpet,non-crop,other
+Asian Pear,crop,pear
+aspragus,crop,asparagus
+aster,non-crop,family:asteraceae
+"Asters, stonecrop flower",non-crop,other
+austraila crescent,non-crop,other
+australian crescent potato,crop,potato
+balloon flowers,non-crop,other
+basil,crop,other
+"Basil, Rose",crop,other
+berry,crop,other-berry
+Black-eyed Susan cultivar,non-crop,other
+Bloodroot,non-crop,other
+Blueberry,crop,blueberry
+Bougainville,non-crop,other
+butterfly weed,non-crop,other
+Callistephus chinensis,non-crop,species:callistephus-chinensis
+Cherry,crop,cherry
+cherry tomatoes,crop,tomato
+chrysanthemum,non-crop,genus:chrysanthemum
+Chrysanthemum,non-crop,genus:chrysanthemum
+Clover,non-crop,genus:trifolium
+clovers,non-crop,genus:trifolium
+crabapple,non-crop,genus:malus
+crabapple tree,non-crop,genus:malus
+Crabapple tree,non-crop,genus:malus
+currants,non-crop,genus:ribes
+Dabdelion,non-crop,genus:taraxacum
+dogwood,non-crop,genus:cornus
+Flower,non-crop,other
+flower,non-crop,other
+flower (type unknown),non-crop,other
+flower garden,non-crop,other
+flowering weeds,non-crop,other
+flowers,non-crop,other
+Flowers,non-crop,other
+flowrs,non-crop,other
+"forbs-aster, purple coneflowet",non-crop,species:echinacea-purpurea
+garden,non-crop,other
+german butterball,crop,potato
+golden rod and aster,non-crop,genus:solidago
+gourds,crop,squash
+grass,non-crop,other
+grass and native plantings,non-crop,other
+hastas?,non-crop,genus:hosta
+herb,non-crop,other
+herbs,non-crop,other
+hosta,non-crop,genus:hosta
+Hydrangas,non-crop,genus:hydrangea
+hydrangea,non-crop,genus:hydrangea
+Lavender and Lesser Calamint,non-crop,family:lamiaceae
+lawn,non-crop,other
+Lawn Bush,non-crop,other
+Lesser Calamint,non-crop,species:clinopodia-nepeta
+lesser calamint,non-crop,species:clinopodia-nepeta
+lesser Calamint,non-crop,species:clinopodia-nepeta
+lilac,non-crop,species:syringa-vulgaris
+loofah,crop,other
+Luffa,crop,other
+magnolia,non-crop,genus:magnolia
+marigolds,non-crop,genus:calendula
+melon,crop,melon
+Mums,non-crop,genus:chrysanthemum
+mustard green flowers,non-crop,other
+myrrth,non-crop,other
+NA,non-crop,other
+native flower,non-crop,other
+native flower garden,non-crop,other
+native flowere,non-crop,other
+"native flowering plants-aster, purple coneflower",non-crop,other
+native garden plants,non-crop,other
+native plants,non-crop,other
+native plants - dolidago speciosa,non-crop,species:solidago-speciosa
+native plants - solidago speciosa,non-crop,species:solidago-speciosa
+native plants - tall thistle,non-crop,other
+ninebark bush,non-crop,other
+none,non-crop,other
+None,non-crop,other
+not sure,non-crop,other
+oneida gold,crop,potato
+orchid,non-crop,other
+Pear,crop,pear
+Perennial Flower bed,non-crop,other
+petunias,non-crop,other
+plants,non-crop,other
+Plum,crop,plum
+"purple coneflower, aster",non-crop,family:asteraceae
+purple flower,non-crop,family:asteraceae
+Purple Flower,non-crop,family:asteraceae
+Purple flowers,non-crop,family:asteraceae
+red endeavor potato,crop,potato
+red endeavor potatoes,crop,potato
+redbekia flower,non-crop,genus:rudbeckia
+redbud tree,non-crop,genus:cercis
+Redbud tree,non-crop,genus:cercis
+rose bush,non-crop,genus:rosa
+Roses,non-crop,genus:rosa
+rudbeckia,non-crop,genus:rudbeckia
+Russian Sage,non-crop,species:salvia-yangii
+salvia,non-crop,genus:salvia
+Samdal elderberry,non-crop,genus:sambucus
+scilia,non-crop,genus:scilla
+sedum,non-crop,genus:sedum
+"smooth asters, purple coneflowes",non-crop,family:asteraceae
+solidago,non-crop,genus:solidago
+"solidago “fireworks”, brown eyed Susan",non-crop,genus:solidago
+solisago speciosa,non-crop,genus:solidago
+special crops,crop,other
+Spiria,non-crop,genus:spiraea
+"sriff goldemrod,rudbeckia",non-crop,genus:solidago
+starry night acorn squash,crop,squash
+sunflowers,crop,sunflower
+super chili,crop,pepper
+thistle,non-crop,other
+tomatoes,crop,tomato
+tomatos,crop,tomato
+Variety of Vegetables,crop,other
+Various; puple flower,non-crop,other
+Various; white flower,non-crop,other
+"white flowering shrub, perhaps Cherry family",non-crop,other
+white snakeroot,non-crop,other
+Wild Flower,non-crop,other
+Yellow Allamanda,non-crop,species:allamanda-cathartica
+zucchini,crop,squash

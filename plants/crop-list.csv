@@ -1,0 +1,71 @@
+﻿ID,CommonName,ScientificName,Description,CropCategory
+alfalfa,Alfalfa,Medicago sativa,<em>Medicago sativa</em>,Hay
+almond,Almonds,Prunus dulcis,<em>Prunus dulcis</em>,Tree crops
+apple,Apples,Malus domestica,<em>Malus domestica</em>,Tree crops
+apricot,Apricots,Prunus armeniaca,<em>Prunus armeniaca</em>,Tree crops
+asparagus,Asparagus,Asparagus officinalis,<em>Asparagus officinalis</em>,Vegetables
+blackberry,Blackberries,Rubus spp.,<em>Rubus</em> spp.,Berries
+blueberry,Blueberries,Vaccinium spp.,<em>Vaccinium</em> spp.,Berries
+broccoli,Broccoli,Brassica oleraceae,<em>Brassica oleraceae</em>,Vegetables
+buckwheat,Buckwheat,Fagopyrum esculentum,<em>Fagopyrum esculentum</em>,Grains
+cabbage,Cabbage,Brassica oleraceae,<em>Brassica oleraceae</em>,Vegetables
+camelina,Camelina,Camelina spp.,<em>Camelina spp.</em>,Grains
+canola,Canola,Brassica spp.,<em>Brassica</em> spp.,Grains
+cantaloupe,Cantaloupes,Cucumis melo,<em>Cucumis melo</em>,Cucurbits
+carrot,Carrots,Daucus carota,<em>Daucus carota</em>,Vegetables
+cauliflower,Cauliflower,Brassica oleraceae,<em>Brassica oleraceae</em>,Vegetables
+celery,Celery,Apium graveolens,<em>Apium graveolens</em>,Vegetables
+cherry,Cherries,Prunus spp.,<em>Prunus</em> spp.,Tree crops
+chickpea,Chickpeas,Cicer arietinum,<em>Cicer arietinum</em>,Legumes
+chives,Chives,Allium schoenoprasum,<em>Allium schoenoprasum</em>,Vegetables
+citrus,Citrus,Citrus spp.,<em>Citrus</em> spp.,Tree crops
+corn,Corn,Zea mays,<em>Zea mays</em>,Crops
+cotton,Cotton,Gossypium spp.,<em>Gossypium</em> spp.,Crops
+cranberry,Cranberries,Vaccinium spp.,<em>Vaccinium</em> spp.,Berries
+cucumber,Cucumbers,Cucumis sativus,<em>Cucumis sativus</em>,Cucurbits
+eggplant,Eggplants,Solanum melongena,<em>Solanum melongena</em>,Crops
+flax,Flax,Linum usitatissimum,<em>Linum usitatissimum</em>,Grains
+garlic,Garlic,Allium sativum,<em>Allium sativum</em>,Crops
+grape,Grapes,Vitis spp.,<em>Vitis</em> spp.,Crops
+honeydew-melon,Honeydew melon,Cucumis melo,<em>Cucumis melo</em>,Cucurbits
+hops,Hops,Humulus lupulus,<em>Humulus lupulus</em>,Crops
+lentil,Lentils,Lens spp.,<em>Lens</em> spp.,Legumes
+lettuce,Lettuce,Lactuca sativa,<em>Lactuca sativa</em>,Crops
+mint,Mint,Mentha spp.,<em>Mentha</em> spp.,Crops
+mustard,Mustard,Brassica spp./Sinapsis spp.,<em>Brassica</em> spp. and <em>Sinapsis</em> spp.,Grains
+nectarine,Nectarines,Prunus persica,<em>Prunus persica</em>,Tree crops
+olive,Olives,Olea europaea,<em>Olea europaea</em>,Tree crops
+onion,Onions,Allium cepa,<em>Allium cepa</em>,Crops
+orange,Oranges,Citrus x sinensis,<em>Citrus x sinensis</em>,Tree crops
+other,Other,Other crop not listed,Other crop not listed,Crops
+other-berry,Other berry,Other berry not listed,Other berry not listed,Crops
+other-fruit,Other fruit,Other fruit not listed,Other fruit not listed,Crops
+other-vegetable,Other vegetable,Other vegetable not listed,Other vegetable not listed,Crops
+peach,Peaches,Prunus persica,<em>Prunus persica</em>,Tree crops
+peanut,Peanuts,Arachis hypogaea,<em>Arachis hypogaea</em>,Crops
+pear,Pears,Pyrus spp.,<em>Pyrus</em> spp.,Tree crops
+pea,Peas,Pisum sativum,<em>Pisum sativum</em>,Crops
+pecan,Pecans,Carya illinoinensis,<em>Carya illinoinensis</em>,Tree crops
+pepper,Peppers,Capsicum spp.,<em>Capsicum</em> spp.,Crops
+pistachio,Pistachios,Pistacia vera,<em>Pistacia vera</em>,Tree crops
+plum,Plums,Prunus spp.,<em>Prunus</em> spp.,Crops
+pomegranate,Pomegranates,Punica granatum,<em>Punica granatum</em>,Tree crops
+potato,Potatoes,Solanum tuberosum,<em>Solanum tuberosum</em>,Crops
+prune,Prunes,Prunus domestica,<em>Prunus domestica</em>,Tree crops
+pumpkin,Pumpkins,Cucurbita pepo,<em>Cucurbita pepo</em>,Cucurbits
+radish,Radishes,Raphanus raphanistrum,<em>Raphanus raphanistrum</em>,Crops
+raspberry,Raspberries,Rubus spp.,<em>Rubus</em> spp.,Crops
+safflower,Safflower,Carthamus tinctorium,<em>Carthamus tinctorium</em>,Grains
+sorghum,Sorghum,Sorghum spp.,<em>Sorghum</em> spp.,Crops
+soybean,Soybeans,Glycine max,<em>Glycine max</em>,Legumes
+squash,Squash,Cucurbita spp.,<em>Cucurbita</em> spp.,Cucurbits
+strawberry,Strawberries,Fragaria x ananassa,<em>Fragaria x ananassa</em>,Crops
+sugarbeet,Sugarbeets,Beta vulgaris,<em>Beta vulgaris</em>,Crops
+sunflower,Sunflower,Helianthus spp.,<em>Helianthus</em> spp.,Crops
+sweet-corn,Sweet Corn,Zea mays,<em>Zea mays</em>,Crops
+sweet-potato,Sweet Potatoes,Ipomoea batatas,<em>Ipomoea batatas</em>,Crops
+tobacco,Tobacco,Nicotiana spp.,<em>Nicotiana</em> spp.,Crops
+tomato,Tomatoes,Solanum lycopersicum,<em>Solanum lycopersicum</em>,Crops
+turnip,Turnips,Brassica rapa,<em>Brassica rapa</em>,Crops
+walnut,Walnuts,Juglans spp.,<em>Juglans</em> spp.,Tree crops
+watermelon,Watermelons,Citrullus lanatus,<em>Citrullus lanatus</em>,Cucurbits

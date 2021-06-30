@@ -1,0 +1,13 @@
+﻿PlantID,ScientificName,CommonName,TaxonLevel,Family,Genus,Species
+creeping-charlie,Glechoma hederacea,Creeping Charlie,Species,Lamiaceae,Glechoma,Glechoma hederacea
+cup-plant,Silphium perfoliatum,Cup Plant,Species,Asteraceae,Silphium,Silphium perfoliatum
+dandelion,Taraxacum,Dandelion,Genus,Asteraceae,Taraxacum,
+goldenrod,Solidago,Goldenrod,Genus,Asteraceae,Solidago,
+leadplant,Amorpha canescens,Leadplant,Species,Fabaceae,Amorpha,Amorpha canescens
+milkweed,Asclepias,Milkweed,Genus,Apocynaceae,Asclepias,
+white-clover,Trifolium repens,White Clover,Species,Fabaceae,Trifolium,Trifolium repens
+wild-bergamot,Monarda fistulosa,Wild Bergamot,Species,Lamiaceae,Monarda,Monarda fistulosa
+american-gromwell,Lithospermum latifolium,American Gromwell,Species,Boraginaceae,Lithospermum,Lithospermum latifolium
+forked-aster,Eurybia furcata,Forked Aster,Species,Asteraceae,Eurybia,Eurybia furcata
+lesser-purple-fringed-orchid,Platanthera psycodes,Lesser Purple-Fringed Orchid,Species,Orchidaceae,Platanthera,Platanthera psycodes
+lesser-yellow-lady-slipper,Cypripedium parviflorum,Lesser Yellow Lady Slipper,Species,Orchidaceae,Cypripedium,Cypripedium parviflorum
