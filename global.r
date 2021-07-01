@@ -3,9 +3,7 @@
 library(tidyverse)
 library(httr)
 
-kebab <- function(s) {
-  gsub(" ", "-", tolower(s))
-}
+
 
 # Load remote data --------------------------------------------------------
 
@@ -81,13 +79,13 @@ bee_names <- bees %>% filter(type != "wild_bee") %>% pull(label) %>% as.characte
 wildbee_names <- levels(bees$group)
 
 # load habitat types
-habitat_list <- read_csv("data/habitats.csv", col_types = cols()) %>% mutate_all(fct_inorder)
+habitat_list <- read_csv("data/habitats.csv", col_types = cols())
 
 # load management types
-management_list <- read_csv("data/managements.csv", col_types = cols()) %>% mutate_all(fct_inorder)
+management_list <- read_csv("data/managements.csv", col_types = cols())
 
 # load plant list
-plant_list <- read_csv("data/plant-list.csv", col_types = cols()) %>% mutate_all(fct_inorder)
+plant_list <- read_csv("data/plant-list.csv", col_types = cols())
 
 
 
@@ -119,7 +117,7 @@ wibee <- wibee_in %>%
     habitat = replace_na(habitat, "other"),
     habitat = case_when(
       habitat %in% habitat_list$type ~ habitat,
-      grepl("lawn", habitat) || grepl("garden", habitat) ~ "lawn-and-garden",
+      grepl("lawn", habitat) | grepl("garden", habitat) ~ "lawn-and-garden",
       T ~ "other"),
     habitat = factor(habitat, levels = habitat_list$type)) %>%
   left_join(rename(habitat_list, habitat = type, habitat_name = label)) %>%
@@ -130,8 +128,8 @@ wibee <- wibee_in %>%
       grepl("organic", management) ~ "organic",
       grepl("conventional", management) ~ "conventional",
       grepl("ipm", management) ~ "ipm",
-      grepl("spray", management) && grepl("low", management) ~ "low spray",
-      grepl("spray", management) && grepl("no", management) ~ "no spray",
+      grepl("spray", management) & grepl("low", management) ~ "low spray",
+      grepl("spray", management) & grepl("no", management) ~ "no spray",
       T ~ "other"),
     management = factor(management, levels = management_list$type)) %>%
   left_join(rename(management_list, management = type, management_name = label)) %>%
@@ -146,38 +144,77 @@ wibee <- wibee_in %>%
     id = 1:length(id)) %>%
   droplevels()
 
+# make ranked list of habitat types
+habitats <- wibee %>%
+  group_by(habitat, habitat_name) %>%
+  summarise(surveys = n(), .groups = "drop") %>%
+  arrange(desc(surveys)) %>%
+  rename(type = habitat, label = habitat_name) %>%
+  mutate(label = fct_inorder(label))
+
+# make ranked list of management types
+managements <- wibee %>%
+  group_by(management, management_name) %>%
+  summarise(surveys = n(), .groups = "drop") %>%
+  arrange(desc(surveys)) %>%
+  rename(type = management, label = management_name) %>%
+  mutate(label = fct_inorder(label))
+
+# make ranked list of plants and reclass low-frequency ones
+plant_ranks <- wibee %>%
+  group_by(plant_group, plant_id, plant_label) %>%
+  summarise(surveys = n(), .groups = "drop") %>%
+  group_by(plant_group) %>%
+  arrange(plant_group, desc(surveys)) %>%
+  mutate(
+    plant_rank = row_number(),
+    plant_type = case_when(
+      plant_id == "species:other" ~ "other non-crop",
+      plant_id == "other" & plant_group == "crop" ~ "other crop",
+      plant_id == "other" & plant_group == "non-crop" ~ "other non-crop",
+      plant_rank >= 15 & plant_group == "crop" ~ "other crop",
+      plant_rank >= 15 & plant_group == "non-crop" ~ "other non-crop",
+      T ~ plant_id),
+    plant_label = case_when(
+      plant_type == "other crop" ~ "Other crop",
+      plant_type == "other non-crop" ~ "Other/Unknown non-crop plant",
+      T ~ plant_label)) %>%
+  select(-surveys)
+
+surveys <- wibee %>%
+  select(-c(remote_id, picture_url, plant_label)) %>%
+  left_join(plant_ranks)
+
+plants <- surveys %>%
+  group_by(plant_group, plant_type, plant_label) %>%
+  summarise(surveys = n(), .groups = "drop") %>%
+  arrange(plant_group, desc(surveys))
+
+select_crops <- plants %>%
+  filter(plant_group == "crop") %>%
+  rename(type = plant_type, label = plant_label) %>%
+  mutate(label = fct_inorder(label))
+
+focal_noncrops <- plants %>%
+  filter(plant_group == "non-crop focal") %>%
+  rename(type = plant_type, label = plant_label) %>%
+  mutate(label = fct_inorder(label))
+
+select_noncrops <- plants %>%
+  filter(plant_group == "non-crop") %>%
+  rename(type = plant_type, label = plant_label) %>%
+  mutate(label = fct_inorder(label))
+
+
 
 # separate surveys and ids for picture downloads
 # the ids will change if the filter is changed in the block above
-surveys <- wibee %>% select(-c("remote_id", "picture_url"))
+
 images <- wibee %>%
   select(c("id", "remote_id", "picture_url")) %>%
   filter(!is.na(picture_url))
 
 
-habitats <- surveys %>%
-  group_by(habitat, habitat_name) %>%
-  summarise(surveys = n(), .groups = "drop") %>%
-  rename(type = habitat, label = habitat_name)
-
-managements <- surveys %>%
-  group_by(management, management_name) %>%
-  summarise(surveys = n(), .groups = "drop") %>%
-  rename(type = management, label = management_name)
-
-plants <- surveys %>%
-  group_by(plant_type, plant_id, plant_name, plant_common_name) %>%
-  summarise(surveys = n(), .groups = "drop")
-
-top_plants <- plants %>%
-  group_by(plant_type) %>%
-  slice_max(surveys, n = 15) %>%
-  ungroup() %>%
-  mutate_if(is.factor, as.character) %>%
-  mutate_if(is.character, fct_inorder)
-
-top_crops <- top_plants %>% filter(plant_type == "crop")
-top_noncrops <- top_plants %>% filter(plant_type == "non-crop")
 
 
 # pivot longer for some data analysis
@@ -186,6 +223,7 @@ surveys_long <- surveys %>%
   left_join(
     rename(bees, bee = type, bee_name = label, bee_color = color, bee_group = group),
     by = "bee")
+
 
 
 
@@ -225,3 +263,4 @@ bee_totals <- surveys_long %>%
   group_by(bee_name) %>%
   summarise(tot_count = sum(count), .groups = "drop") %>%
   mutate(pct_count = sprintf("%1.1f%%", tot_count / sum(.$tot_count) * 100))
+

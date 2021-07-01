@@ -32,7 +32,7 @@ server <- function(input, output, session) {
       surveys_by_loc_date(),
       habitat %in% input$which_habitat,
       management %in% input$which_mgmt,
-      plant_id %in% input$which_crop || plant_id %in% input$which_noncrop) %>%
+      plant_type %in% input$which_crops | plant_type %in% input$which_focal_noncrops | plant_type %in% input$which_noncrops) %>%
     droplevels()
     }) 
   
@@ -45,7 +45,7 @@ server <- function(input, output, session) {
         between(date, input$date_range[1], input$date_range[2]),
         habitat %in% input$which_habitat,
         management %in% input$which_mgmt,
-        plant_id %in% input$which_crop || plant_id %in% input$which_noncrop,
+        plant_type %in% input$which_crops | plant_type %in% input$which_focal_noncrops | plant_type %in% input$which_noncrops,
         bee_name %in% input$which_bees
       ) %>%
       droplevels()
@@ -93,40 +93,59 @@ server <- function(input, output, session) {
       selected = input$which_mgmt)
     })
   
-  
+
   # Crop checkbox labels and values
   crop_labels <- reactive({
-    top_crops %>%
+    select_crops %>%
       left_join(
-        count(surveys_by_loc_date(), plant_id, .drop = F),
-        by = "plant_id") %>%
+        count(surveys_by_loc_date(), plant_type, .drop = F),
+        by = c("type" = "plant_type")) %>%
       mutate(
         n = replace_na(n, 0),
         box_label = paste0(label, " (", n, ")"))
   })
-  
+
   observeEvent(crop_labels(), {
-    updateCheckboxGroupInput(session, "which_crop",
+    updateCheckboxGroupInput(session, "which_crops",
       choiceNames = crop_labels()$box_label,
-      choiceValues = crop_labels()$plant_type,
-      selected = input$which_crop)
+      choiceValues = crop_labels()$type,
+      selected = input$which_crops)
   })
-  
+
+
+  # Focal plant checkbox labels and values
+  focal_noncrop_labels <- reactive({
+    focal_noncrops %>%
+      left_join(
+        count(surveys_by_loc_date(), plant_type, .drop = F),
+        by = c("type" = "plant_type")) %>%
+      mutate(
+        n = replace_na(n, 0),
+        box_label = paste0(label, " (", n, ")"))
+  })
+
+  observeEvent(focal_noncrop_labels(), {
+    updateCheckboxGroupInput(session, "which_focal_noncrops",
+      choiceNames = focal_noncrop_labels()$box_label,
+      choiceValues = focal_noncrop_labels()$type,
+      selected = input$which_focal_noncrops)
+  })
+
   # Non-crop checkbox labels and values
   noncrop_labels <- reactive({
-    top_noncrops %>%
+    select_noncrops %>%
       left_join(
-        count(surveys_by_loc_date(), plant_id, .drop = F),
-        by = "plant_id") %>%
+        count(surveys_by_loc_date(), plant_type, .drop = F),
+        by = c("type" = "plant_type")) %>%
       mutate(
         n = replace_na(n, 0),
         box_label = paste0(label, " (", n, ")"))
   })
   
   observeEvent(noncrop_labels(), {
-    updateCheckboxGroupInput(session, "which_noncrop",
+    updateCheckboxGroupInput(session, "which_noncrops",
       choiceNames = noncrop_labels()$box_label,
-      choiceValues = noncrop_labels()$plant_type,
+      choiceValues = noncrop_labels()$type,
       selected = input$which_noncrop)
   })
   
@@ -191,8 +210,9 @@ server <- function(input, output, session) {
   observeEvent(input$reset, {
     # updateSliderInput(session, "date_range", value = c(min_date, max_date))
     updateCheckboxGroupInput(session, "which_habitat", selected = habitats$type)
-    updateCheckboxGroupInput(session, "which_crop", selected = top_crops$plant_id)
-    updateCheckboxGroupInput(session, "which_noncrop", selected = top_noncrops$plant_id)
+    updateCheckboxGroupInput(session, "which_crops", selected = select_crops$type)
+    updateCheckboxGroupInput(session, "which_focal_noncrops", selected = focal_noncrops$type)
+    updateCheckboxGroupInput(session, "which_noncrops", selected = select_noncrops$type)
     updateCheckboxGroupInput(session, "which_mgmt", selected = managements$type)
     updateCheckboxInput(session, "group_wild", value = F)
     resetBees()
@@ -203,24 +223,17 @@ server <- function(input, output, session) {
   
   # All/None buttons
   observeEvent(input$which_bees_all, resetBees())
-  observeEvent(input$which_bees_none,
-    updateCheckboxGroupInput(session, "which_bees", selected = ""))
-  observeEvent(input$which_habitat_all,
-    updateCheckboxGroupInput(session, "which_habitat", selected = habitats$type))
-  observeEvent(input$which_habitat_none,
-    updateCheckboxGroupInput(session, "which_habitat", selected = ""))
-  observeEvent(input$which_crop_all,
-    updateCheckboxGroupInput(session, "which_crop", selected = top_crops$plant_id))
-  observeEvent(input$which_crop_none,
-    updateCheckboxGroupInput(session, "which_crop", selected = ""))
-  observeEvent(input$which_noncrop_all,
-    updateCheckboxGroupInput(session, "which_noncrop", selected = top_noncrops$plant_id))
-  observeEvent(input$which_noncrop_none,
-    updateCheckboxGroupInput(session, "which_noncrop", selected = ""))
-  observeEvent(input$which_mgmt_all,
-    updateCheckboxGroupInput(session, "which_mgmt", selected = managements$type))
-  observeEvent(input$which_mgmt_none,
-    updateCheckboxGroupInput(session, "which_mgmt", selected = ""))
+  observeEvent(input$which_bees_none, updateCheckboxGroupInput(session, "which_bees", selected = ""))
+  observeEvent(input$which_habitat_all, updateCheckboxGroupInput(session, "which_habitat", selected = habitats$type))
+  observeEvent(input$which_habitat_none, updateCheckboxGroupInput(session, "which_habitat", selected = ""))
+  observeEvent(input$which_crops_all, updateCheckboxGroupInput(session, "which_crops", selected = select_crops$type))
+  observeEvent(input$which_crops_none, updateCheckboxGroupInput(session, "which_crops", selected = ""))
+  observeEvent(input$which_focal_noncrops_all, updateCheckboxGroupInput(session, "which_focal_noncrops", selected = focal_noncrops$type))
+  observeEvent(input$which_focal_noncrops_none, updateCheckboxGroupInput(session, "which_focal_noncrops", selected = ""))
+  observeEvent(input$which_noncrops_all, updateCheckboxGroupInput(session, "which_noncrops", selected = select_noncrops$type))
+  observeEvent(input$which_noncrops_none, updateCheckboxGroupInput(session, "which_noncrops", selected = ""))
+  observeEvent(input$which_mgmt_all, updateCheckboxGroupInput(session, "which_mgmt", selected = managements$type))
+  observeEvent(input$which_mgmt_none, updateCheckboxGroupInput(session, "which_mgmt", selected = ""))
   
   
   

@@ -128,10 +128,7 @@ ui <- fixedPage(
           choices = years,
           selected = years,
           individual = TRUE,
-          checkIcon = list(
-            yes = icon("check-square"),
-            no = icon("square-o")
-          )
+          checkIcon = list(yes = icon("check-square"), no = icon("square-o"))
         ),
         sliderInput(
           "date_range",
@@ -151,8 +148,7 @@ ui <- fixedPage(
       style = "primary",
       title = "3) Select by habitat or management type",
       p(em("Filter survey data by selecting which habitats, crops, flowers, and management types you want to see data for. You can also group wild bees together or show only specific bee types."), style = "margin-top:.5em; margin-bottom:.5em"),
-      div(
-        class = "well",
+      div(class = "well",
         fixedRow(
           column(3,
             checkboxGroupInput(
@@ -161,63 +157,81 @@ ui <- fixedPage(
               choiceNames = bee_names,
               choiceValues = bee_names,
               selected = bee_names
-            ),
+              ),
             materialSwitch("group_wild", label = "Group wild bees together", status = "success"),
             div(actionButton("which_bees_all", "All"), style = "display:inline-block"),
-            div(actionButton("which_bees_none", "None"), style = "display:inline-block"),
-          ),
+            div(actionButton("which_bees_none", "None"), style = "display:inline-block")
+            ),
           column(3,
             checkboxGroupInput(
               "which_habitat",
               "Habitat:",
-              choiceNames = habitats$label,
+              choiceNames = levels(habitats$label),
               choiceValues = habitats$type,
               selected = habitats$type
-            ),
+              ),
             div(actionButton("which_habitat_all", "All"), style = "display:inline-block"),
-            div(actionButton("which_habitat_none", "None"), style = "display:inline-block"),
-          ),
+            div(actionButton("which_habitat_none", "None"), style = "display:inline-block")
+            ),
           column(3,
             checkboxGroupInput(
               "which_mgmt",
               "Management:",
-              choiceNames = managements$label,
+              choiceNames = levels(managements$label),
               choiceValues = managements$type,
               selected = managements$type
-            ),
+              ),
             div(actionButton("which_mgmt_all", "All"), style = "display:inline-block"),
             div(actionButton("which_mgmt_none", "None"), style = "display:inline-block"),
-            div(actionButton("reset", "Reset filters"), style = "margin-top:15px"),
+            div(actionButton("reset", "Reset filters"), style = "margin-top:15px")
+            )
           )
-        ),
+      )
+    )
+  ),
+  
+  bsCollapse(
+    bsCollapsePanel(
+      style = "primary",
+      title = "4) Select crop(s) or flowering plant(s) observed during survey",
+      div(class = "well",
         fixedRow(
           column(3,
             checkboxGroupInput(
-              "which_crop",
+              "which_crops",
               "Crop:",
-              choiceNames = top_crops$plant_common_name,
-              choiceValues = top_crops$plant_id,
-              selected = top_crops$plant_id
+              choiceNames = levels(select_crops$label),
+              choiceValues = select_crops$type,
+              selected = select_crops$type
+              ),
+            div(actionButton("which_crops_all", "All"), style = "display:inline-block"),
+            div(actionButton("which_crops_none", "None"), style = "display:inline-block")
             ),
-            div(actionButton("which_crop_all", "All"), style = "display:inline-block"),
-            div(actionButton("which_crop_none", "None"), style = "display:inline-block")
-          ),
-          column(3,
+          column(4,
             checkboxGroupInput(
-              "which_noncrop",
-              "Flowering plant:",
-              choiceNames = top_noncrops$plant_common_name,
-              choiceValues = top_noncrops$plant_id,
-              selected = top_noncrops$plant_id
-            ),
-            div(actionButton("which_noncrop_all", "All"), style = "display:inline-block"),
-            div(actionButton("which_noncrop_none", "None"), style = "display:inline-block")
+              "which_focal_noncrops",
+              "Focal non-crop plants:",
+              choiceNames = levels(focal_noncrops$label),
+              choiceValues = focal_noncrops$type,
+              selected = focal_noncrops$type),
+            div(actionButton("which_focal_noncrops_all", "All"), style = "display:inline-block"),
+            div(actionButton("which_focal_noncrops_none", "None"), style = "display:inline-block")
+          ),
+          column(5,
+            checkboxGroupInput(
+              "which_noncrops",
+              "Other non-crop plant:",
+              choiceNames = levels(select_noncrops$label),
+              choiceValues = select_noncrops$type,
+              selected = select_noncrops$type),
+            div(actionButton("which_noncrops_all", "All"), style = "display:inline-block"),
+            div(actionButton("which_noncrops_none", "None"), style = "display:inline-block")
+            )
           )
-        )
-      ),
-    div(style = "text-align: center; font-weight: bold;", textOutput("survey_count_filters"))
-    )
-  ),
+        ),
+      div(style = "text-align: center; font-weight: bold;", textOutput("survey_count_filters"))
+      )
+    ),
   
   
   
@@ -287,8 +301,9 @@ ui <- fixedPage(
     # user stats
     tabPanel("User statistics",
       br(),
-      plotlyOutput("plotUserStats", height = "600px"))
-  ),
+      plotlyOutput("plotUserStats", height = "600px")
+      )
+    ),
   
   
 
@@ -311,7 +326,7 @@ ui <- fixedPage(
     p("dashboard developed by", a("tanuki.tech", href = "https://github.com/bzbradford", target = "_blank"), style = "font-size:small; color:grey"),
     p("WiBee app developed by", a("caracal.tech", href = "https://caracal.tech/", target = "_blank"), style = "font-size:small; color:grey"),
     br(),
-    p(em(paste("Data last updated:", as.character(refresh_time, format="%Y-%m-%d %H:%M:%S %Z"))))
+    p(em(paste("Data last updated:", as.character(refresh_time, format = "%Y-%m-%d %H:%M:%S %Z"))))
   )
   
 )
