@@ -44,7 +44,7 @@ ui <- fixedPage(
     mainPanel = mainPanel(
       h3("What is the WiBee app?", style = "margin-top:0px"),
       p("WiBee (pronounced We-bee) is a new smartphone app developed by the", a("Gratton Lab", href = "https://gratton.entomology.wisc.edu/", target = "_blank"), "at the University of Wisconsin-Madison. We invite growers and interested citizen scientists to use the app during the growing season to collect high quality data on wild bee abundance and diversity on Wisconsin’s fruit and vegetable farms. The app can also be used in your home garden, or at prairies, parks, woodlands, or anywhere else you see pollinator activity, whether or not you live in Wisconsin. All are welcome to contribute."),
-      p("WiBee is a citizen science project, so all the data here is collected by people like you going out and completing surveys with the WiBee App. We invite you to explore the data to see what wild bee populations and their flower visit rates look like across Wisconsin. You can also compare your own data in the WiBee app to the summary data presented here in this dashboard to help you make decisions about managing your local pollinator community or track any change over time. As you explore the data below, remember that this dashboard is a work in progress. If you have specific suggestions, please contact us!"),
+      p("WiBee is a citizen science project where participants use the ", a("WiBee app", href = "http://www.pollinators.wisc.edu/wibee"), " to conduct 5-minute pollinator surveys of a 1 meter square section of flowering plants. Each time a pollinator (such as a honey bee, bumble bee, solitary wild bee, or other non-bee insect) lands on a flower, that's a visit! All the data here is collected by people like you going out and completing surveys with the WiBee App. We invite you to explore the data to see what wild bee populations and their flower visit rates look like across Wisconsin. You can also compare your own data in the WiBee app to the summary data presented here in this dashboard to help you make decisions about managing your local pollinator community or track any change over time. As you explore the data below, remember that this dashboard is a work in progress. If you have specific suggestions, please contact us!"),
       p("To join the project and help collect data, download the WiBee app today or visit", a("pollinators.wisc.edu/wibee", href = "http://www.pollinators.wisc.edu/wibee", target = "_blank"), "to learn more. Questions?", a("Email us.", href = "mailto:pollinators@wisc.edu"), "Comments?", a("Send feedback.", href = "https://forms.gle/6qy9qJLwCxSTTPNT8", target = "_blank"), "Want to stay in the loop?", a("Sign up for our newsletter.", href = "http://eepurl.com/gMqRdr", target = "_blank"), "Thank you for participating!")),
     
     sidebarPanel = sidebarPanel(
@@ -185,7 +185,8 @@ ui <- fixedPage(
             div(actionButton("which_bees_none", "None"), style = "display:inline-block")
           ),
         )
-      )
+      ),
+      div(style = "text-align: center; font-weight: bold;", textOutput("survey_count_site"))
     )
   ),
   
@@ -229,7 +230,7 @@ ui <- fixedPage(
             )
           )
         ),
-      div(style = "text-align: center; font-weight: bold;", textOutput("survey_count_filters"))
+      div(style = "text-align: center; font-weight: bold;", textOutput("survey_count_plant"))
       )
     ),
   
@@ -264,22 +265,26 @@ ui <- fixedPage(
     tabPanel("Activity by date",
       br(),
       plotlyOutput("plotByDate"),
-      br()),
+      br(),
+      p(em("This chart shows daily or season trends in pollinator activity by showing the average activity by pollinator group across all surveys conducted on a given day. The date range can be adjusted in the survey filters below the map."), align = "center", style = "margin-top:.5em; margin-bottom:.5em; font-size:small")),
     
     tabPanel("Compare habitats",
       br(),
       plotlyOutput("plotByHabitat"),
-      br()),
-    
-    tabPanel("Compare crops/flowers",
       br(),
-      plotlyOutput("plotByCrop"),
-      br()),
+      p(em("This chart compares total pollinator visitation rates across different habitat types. The number of surveys represented by each habitat is shown in parentheses in the labels."), align = "center", style = "margin-top:.5em; margin-bottom:.5em; font-size:small")),
     
     tabPanel("Compare managements",
       br(),
       plotlyOutput("plotByMgmt"),
-      br()),
+      br(),
+      p(em("This chart compares total pollinator visitation rates by user-reported management practices. The number of surveys represented by each practice is shown in parentheses in the labels."), align = "center", style = "margin-top:.5em; margin-bottom:.5em; font-size:small")),
+    
+    tabPanel("Compare crops/flowers",
+      br(),
+      plotlyOutput("plotByCrop"),
+      br(),
+      p(em("This interactive chart compares total pollinator visitation rates across all of the different crops and non-crop plants surveyed with the app. The number of surveys represented by each plant species or group is shown in parentheses in the labels."), align = "center", style = "margin-top:.5em; margin-bottom:.5em; font-size:small")),
     
     # Tabular survey data
     tabPanel("View as data table",
@@ -289,24 +294,25 @@ ui <- fixedPage(
       fixedRow(
         column(width = 8,
           checkboxGroupInput(
-        "dtGroups",
-        label = "Select which variables to include in table:",
-        choiceNames = c("Survey ID", "Date", "Location", "Habitat", "Crop", "Management"),
-        choiceValues = c("id", "date", "grid_pt", "habitat", "crop", "management"),
-        selected = c("habitat", "crop", "management"),
-        inline = T)
-          ),
+            "dtGroups",
+            label = "Select which variables to include in table:",
+            choiceNames = c("Survey ID", "Date", "Location", "Habitat", "Crop", "Management"),
+            choiceValues = c("id", "date", "grid_pt", "habitat", "crop", "management"),
+            selected = c("habitat", "crop", "management"),
+            inline = T)),
         column(width = 4, align = "right",
           downloadButton("download_data", "Download data"))
       ),
-      DTOutput("summaryTable")),
+      DTOutput("summaryTable")
+    ),
     
     # user stats
     tabPanel("User statistics",
       br(),
-      plotlyOutput("plotUserStats", height = "600px")
-      )
-    ),
+      plotlyOutput("plotUserStats", height = "600px"),
+      p(em("This graph shows the total number of surveys conducted each year, further grouped by the number of users who have conducted the same amount of surveys."), align = "center", style = "margin-top:.5em; margin-bottom:.5em; font-size:small;")
+    )
+  ),
   
   
 

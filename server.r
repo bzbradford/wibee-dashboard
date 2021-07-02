@@ -19,7 +19,7 @@ server <- function(input, output, session) {
   
   
   # filter survey data by date slider
-  surveys_by_loc_date <- reactive({
+  surveys_by_date <- reactive({
     surveys_by_loc() %>%
       filter(year %in% input$years) %>%
       filter(between(date, input$date_range[1], input$date_range[2]))
@@ -27,27 +27,29 @@ server <- function(input, output, session) {
   
   
   # filter survey data by site characteristics
-  filtered_surveys <- reactive({
-    filter(
-      surveys_by_loc_date(),
-      habitat %in% input$which_habitat,
-      management %in% input$which_mgmt,
-      plant_type %in% input$which_crops | plant_type %in% input$which_focal_noncrops | plant_type %in% input$which_noncrops) %>%
+  surveys_by_site <- reactive({
+    surveys_by_date() %>%
+      filter(habitat %in% input$which_habitat) %>%
+      filter(management %in% input$which_mgmt) %>%
     droplevels()
-    }) 
+    })
   
+  # filter survey data by site characteristics
+  filtered_surveys <- reactive({
+    surveys_by_site() %>%
+      filter(plant_type %in% c(input$which_crops, input$which_focal_noncrops, input$which_noncrops)) %>%
+      droplevels()
+  })
 
-  # pivot filtered survey list long
+  # filter the long survey list
   filtered_surveys_long <- reactive({
     surveys_long %>%
-      filter(
-        grid_pt %in% map_selection(),
-        between(date, input$date_range[1], input$date_range[2]),
-        habitat %in% input$which_habitat,
-        management %in% input$which_mgmt,
-        plant_type %in% c(input$which_crops, input$which_focal_noncrops, input$which_noncrops),
-        bee_name %in% input$which_bees
-      ) %>%
+      filter(grid_pt %in% map_selection()) %>%
+      filter(between(date, input$date_range[1], input$date_range[2])) %>%
+      filter(habitat %in% input$which_habitat) %>%
+      filter(management %in% input$which_mgmt) %>%
+      filter(plant_type %in% c(input$which_crops, input$which_focal_noncrops, input$which_noncrops)) %>%
+      filter(bee_name %in% input$which_bees) %>%
       droplevels()
     })
   
@@ -58,7 +60,7 @@ server <- function(input, output, session) {
   habitat_labels <- reactive({
     habitats %>%
       left_join(
-        count(surveys_by_loc_date(), habitat, .drop = F),
+        count(surveys_by_date(), habitat, .drop = F),
         by = c("type" = "habitat")) %>%
       mutate(
         n = replace_na(n, 0),
@@ -77,7 +79,7 @@ server <- function(input, output, session) {
   mgmt_labels <- reactive({
     managements %>%
       left_join(
-        count(surveys_by_loc_date(), management, .drop = F),
+        count(surveys_by_date(), management, .drop = F),
         by = c("type" = "management")) %>%
       mutate(
         n = replace_na(n, 0),
@@ -96,7 +98,7 @@ server <- function(input, output, session) {
   crop_labels <- reactive({
     select_crops %>%
       left_join(
-        count(surveys_by_loc_date(), plant_type, .drop = F),
+        count(surveys_by_site(), plant_type, .drop = F),
         by = c("type" = "plant_type")) %>%
       mutate(
         n = replace_na(n, 0),
@@ -115,7 +117,7 @@ server <- function(input, output, session) {
   focal_noncrop_labels <- reactive({
     focal_noncrops %>%
       left_join(
-        count(surveys_by_loc_date(), plant_type, .drop = F),
+        count(surveys_by_site(), plant_type, .drop = F),
         by = c("type" = "plant_type")) %>%
       mutate(
         n = replace_na(n, 0),
@@ -133,7 +135,7 @@ server <- function(input, output, session) {
   noncrop_labels <- reactive({
     select_noncrops %>%
       left_join(
-        count(surveys_by_loc_date(), plant_type, .drop = F),
+        count(surveys_by_site(), plant_type, .drop = F),
         by = c("type" = "plant_type")) %>%
       mutate(
         n = replace_na(n, 0),
@@ -252,16 +254,23 @@ server <- function(input, output, session) {
   # Number of matching surveys after date filter
   output$survey_count_date <- renderText({
     paste(
-      nrow(surveys_by_loc_date()), "out of",
+      nrow(surveys_by_date()), "out of",
       nrow(surveys_by_loc()), "surveys match your date selections.")
   })
   
   # Number of matching surveys after date filter
-  output$survey_count_filters <- renderText({
+  output$survey_count_site <- renderText({
+    paste(
+      nrow(surveys_by_site()), "out of",
+      nrow(surveys_by_date()), "surveys match your habitat and management selections.")
+    })
+  
+  # Number of matching surveys after date filter
+  output$survey_count_plant <- renderText({
     paste(
       nrow(filtered_surveys()), "out of",
-      nrow(surveys_by_loc_date()), "surveys match your filter selections.")
-    })
+      nrow(surveys_by_site()), "surveys match your plant selections.")
+  })
   
   # Number of matching surveys after site characteristic filters
   output$survey_count_final <- renderText({
@@ -269,7 +278,6 @@ server <- function(input, output, session) {
       nrow(filtered_surveys()), "out of",
       nrow(surveys), "total surveys match all of your criteria.")
     })
-  
   
   
 
@@ -509,35 +517,8 @@ server <- function(input, output, session) {
         yaxis = list(title = "Number of visits per survey", fixedrange = T),
         hovermode = "compare"
       )
-    }) %>%
-    bindCache(filtered_surveys_long())
-  
-  output$plotByCrop <- renderPlotly({
-    filtered_surveys_long() %>%
-      group_by(crop_name, bee_name, bee_color) %>%
-      summarise(
-        visit_rate = round(mean(count), 2),
-        n = n(),
-        .groups = "drop") %>%
-      droplevels() %>%
-      mutate(x = fct_inorder(paste0("(", n, ") ", crop_name))) %>%
-      plot_ly(
-        type = "bar",
-        x = ~ x,
-        y = ~ visit_rate,
-        color = ~ bee_name,
-        colors = ~ levels(.$bee_color),
-        marker = list(line = list(color = "#ffffff", width = .25))) %>%
-      plotly::layout(
-        barmode = "stack",
-        title = list(text = "<b>Pollinator visitation rates by crop type</b>", font = list(size = 15)),
-        xaxis = list(title = "", fixedrange = T),
-        yaxis = list(title = "Number of visits per survey", fixedrange = T),
-        hovermode = "compare"
-      )
-    }) %>%
-    bindCache(filtered_surveys_long())
-  
+    })
+
   output$plotByMgmt <- renderPlotly({
     filtered_surveys_long() %>%
       group_by(management_name, bee_name, bee_color) %>%
@@ -561,8 +542,37 @@ server <- function(input, output, session) {
         yaxis = list(title = "Number of visits per survey", fixedrange = T),
         hovermode = "compare"
       )
-    }) %>%
-    bindCache(filtered_surveys_long())
+    })
+  
+  output$plotByCrop <- renderPlotly({
+    bmargin <- max(
+      40,
+      10 + 4 * max(nchar(filtered_surveys()$plant_label)))
+    
+    filtered_surveys_long() %>%
+      group_by(plant_label, bee_name, bee_color) %>%
+      summarise(
+        visit_rate = round(mean(count), 2),
+        n = n(),
+        .groups = "drop") %>%
+      droplevels() %>%
+      mutate(x = fct_inorder(paste0("(", n, ") ", plant_label))) %>%
+      plot_ly(
+        type = "bar",
+        x = ~ x,
+        y = ~ visit_rate,
+        color = ~ bee_name,
+        colors = ~ levels(.$bee_color),
+        marker = list(line = list(color = "#ffffff", width = .25))) %>%
+      plotly::layout(
+        barmode = "stack",
+        title = list(text = "<b>Pollinator visitation rates by plant type</b>", font = list(size = 15)),
+        xaxis = list(title = "", fixedrange = T, tickangle = 45),
+        yaxis = list(title = "Number of visits per survey", fixedrange = T),
+        hovermode = "compare",
+        margin = list(b = bmargin)
+      )
+    })
   
   
 
@@ -582,8 +592,7 @@ server <- function(input, output, session) {
       pivot_wider(names_from = bee_name, values_from = visit_rate) %>%
       mutate("row" = row_number()) %>%
       select("row", everything())
-    }) %>%
-    bindCache(filtered_surveys_long(), input$dtGroups)
+    })
   
   output$summaryTable <- renderDT(
     filteredTable(),

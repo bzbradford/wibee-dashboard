@@ -17,11 +17,11 @@ if (file.exists("./refresh_time")) {
 
 # update surveys at most once an hour. Writes to local csv
 if (refresh_time < Sys.time() - 3600) {
-  get_surveys <-
-    content(
-      GET(url = "https://wibee.caracal.tech/api/data/survey-summaries",
-        config = add_headers(Authorization = Sys.getenv("caracal_token")))
-    )
+  try({
+    get_surveys <- content(GET(
+      url = "https://wibee.caracal.tech/api/data/survey-summaries",
+      config = add_headers(Authorization = Sys.getenv("caracal_token"))))
+  })
   if (is.data.frame(get_surveys)) {
     arrange(get_surveys, ended_at) %>% write_csv("./data/surveys.csv")
     refresh_time <- Sys.time()
@@ -86,8 +86,8 @@ management_list <- read_csv("data/managements.csv", col_types = cols())
 
 # load plant lists
 plant_list <- read_csv("plants/known-plant-list.csv", col_types = cols())
-legacy_plant_list <- read_csv("plants/legacy-plant-list.csv")
-focal_plant_list <- read_csv("plants/focal-plant-list.csv")
+legacy_plant_list <- read_csv("plants/legacy-plant-list.csv", col_types = cols())
+focal_plant_list <- read_csv("plants/focal-plant-list.csv", col_types = cols())
 plant_replace <- bind_rows(legacy_plant_list, focal_plant_list)
 
 # content checks ----------------------------------------------------------
@@ -145,8 +145,9 @@ wibee <- wibee_in %>%
   left_join(plant_replace) %>%
   mutate(crop = ifelse(is.na(new_crop), crop, new_crop)) %>%
   left_join(plant_list) %>%
-  mutate(focal = new_crop %in% focal_plant_list$new_crop) %>%
-  mutate(plant_group = ifelse(focal, "non-crop focal", plant_group)) %>%
+  mutate(
+    focal = new_crop %in% focal_plant_list$new_crop,
+    plant_group = ifelse(focal, "non-crop focal", plant_group)) %>%
   droplevels()
 
 # make ranked list of habitat types
@@ -155,7 +156,8 @@ habitats <- wibee %>%
   summarise(surveys = n(), .groups = "drop") %>%
   arrange(desc(surveys)) %>%
   rename(type = habitat, label = habitat_name) %>%
-  mutate(label = fct_inorder(label))
+  mutate(label = fct_inorder(label)) %>%
+  drop_na()
 
 # make ranked list of management types
 managements <- wibee %>%
@@ -163,7 +165,8 @@ managements <- wibee %>%
   summarise(surveys = n(), .groups = "drop") %>%
   arrange(desc(surveys)) %>%
   rename(type = management, label = management_name) %>%
-  mutate(label = fct_inorder(label))
+  mutate(label = fct_inorder(label)) %>%
+  drop_na()
 
 # make ranked list of plants and reclass low-frequency ones
 plant_ranks <- wibee %>%
@@ -181,7 +184,8 @@ plant_ranks <- wibee %>%
     plant_label = case_when(
       plant_type == "other-crop" ~ "Other crop",
       plant_type == "other-non-crop" ~ "Other/Unknown non-crop plant",
-      T ~ plant_label))
+      T ~ plant_label)) %>%
+  drop_na()
 
 surveys <- wibee %>%
   select(-c(remote_id, picture_url, plant_label)) %>%
@@ -195,17 +199,20 @@ plants <- surveys %>%
 select_crops <- plants %>%
   filter(plant_group == "crop") %>%
   rename(type = plant_type, label = plant_label) %>%
-  mutate(label = fct_inorder(label))
+  mutate(label = fct_inorder(label)) %>%
+  drop_na()
 
 focal_noncrops <- plants %>%
   filter(plant_group == "non-crop focal") %>%
   rename(type = plant_type, label = plant_label) %>%
-  mutate(label = fct_inorder(label))
+  mutate(label = fct_inorder(label)) %>%
+  drop_na()
 
 select_noncrops <- plants %>%
   filter(plant_group == "non-crop") %>%
   rename(type = plant_type, label = plant_label) %>%
-  mutate(label = fct_inorder(label))
+  mutate(label = fct_inorder(label)) %>%
+  drop_na()
 
 
 
