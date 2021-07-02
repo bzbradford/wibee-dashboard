@@ -146,23 +146,11 @@ ui <- fixedPage(
   bsCollapse(
     bsCollapsePanel(
       style = "primary",
-      title = "3) Select by habitat or management type",
-      p(em("Filter survey data by selecting which habitats, crops, flowers, and management types you want to see data for. You can also group wild bees together or show only specific bee types."), style = "margin-top:.5em; margin-bottom:.5em"),
+      title = "3) Select by habitat, management type, or pollinator group",
+      p(em("Filter survey data by selecting which habitats, management types, or pollinator groups you want to see data for. Number of matching surveys for each habitat or reported management practice is shown in parentheses."), style = "margin-top:.5em; margin-bottom:.5em"),
       div(class = "well",
         fixedRow(
-          column(3,
-            checkboxGroupInput(
-              "which_bees",
-              "Bee group:",
-              choiceNames = bee_names,
-              choiceValues = bee_names,
-              selected = bee_names
-              ),
-            materialSwitch("group_wild", label = "Group wild bees together", status = "success"),
-            div(actionButton("which_bees_all", "All"), style = "display:inline-block"),
-            div(actionButton("which_bees_none", "None"), style = "display:inline-block")
-            ),
-          column(3,
+          column(4,
             checkboxGroupInput(
               "which_habitat",
               "Habitat:",
@@ -173,7 +161,7 @@ ui <- fixedPage(
             div(actionButton("which_habitat_all", "All"), style = "display:inline-block"),
             div(actionButton("which_habitat_none", "None"), style = "display:inline-block")
             ),
-          column(3,
+          column(4,
             checkboxGroupInput(
               "which_mgmt",
               "Management:",
@@ -182,10 +170,21 @@ ui <- fixedPage(
               selected = managements$type
               ),
             div(actionButton("which_mgmt_all", "All"), style = "display:inline-block"),
-            div(actionButton("which_mgmt_none", "None"), style = "display:inline-block"),
-            div(actionButton("reset", "Reset filters"), style = "margin-top:15px")
-            )
-          )
+            div(actionButton("which_mgmt_none", "None"), style = "display:inline-block")
+            ),
+          column(4,
+            checkboxGroupInput(
+              "which_bees",
+              "Bee group:",
+              choiceNames = bee_names,
+              choiceValues = bee_names,
+              selected = bee_names
+            ),
+            materialSwitch("group_wild", label = "Group wild bees together", status = "success"),
+            div(actionButton("which_bees_all", "All"), style = "display:inline-block"),
+            div(actionButton("which_bees_none", "None"), style = "display:inline-block")
+          ),
+        )
       )
     )
   ),
@@ -194,12 +193,13 @@ ui <- fixedPage(
     bsCollapsePanel(
       style = "primary",
       title = "4) Select crop(s) or flowering plant(s) observed during survey",
+      p(em("Filter survey data by selecting which crops, focal plants (featured plants for surveys shown in the app), or other non-crop flowering plants you want to see data for. Number of matching surveys for each plant is shown in parentheses."), style = "margin-top:.5em; margin-bottom:.5em"),
       div(class = "well",
         fixedRow(
           column(3,
             checkboxGroupInput(
               "which_crops",
-              "Crop:",
+              "Crop name:",
               choiceNames = levels(select_crops$label),
               choiceValues = select_crops$type,
               selected = select_crops$type
@@ -232,6 +232,9 @@ ui <- fixedPage(
       div(style = "text-align: center; font-weight: bold;", textOutput("survey_count_filters"))
       )
     ),
+  
+  # materialSwitch("group_wild", label = "Group wild bees together?", status = "success"),
+  # div(actionButton("reset", "Reset filters"), style = "margin-top:15px"),
   
   
   

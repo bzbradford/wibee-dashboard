@@ -10,8 +10,20 @@ kebab <- function(s) {
 crops <- read_csv("plants/crop-list.csv") %>%
   mutate(
     PlantGroup = "crop",
-    Label = CommonName)
+    Label = CommonName) %>%
+  rename(PlantID = ID)
 
+# focal non-crops
+# noncrop_focal <- read_csv("plants/non-crop-focal-list.csv") %>%
+#   mutate(PlantGroup = "non-crop focal") %>%
+#   mutate(Label = case_when(
+#     TaxonLevel == "Species" ~ paste0(CommonName, " (", Species, ")"),
+#     TaxonLevel == "Genus" ~ paste0(CommonName, " (Genus ", Genus, ")"),
+#     T ~ CommonName
+#   ))
+
+# noncrop_focal <- read_csv("plants/non-crop-focal-list.csv") %>%
+#   mutate(Focal = TRUE)
 
 # non-crops
 noncrop_families <- 
@@ -26,19 +38,19 @@ noncrop_genera <-
   mutate(
     TaxonLevel = "Genus",
     ScientificName = Genus,
-    Label = paste0("Genus <i>", Genus, "</i> (", str_trunc(CommonName, 20), ")"))
+    Label = paste0("Genus ", Genus, " (", str_trunc(CommonName, 20), ")"))
 
 noncrop_species <- 
   read_csv("plants/non-crop-species-list.csv") %>%
   mutate(
     TaxonLevel = "Species",
     ScientificName = Species,
-    Label = paste0("<i>", Species, "</i> (", str_trunc(CommonName, 20), ")"))
+    Label = paste0(Species, " (", str_trunc(CommonName, 20), ")"))
 
 noncrop_other <- 
   tibble(
     PlantGroup = "non-crop",
-    PlantID = "other",
+    PlantID = "other-non-crop",
     ScientificName = "Other",
     CommonName = "Other",
     Label = "Other non-crop plant")
@@ -50,18 +62,23 @@ noncrops <-
     PlantID = kebab(paste0(TaxonLevel, ":", ScientificName))) %>%
   bind_rows(noncrop_other)
 
-# focal non-crops
-noncrop_focal <- read_csv("plants/non-crop-focal-list.csv") %>%
-  mutate(PlantGroup = "non-crop focal") %>%
-  mutate(Label = case_when(
-    TaxonLevel == "Species" ~ paste0(CommonName, " (<i>", Species, "</i>)"),
-    TaxonLevel == "Genus" ~ paste0(CommonName, "(Genus <i>", Genus, "</i>)"),
-    T ~ CommonName
-  ))
-
 
 # all plant options excluding write-ins
-known_plants <- bind_rows(crops, noncrop_focal, noncrops, noncrop_other)
+known_plants <- bind_rows(crops, noncrops) %>%
+  select(
+    crop = PlantID,
+    plant_id = PlantID,
+    plant_group = PlantGroup,
+    plant_name = ScientificName,
+    plant_common_name = CommonName,
+    plant_taxon_level = TaxonLevel,
+    plant_family = Family,
+    plant_genus = Genus,
+    plant_species = Species,
+    plant_label = Label
+  )
+
+known_plants %>% write_csv("plants/known-plant-list.csv")
 
 
 # export values that don't match known plants (write-ins)
@@ -74,26 +91,29 @@ known_plants <- bind_rows(crops, noncrop_focal, noncrops, noncrop_other)
 
 # Here I went through the unmatched list and added matches
 
-# load legacy plant crossref list
-legacy_plants <- read_csv("plants/legacy-plant-list.csv") %>% 
-  left_join(known_plants)
-
-# combine and save master plant list
-all_plants <- known_plants %>%
-  mutate(crop = PlantID) %>%
-  bind_rows(legacy_plants) %>%
-  select(
-    crop,
-    plant_id = PlantID,
-    plant_group = PlantGroup,
-    plant_name = ScientificName,
-    plant_common_name = CommonName,
-    plant_taxon_level = TaxonLevel,
-    plant_family = Family,
-    plant_genus = Genus,
-    plant_species = Species,
-    plant_label = Label
-  )
-
-# export plant list
-all_plants %>% write_csv("data/plant-list.csv")
+# 
+# # load legacy plant crossref list
+# legacy_plants <- read_csv("plants/legacy-plant-list.csv") %>% 
+#   left_join(known_plants)
+# 
+# 
+# # combine and save master plant list
+# all_plants <- known_plants %>%
+#   mutate(crop = ifelse(is.na(AlternateID), PlantID, AlternateID)) %>%
+#   bind_rows(legacy_plants) %>%
+#   select(
+#     crop,
+#     plant_id = PlantID,
+#     plant_group = PlantGroup,
+#     plant_name = ScientificName,
+#     plant_common_name = CommonName,
+#     plant_taxon_level = TaxonLevel,
+#     plant_family = Family,
+#     plant_genus = Genus,
+#     plant_species = Species,
+#     plant_label = Label
+#   )
+# 
+# # export plant list
+# all_plants %>% write_csv("plants/plant-list.csv")
+# 

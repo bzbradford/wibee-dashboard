@@ -45,13 +45,11 @@ server <- function(input, output, session) {
         between(date, input$date_range[1], input$date_range[2]),
         habitat %in% input$which_habitat,
         management %in% input$which_mgmt,
-        plant_type %in% input$which_crops | plant_type %in% input$which_focal_noncrops | plant_type %in% input$which_noncrops,
+        plant_type %in% c(input$which_crops, input$which_focal_noncrops, input$which_noncrops),
         bee_name %in% input$which_bees
       ) %>%
       droplevels()
     })
-  
-  
   
 
 # Filter checkboxes -------------------------------------------------------
@@ -146,7 +144,7 @@ server <- function(input, output, session) {
     updateCheckboxGroupInput(session, "which_noncrops",
       choiceNames = noncrop_labels()$box_label,
       choiceValues = noncrop_labels()$type,
-      selected = input$which_noncrop)
+      selected = input$which_noncrops)
   })
   
   

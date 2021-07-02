@@ -84,10 +84,11 @@ habitat_list <- read_csv("data/habitats.csv", col_types = cols())
 # load management types
 management_list <- read_csv("data/managements.csv", col_types = cols())
 
-# load plant list
-plant_list <- read_csv("data/plant-list.csv", col_types = cols())
-
-
+# load plant lists
+plant_list <- read_csv("plants/known-plant-list.csv", col_types = cols())
+legacy_plant_list <- read_csv("plants/legacy-plant-list.csv")
+focal_plant_list <- read_csv("plants/focal-plant-list.csv")
+plant_replace <- bind_rows(legacy_plant_list, focal_plant_list)
 
 # content checks ----------------------------------------------------------
 
@@ -133,7 +134,6 @@ wibee <- wibee_in %>%
       T ~ "other"),
     management = factor(management, levels = management_list$type)) %>%
   left_join(rename(management_list, management = type, management_name = label)) %>%
-  left_join(plant_list) %>%
   mutate(
     lat_rnd = round(lat, 1),
     lng_rnd = round(lng, 1),
@@ -142,6 +142,11 @@ wibee <- wibee_in %>%
   mutate(
     remote_id = id,
     id = 1:length(id)) %>%
+  left_join(plant_replace) %>%
+  mutate(crop = ifelse(is.na(new_crop), crop, new_crop)) %>%
+  left_join(plant_list) %>%
+  mutate(focal = new_crop %in% focal_plant_list$new_crop) %>%
+  mutate(plant_group = ifelse(focal, "non-crop focal", plant_group)) %>%
   droplevels()
 
 # make ranked list of habitat types
@@ -169,17 +174,14 @@ plant_ranks <- wibee %>%
   mutate(
     plant_rank = row_number(),
     plant_type = case_when(
-      plant_id == "species:other" ~ "other non-crop",
-      plant_id == "other" & plant_group == "crop" ~ "other crop",
-      plant_id == "other" & plant_group == "non-crop" ~ "other non-crop",
-      plant_rank >= 15 & plant_group == "crop" ~ "other crop",
-      plant_rank >= 15 & plant_group == "non-crop" ~ "other non-crop",
+      plant_id == "species:other" ~ "other-non-crop",
+      plant_rank >= 15 & plant_group == "crop" ~ "other-crop",
+      plant_rank >= 15 & plant_group == "non-crop" ~ "other-non-crop",
       T ~ plant_id),
     plant_label = case_when(
-      plant_type == "other crop" ~ "Other crop",
-      plant_type == "other non-crop" ~ "Other/Unknown non-crop plant",
-      T ~ plant_label)) %>%
-  select(-surveys)
+      plant_type == "other-crop" ~ "Other crop",
+      plant_type == "other-non-crop" ~ "Other/Unknown non-crop plant",
+      T ~ plant_label))
 
 surveys <- wibee %>%
   select(-c(remote_id, picture_url, plant_label)) %>%
