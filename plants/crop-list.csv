@@ -1,4 +1,4 @@
-﻿PlantID,CommonName,ScientificName,Description,CropCategory
+﻿ID,CommonName,ScientificName,Description,CropCategory
 onion,Onions,Allium cepa,<em>Allium cepa</em>,Crops
 garlic,Garlic,Allium sativum,<em>Allium sativum</em>,Crops
 chives,Chives,Allium schoenoprasum,<em>Allium schoenoprasum</em>,Vegetables
@@ -68,6 +68,6 @@ corn,Corn,Zea mays,<em>Zea mays</em>,Crops
 sweet-corn,Sweet Corn,Zea mays,<em>Zea mays</em>,Crops
 herb,Herbs,Various,Herbs,Crops
 other-berry,Other berry,Other berry,Other berry,Crops
-other,Other,Other crop,Other crop,Crops
+other-crop,Other crop,Other crop,Other crop,Crops
 other-fruit,Other fruit,Other fruit,Other fruit,Crops
 other-vegetable,Other vegetable,Other vegetable,Other vegetable,Crops
