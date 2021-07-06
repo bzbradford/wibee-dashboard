@@ -106,7 +106,7 @@ ui <- fixedPage(
       style = "primary",
       value = "map",
       title = "1) Filter by survey location",
-      p(em("Click on individual grid cell(s) to show only results from those areas. Note: some surveys are from outside Wisconsin. Click 'Zoom all' to see them."), style = "margin-top:.5em; margin-bottom:.5em"),
+      p(em("Click on individual grid cell(s) to show only results from those areas. Note: some surveys are from outside Wisconsin. Click 'Select all' to see them."), style = "margin-top:.5em; margin-bottom:.5em"),
       leafletOutput("map", height = 600),
       div(style = "margin-top: 5px;",
         div(actionButton("map_select_visible", "Select visible"), style = "padding-right:10px; display:inline-block"),
