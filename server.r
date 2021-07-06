@@ -226,14 +226,25 @@ server <- function(input, output, session) {
   observeEvent(input$which_bees_none, updateCheckboxGroupInput(session, "which_bees", selected = ""))
   observeEvent(input$which_habitat_all, updateCheckboxGroupInput(session, "which_habitat", selected = habitats$type))
   observeEvent(input$which_habitat_none, updateCheckboxGroupInput(session, "which_habitat", selected = ""))
+  observeEvent(input$which_mgmt_all, updateCheckboxGroupInput(session, "which_mgmt", selected = managements$type))
+  observeEvent(input$which_mgmt_none, updateCheckboxGroupInput(session, "which_mgmt", selected = ""))
   observeEvent(input$which_crops_all, updateCheckboxGroupInput(session, "which_crops", selected = select_crops$type))
   observeEvent(input$which_crops_none, updateCheckboxGroupInput(session, "which_crops", selected = ""))
   observeEvent(input$which_focal_noncrops_all, updateCheckboxGroupInput(session, "which_focal_noncrops", selected = focal_noncrops$type))
   observeEvent(input$which_focal_noncrops_none, updateCheckboxGroupInput(session, "which_focal_noncrops", selected = ""))
   observeEvent(input$which_noncrops_all, updateCheckboxGroupInput(session, "which_noncrops", selected = select_noncrops$type))
   observeEvent(input$which_noncrops_none, updateCheckboxGroupInput(session, "which_noncrops", selected = ""))
-  observeEvent(input$which_mgmt_all, updateCheckboxGroupInput(session, "which_mgmt", selected = managements$type))
-  observeEvent(input$which_mgmt_none, updateCheckboxGroupInput(session, "which_mgmt", selected = ""))
+  observeEvent(input$select_all_plants, {
+    updateCheckboxGroupInput(session, "which_crops", selected = select_crops$type)
+    updateCheckboxGroupInput(session, "which_focal_noncrops", selected = focal_noncrops$type)
+    updateCheckboxGroupInput(session, "which_noncrops", selected = select_noncrops$type)
+  })
+  observeEvent(input$select_no_plants, {
+    updateCheckboxGroupInput(session, "which_crops", selected = "")
+    updateCheckboxGroupInput(session, "which_focal_noncrops", selected = "")
+    updateCheckboxGroupInput(session, "which_noncrops", selected = "")
+  })
+
   
   
   
