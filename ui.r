@@ -297,9 +297,9 @@ ui <- fixedPage(
     ## Compare plants ----
     tabPanel("Compare crops/flowers",
       br(),
-      plotlyOutput("plotByCrop"),
+      plotlyOutput("plotByCrop", height = "600px"),
       br(),
-      p(em("This interactive chart compares total pollinator visitation rates across all of the different crops and non-crop plants surveyed with the app. The number of surveys represented by each plant species or group is shown in parentheses in the labels."), align = "center", style = "margin-top:.5em; margin-bottom:.5em; font-size:small")),
+      p(em("This interactive chart compares total pollinator visitation rates across all of the different crops and non-crop plants surveyed with the app. The number of surveys represented by each plant species or group is shown in parentheses in the labels."), align = "center", style = "margin-top:.5em; margin-bottom:.5em; font-size:small;")),
     
     ## Tabular survey data ----
     tabPanel("View as data table",

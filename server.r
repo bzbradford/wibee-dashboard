@@ -593,7 +593,7 @@ server <- function(input, output, session) {
   output$plotByCrop <- renderPlotly({
     
     # estimate label lengths to increase plot margin
-    bmargin <- max(40, 10 + 4 * max(nchar(filtered_surveys()$plant_label)))
+    margin <- min(max(40, 10 + 4 * max(nchar(filtered_surveys()$plant_label))), 200)
     
     # plot
     filtered_surveys_long() %>%
@@ -617,7 +617,7 @@ server <- function(input, output, session) {
         xaxis = list(title = "", fixedrange = T, tickangle = 45),
         yaxis = list(title = "Number of visits per survey", fixedrange = T),
         hovermode = "compare",
-        margin = list(b = bmargin)
+        margin = list(b = margin)
       )
     })
   
