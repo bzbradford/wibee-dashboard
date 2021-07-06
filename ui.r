@@ -123,7 +123,7 @@ ui <- fixedPage(
     bsCollapsePanel(
       style = "primary",
       title = "2) Select date range",
-      p(em("Filter survey data by selecting which date range you want to see data for."), style = "margin-top:.5em; margin-bottom:.5em"),
+      p(em("Filter survey data by selecting which date range you want to see data for."), style = "margin-bottom:.5em"),
       div(
         class = "well",
         checkboxGroupButtons(
@@ -152,7 +152,7 @@ ui <- fixedPage(
     bsCollapsePanel(
       style = "primary",
       title = "3) Select by habitat, management type, or pollinator group",
-      p(em("Filter survey data by selecting which habitats, management types, or pollinator groups you want to see data for. Number of matching surveys for each habitat or reported management practice is shown in parentheses."), style = "margin-top:.5em; margin-bottom:.5em"),
+      p(em("Filter survey data by selecting which habitats, management types, or pollinator groups you want to see data for. Number of matching surveys for each habitat or reported management practice is shown in parentheses."), style = "margin-bottom:.5em"),
       div(class = "well",
         fixedRow(
           column(4,
@@ -200,7 +200,7 @@ ui <- fixedPage(
     bsCollapsePanel(
       style = "primary",
       title = "4) Select crop(s) or flowering plant(s) observed during survey",
-      p(em("Filter survey data by selecting which crops, focal plants (featured plants for surveys shown in the app), or other non-crop flowering plants you want to see data for. Number of matching surveys for each plant is shown in parentheses."), style = "margin-top:.5em; margin-bottom:.5em"),
+      p(em("Filter survey data by selecting which crops, focal plants (featured plants for surveys shown in the app), or other non-crop flowering plants you want to see data for. Number of matching surveys for each plant is shown in parentheses."), style = "margin-bottom:.5em"),
       div(class = "well",
         fixedRow(
           column(3,

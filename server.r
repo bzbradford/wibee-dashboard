@@ -56,7 +56,25 @@ server <- function(input, output, session) {
 
 # Filter checkboxes -------------------------------------------------------
 
-  # Habitat checkbox labels and values
+  ## Dates ----
+  
+  # Update date slider on year checkbox actions
+  observeEvent(input$years, {
+    df <- surveys %>%
+      select(year, date) %>%
+      filter(year %in% input$years)
+    updateSliderInput(
+      session,
+      "date_range",
+      min = min(df$date),
+      max = max(df$date),
+      value = c(min(df$date), max(df$date)))
+    })
+  
+  
+  ## Habitats ----
+  
+  # Generate labels
   habitat_labels <- reactive({
     habitats %>%
       left_join(
@@ -67,6 +85,7 @@ server <- function(input, output, session) {
         box_label = paste0(label, " (", n, ")"))
     })
   
+  # Update labels on checkbox
   observeEvent(habitat_labels(),{
     updateCheckboxGroupInput(session, "which_habitat",
       choiceNames = habitat_labels()$box_label,
@@ -75,7 +94,9 @@ server <- function(input, output, session) {
     })
   
   
-  # Management checkbox labels and values
+  ## Managements ----
+  
+  # Generate labels
   mgmt_labels <- reactive({
     managements %>%
       left_join(
@@ -86,6 +107,7 @@ server <- function(input, output, session) {
         box_label = paste0(label, " (", n, ")"))
     })
   
+  # Update labels
   observeEvent(mgmt_labels(), {
     updateCheckboxGroupInput(session, "which_mgmt",
       choiceNames = mgmt_labels()$box_label,
@@ -94,7 +116,9 @@ server <- function(input, output, session) {
     })
   
 
-  # Crop checkbox labels and values
+  ## Plants ----
+  
+  # Generate crop labels
   crop_labels <- reactive({
     select_crops %>%
       left_join(
@@ -103,17 +127,17 @@ server <- function(input, output, session) {
       mutate(
         n = replace_na(n, 0),
         box_label = paste0(label, " (", n, ")"))
-  })
+    })
 
+  # Update labels
   observeEvent(crop_labels(), {
     updateCheckboxGroupInput(session, "which_crops",
       choiceNames = crop_labels()$box_label,
       choiceValues = crop_labels()$type,
       selected = input$which_crops)
-  })
+    })
 
-
-  # Focal plant checkbox labels and values
+  # Generate focal plant labels
   focal_noncrop_labels <- reactive({
     focal_noncrops %>%
       left_join(
@@ -122,16 +146,17 @@ server <- function(input, output, session) {
       mutate(
         n = replace_na(n, 0),
         box_label = paste0(label, " (", n, ")"))
-  })
+    })
 
+  # Update labels
   observeEvent(focal_noncrop_labels(), {
     updateCheckboxGroupInput(session, "which_focal_noncrops",
       choiceNames = focal_noncrop_labels()$box_label,
       choiceValues = focal_noncrop_labels()$type,
       selected = input$which_focal_noncrops)
-  })
+    })
 
-  # Non-crop checkbox labels and values
+  # Generate non-crop plant labels
   noncrop_labels <- reactive({
     select_noncrops %>%
       left_join(
@@ -140,14 +165,15 @@ server <- function(input, output, session) {
       mutate(
         n = replace_na(n, 0),
         box_label = paste0(label, " (", n, ")"))
-  })
+    })
   
+  # Update labels
   observeEvent(noncrop_labels(), {
     updateCheckboxGroupInput(session, "which_noncrops",
       choiceNames = noncrop_labels()$box_label,
       choiceValues = noncrop_labels()$type,
       selected = input$which_noncrops)
-  })
+    })
   
   
   # Date slider
@@ -162,26 +188,9 @@ server <- function(input, output, session) {
   #       value = c(min(df$date), max(df$date)))
   #     }
   #   })
+
   
-  observeEvent(input$years, {
-    df <- surveys %>%
-      select(year, date) %>%
-      filter(year %in% input$years)
-    updateSliderInput(
-      session,
-      "date_range",
-      min = min(df$date),
-      max = max(df$date),
-      value = c(min(df$date), max(df$date)))
-    })
-  
-  
-  # reset date slider button
-  observeEvent(input$reset_date, {
-    updateCheckboxGroupButtons(session, "years", selected = years)
-    updateSliderInput(session, "date_range", value = c(min_date, max_date))
-    })
-  
+
   
   
   
@@ -206,46 +215,63 @@ server <- function(input, output, session) {
     }
   }
   
-  # Reset button
-  observeEvent(input$reset, {
-    # updateSliderInput(session, "date_range", value = c(min_date, max_date))
-    updateCheckboxGroupInput(session, "which_habitat", selected = habitats$type)
+  resetDate <- function() {
+    updateCheckboxGroupButtons(session, "years", selected = years)
+    updateSliderInput(session, "date_range", value = c(min_date, max_date))
+  }
+  
+  selectAllPlants <- function() {
     updateCheckboxGroupInput(session, "which_crops", selected = select_crops$type)
     updateCheckboxGroupInput(session, "which_focal_noncrops", selected = focal_noncrops$type)
     updateCheckboxGroupInput(session, "which_noncrops", selected = select_noncrops$type)
-    updateCheckboxGroupInput(session, "which_mgmt", selected = managements$type)
-    updateCheckboxInput(session, "group_wild", value = F)
-    resetBees()
-  })
+  }
   
-  # Group wild bees together
-  observeEvent(input$group_wild, resetBees())
-  
-  # All/None buttons
-  observeEvent(input$which_bees_all, resetBees())
-  observeEvent(input$which_bees_none, updateCheckboxGroupInput(session, "which_bees", selected = ""))
-  observeEvent(input$which_habitat_all, updateCheckboxGroupInput(session, "which_habitat", selected = habitats$type))
-  observeEvent(input$which_habitat_none, updateCheckboxGroupInput(session, "which_habitat", selected = ""))
-  observeEvent(input$which_mgmt_all, updateCheckboxGroupInput(session, "which_mgmt", selected = managements$type))
-  observeEvent(input$which_mgmt_none, updateCheckboxGroupInput(session, "which_mgmt", selected = ""))
-  observeEvent(input$which_crops_all, updateCheckboxGroupInput(session, "which_crops", selected = select_crops$type))
-  observeEvent(input$which_crops_none, updateCheckboxGroupInput(session, "which_crops", selected = ""))
-  observeEvent(input$which_focal_noncrops_all, updateCheckboxGroupInput(session, "which_focal_noncrops", selected = focal_noncrops$type))
-  observeEvent(input$which_focal_noncrops_none, updateCheckboxGroupInput(session, "which_focal_noncrops", selected = ""))
-  observeEvent(input$which_noncrops_all, updateCheckboxGroupInput(session, "which_noncrops", selected = select_noncrops$type))
-  observeEvent(input$which_noncrops_none, updateCheckboxGroupInput(session, "which_noncrops", selected = ""))
-  observeEvent(input$select_all_plants, {
-    updateCheckboxGroupInput(session, "which_crops", selected = select_crops$type)
-    updateCheckboxGroupInput(session, "which_focal_noncrops", selected = focal_noncrops$type)
-    updateCheckboxGroupInput(session, "which_noncrops", selected = select_noncrops$type)
-  })
-  observeEvent(input$select_no_plants, {
+  selectNoPlants <- function() {
     updateCheckboxGroupInput(session, "which_crops", selected = "")
     updateCheckboxGroupInput(session, "which_focal_noncrops", selected = "")
     updateCheckboxGroupInput(session, "which_noncrops", selected = "")
-  })
-
+  }
   
+  
+  ## Reset date slider ----
+  observeEvent(input$reset_date, resetDate())
+  
+  
+  ## All/None buttons ----
+  observeEvent(input$which_bees_all, resetBees())
+  observeEvent(input$which_bees_none, updateCheckboxGroupInput(session, "which_bees", selected = ""))
+  
+  observeEvent(input$which_habitat_all, updateCheckboxGroupInput(session, "which_habitat", selected = habitats$type))
+  observeEvent(input$which_habitat_none, updateCheckboxGroupInput(session, "which_habitat", selected = ""))
+  
+  observeEvent(input$which_mgmt_all, updateCheckboxGroupInput(session, "which_mgmt", selected = managements$type))
+  observeEvent(input$which_mgmt_none, updateCheckboxGroupInput(session, "which_mgmt", selected = ""))
+  
+  observeEvent(input$which_crops_all, updateCheckboxGroupInput(session, "which_crops", selected = select_crops$type))
+  observeEvent(input$which_crops_none, updateCheckboxGroupInput(session, "which_crops", selected = ""))
+  
+  observeEvent(input$which_focal_noncrops_all, updateCheckboxGroupInput(session, "which_focal_noncrops", selected = focal_noncrops$type))
+  observeEvent(input$which_focal_noncrops_none, updateCheckboxGroupInput(session, "which_focal_noncrops", selected = ""))
+  
+  observeEvent(input$which_noncrops_all, updateCheckboxGroupInput(session, "which_noncrops", selected = select_noncrops$type))
+  observeEvent(input$which_noncrops_none, updateCheckboxGroupInput(session, "which_noncrops", selected = ""))
+  
+  observeEvent(input$select_all_plants, selectAllPlants())
+  observeEvent(input$select_no_plants, selectNoPlants())
+  
+
+  ## Reset bee selections on grouping ----
+  observeEvent(input$group_wild, resetBees())
+  
+  ## Master reset button ----
+  observeEvent(input$reset, {
+    resetDate()
+    updateCheckboxGroupInput(session, "which_habitat", selected = habitats$type)
+    updateCheckboxGroupInput(session, "which_mgmt", selected = managements$type)
+    selectAllPlants()
+    updateCheckboxInput(session, "group_wild", value = F)
+    resetBees()
+  })
   
   
 
@@ -294,6 +320,8 @@ server <- function(input, output, session) {
 
 # Map and map filtering ---------------------------------------------------
   
+  ## Initialize map ----
+  
   # initialize map selection list, with all in WI selected
   map_selection <- reactiveVal(value = map_pts_wi)
   
@@ -324,6 +352,9 @@ server <- function(input, output, session) {
     leafletProxy("map") %>% setView(lng = -89.7, lat = 44.8, zoom = 7)
   }, once = T)
   
+  
+  ## Handle map interactions ----
+  
   # handle adding and subtracting grids from selection
   observeEvent(input$map_shape_click, {
     click <- input$map_shape_click
@@ -345,7 +376,6 @@ server <- function(input, output, session) {
       map_selection(new_sel)}
     })
   
-  
   # reactive portion of map showing selected grids
   observeEvent(map_selection(), {
     leafletProxy("map") %>%
@@ -366,6 +396,8 @@ server <- function(input, output, session) {
     })
   
   
+  ## Handle map buttons ----
+  
   # zoom to show all data
   observeEvent(input$map_zoom_all, {
     leafletProxy("map") %>% 
@@ -376,7 +408,6 @@ server <- function(input, output, session) {
         lat2 = max(surveys$lat))
     map_selection(map_pts_all)
     })
-  
   
   # select grids visible in map window
   observeEvent(input$map_select_visible, {
@@ -393,13 +424,11 @@ server <- function(input, output, session) {
     map_selection(new_pts)
     })
   
-  
   # clear selection
   observeEvent(input$map_clear_selection, {
     leafletProxy("map") %>% clearGroup("Selected points")
     map_selection(NULL)
     })
-  
   
   # reset view to show and select Wisconsin points
   observeEvent(input$map_reset, {
@@ -409,7 +438,9 @@ server <- function(input, output, session) {
 
 
 
-# Pie charts --------------------------------------------------------------
+# Outputs -----------------------------------------------------------------
+  
+  ## Bee activity pie charts ----
   
   # left pie chart: whole dataset
   output$map_chart_all <- renderPlotly({
@@ -469,10 +500,8 @@ server <- function(input, output, session) {
 
   
   
+  ## Activity by date plot ----
 
-# Plot by date ------------------------------------------------------------
-
-  # Plot of daily bee counts
   output$plotByDate <- renderPlotly({
     df <- filtered_surveys_long()
     if (nrow(df) > 0) {
@@ -497,13 +526,11 @@ server <- function(input, output, session) {
           bargap = 0
           )
       }
-    }) %>%
-    bindCache(filtered_surveys_long())
+    })
   
   
   
-
-# Plot by site characteristics --------------------------------------------
+  ## Plot by habitat ----
   
   output$plotByHabitat <- renderPlotly({
     filtered_surveys_long() %>%
@@ -529,7 +556,11 @@ server <- function(input, output, session) {
         hovermode = "compare"
       )
     })
-
+  
+  
+  
+  ## Plot by management ----
+  
   output$plotByMgmt <- renderPlotly({
     filtered_surveys_long() %>%
       group_by(management_name, bee_name, bee_color) %>%
@@ -555,11 +586,16 @@ server <- function(input, output, session) {
       )
     })
   
+  
+  
+  ## Plot by plant ----
+  
   output$plotByCrop <- renderPlotly({
-    bmargin <- max(
-      40,
-      10 + 4 * max(nchar(filtered_surveys()$plant_label)))
     
+    # estimate label lengths to increase plot margin
+    bmargin <- max(40, 10 + 4 * max(nchar(filtered_surveys()$plant_label)))
+    
+    # plot
     filtered_surveys_long() %>%
       group_by(plant_label, bee_name, bee_color) %>%
       summarise(
@@ -587,7 +623,7 @@ server <- function(input, output, session) {
   
   
 
-# Data table --------------------------------------------------------------
+  ## Data table ----
 
   filteredTable <- reactive({
     filtered_surveys_long() %>%
@@ -612,15 +648,13 @@ server <- function(input, output, session) {
     )
   
   output$download_data <- downloadHandler(
-    filename = "wibee_data.csv",
-    content = function(file) {
-      write_csv(filteredTable(), file)
-      }
+    filename = function() { paste0("WiBee data ", format(Sys.time(), "%Y-%m-%d %H%M%S"), ".csv") },
+    content = function(file) { write_csv(filteredTable(), file) }
     )
   
   
   
-# Plot of user statistics -------------------------------------------------
+  ## Plot of user statistics ----
   
   output$plotUserStats <- renderPlotly({
     df <- 
@@ -663,7 +697,6 @@ server <- function(input, output, session) {
         marker = list(colorscale = "Greens", reversescale = T),
         branchvalues = "total"
       )
-    }) %>%
-    bindCache(filtered_surveys())
+    })
   
 }
