@@ -151,7 +151,7 @@ server <- function(input, output, session) {
   # Update labels
   observeEvent(focal_noncrop_labels(), {
     updateCheckboxGroupInput(session, "which_focal_noncrops",
-      choiceNames = focal_noncrop_labels()$box_label,
+      choiceNames = lapply(as.list(focal_noncrop_labels()$box_label), HTML),
       choiceValues = focal_noncrop_labels()$type,
       selected = input$which_focal_noncrops)
     })
@@ -170,7 +170,7 @@ server <- function(input, output, session) {
   # Update labels
   observeEvent(noncrop_labels(), {
     updateCheckboxGroupInput(session, "which_noncrops",
-      choiceNames = noncrop_labels()$box_label,
+      choiceNames = lapply(as.list(noncrop_labels()$box_label), HTML),
       choiceValues = noncrop_labels()$type,
       selected = input$which_noncrops)
     })

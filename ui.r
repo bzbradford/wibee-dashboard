@@ -218,7 +218,7 @@ ui <- fixedPage(
             checkboxGroupInput(
               "which_focal_noncrops",
               "Focal non-crop plants:",
-              choiceNames = levels(focal_noncrops$label),
+              choiceNames = lapply(as.list(levels(focal_noncrops$label)), HTML),
               choiceValues = focal_noncrops$type,
               selected = focal_noncrops$type),
             div(actionButton("which_focal_noncrops_all", "All"), style = "display:inline-block"),
@@ -228,7 +228,7 @@ ui <- fixedPage(
             checkboxGroupInput(
               "which_noncrops",
               "Other non-crop plant:",
-              choiceNames = levels(select_noncrops$label),
+              choiceNames = lapply(as.list(levels(select_noncrops$label)), HTML),
               choiceValues = select_noncrops$type,
               selected = select_noncrops$type),
             div(actionButton("which_noncrops_all", "All"), style = "display:inline-block"),
