@@ -10,7 +10,7 @@ library(plotly)
 
 
 
-# Define UI ---------------------------------------------------------------
+# Define UI ----
 
 ui <- fixedPage(
   
@@ -38,7 +38,7 @@ ui <- fixedPage(
   
   
 
-## Introduction and project summary ----------------------------------------
+# Introduction and summary ----
 
   sidebarLayout(
     mainPanel = mainPanel(
@@ -71,9 +71,9 @@ ui <- fixedPage(
   br(),
   
 
-  
-## Tabs with map, filters, and how-to --------------------------------------
+# bsCollapse panels ----
 
+  ## How to use ----
   bsCollapse(
     bsCollapsePanel(
       title = "Click for help on how to use this dashboard",
@@ -96,14 +96,17 @@ ui <- fixedPage(
   ),
   br(),
   
+  
   h4("Select and filter bee surveys:"),
+  
+  ## Map ----
   bsCollapse(
     open = "map",
     bsCollapsePanel(
       style = "primary",
       value = "map",
       title = "1) Filter by survey location",
-      p(em("Click on individual grid cell(s) to show only results from those areas. Note: some surveys are from outside Wisconsin. Click 'Zoom all' to see them."), style = "margin-top:.5em; margin-bottom:.5em"),
+      p(em("Click on individual grid cell(s) to show only results from those areas. Note: some surveys are from outside Wisconsin. Click 'Select all' to see them."), style = "margin-top:.5em; margin-bottom:.5em"),
       leafletOutput("map", height = 600),
       div(style = "margin-top: 5px;",
         div(actionButton("map_select_visible", "Select visible"), style = "padding-right:10px; display:inline-block"),
@@ -115,11 +118,12 @@ ui <- fixedPage(
     )
   ),
   
+  ## Date range ----
   bsCollapse(
     bsCollapsePanel(
       style = "primary",
       title = "2) Select date range",
-      p(em("Filter survey data by selecting which date range you want to see data for."), style = "margin-top:.5em; margin-bottom:.5em"),
+      p(em("Filter survey data by selecting which date range you want to see data for."), style = "margin-bottom:.5em"),
       div(
         class = "well",
         checkboxGroupButtons(
@@ -143,11 +147,12 @@ ui <- fixedPage(
     )
   ),
   
+  ## Habitat/management/pollinator ----
   bsCollapse(
     bsCollapsePanel(
       style = "primary",
       title = "3) Select by habitat, management type, or pollinator group",
-      p(em("Filter survey data by selecting which habitats, management types, or pollinator groups you want to see data for. Number of matching surveys for each habitat or reported management practice is shown in parentheses."), style = "margin-top:.5em; margin-bottom:.5em"),
+      p(em("Filter survey data by selecting which habitats, management types, or pollinator groups you want to see data for. Number of matching surveys for each habitat or reported management practice is shown in parentheses."), style = "margin-bottom:.5em"),
       div(class = "well",
         fixedRow(
           column(4,
@@ -190,17 +195,18 @@ ui <- fixedPage(
     )
   ),
   
+  ## Plant selections ----
   bsCollapse(
     bsCollapsePanel(
       style = "primary",
       title = "4) Select crop(s) or flowering plant(s) observed during survey",
-      p(em("Filter survey data by selecting which crops, focal plants (featured plants for surveys shown in the app), or other non-crop flowering plants you want to see data for. Number of matching surveys for each plant is shown in parentheses."), style = "margin-top:.5em; margin-bottom:.5em"),
+      p(em("Filter survey data by selecting which crops, focal plants (featured plants for surveys shown in the app), or other non-crop flowering plants you want to see data for. Number of matching surveys for each plant is shown in parentheses."), style = "margin-bottom:.5em"),
       div(class = "well",
         fixedRow(
           column(3,
             checkboxGroupInput(
               "which_crops",
-              "Crop name:",
+              "Crops:",
               choiceNames = levels(select_crops$label),
               choiceValues = select_crops$type,
               selected = select_crops$type
@@ -212,7 +218,7 @@ ui <- fixedPage(
             checkboxGroupInput(
               "which_focal_noncrops",
               "Focal non-crop plants:",
-              choiceNames = levels(focal_noncrops$label),
+              choiceNames = lapply(as.list(levels(focal_noncrops$label)), HTML),
               choiceValues = focal_noncrops$type,
               selected = focal_noncrops$type),
             div(actionButton("which_focal_noncrops_all", "All"), style = "display:inline-block"),
@@ -222,24 +228,27 @@ ui <- fixedPage(
             checkboxGroupInput(
               "which_noncrops",
               "Other non-crop plant:",
-              choiceNames = levels(select_noncrops$label),
+              choiceNames = lapply(as.list(levels(select_noncrops$label)), HTML),
               choiceValues = select_noncrops$type,
               selected = select_noncrops$type),
             div(actionButton("which_noncrops_all", "All"), style = "display:inline-block"),
             div(actionButton("which_noncrops_none", "None"), style = "display:inline-block")
             )
+          ),
+        fixedRow(align = "center", style = "margin-top: 1em;",
+          div(actionButton("select_all_plants", "Select all plants"), style = "display:inline-block"),
+          div(actionButton("select_no_plants", "Clear all plant selections"), style = "display:inline-block")
           )
         ),
       div(style = "text-align: center; font-weight: bold;", textOutput("survey_count_plant"))
       )
     ),
   
-  # materialSwitch("group_wild", label = "Group wild bees together?", status = "success"),
   # div(actionButton("reset", "Reset filters"), style = "margin-top:15px"),
   
   
   
-## Number of selected surveys ----------------------------------------------
+# Text: Number of selected surveys ----
 
   div(
     class = "well",
@@ -251,48 +260,54 @@ ui <- fixedPage(
   
   
 
-## Tabs with plot and data table displays ----------------------------------------
+# Tabs with plot and data table displays ----
 
   h4("View or download survey data:"),
+  
   tabsetPanel(
     
+    ## Species pie charts ----
     tabPanel("Species composition",
       br(),
       plotlyOutput("map_chart_all", width = "45%", inline = T),
       plotlyOutput("map_chart_selected", width = "45%", inline = T),
       br()),
     
+    ## Activity by date ----
     tabPanel("Activity by date",
       br(),
       plotlyOutput("plotByDate"),
       br(),
       p(em("This chart shows daily or season trends in pollinator activity by showing the average activity by pollinator group across all surveys conducted on a given day. The date range can be adjusted in the survey filters below the map."), align = "center", style = "margin-top:.5em; margin-bottom:.5em; font-size:small")),
     
+    ## Compare habitat ----
     tabPanel("Compare habitats",
       br(),
       plotlyOutput("plotByHabitat"),
       br(),
       p(em("This chart compares total pollinator visitation rates across different habitat types. The number of surveys represented by each habitat is shown in parentheses in the labels."), align = "center", style = "margin-top:.5em; margin-bottom:.5em; font-size:small")),
     
+    ## Compare management ----
     tabPanel("Compare managements",
       br(),
       plotlyOutput("plotByMgmt"),
       br(),
       p(em("This chart compares total pollinator visitation rates by user-reported management practices. The number of surveys represented by each practice is shown in parentheses in the labels."), align = "center", style = "margin-top:.5em; margin-bottom:.5em; font-size:small")),
     
+    ## Compare plants ----
     tabPanel("Compare crops/flowers",
       br(),
-      plotlyOutput("plotByCrop"),
+      plotlyOutput("plotByCrop", height = "600px"),
       br(),
-      p(em("This interactive chart compares total pollinator visitation rates across all of the different crops and non-crop plants surveyed with the app. The number of surveys represented by each plant species or group is shown in parentheses in the labels."), align = "center", style = "margin-top:.5em; margin-bottom:.5em; font-size:small")),
+      p(em("This interactive chart compares total pollinator visitation rates across all of the different crops and non-crop plants surveyed with the app. The number of surveys represented by each plant species or group is shown in parentheses in the labels."), align = "center", style = "margin-top:.5em; margin-bottom:.5em; font-size:small;")),
     
-    # Tabular survey data
+    ## Tabular survey data ----
     tabPanel("View as data table",
       br(),
       p("The table below shows the average visitation rate per minute for the surveys and insect categories selected by the filters above. Check or uncheck the grouping variables to simplify or expand the summary table. Click the download button to save a copy of the data you have selected.", em("Note: this data is for personal or educational use only. Other use or use in a publication is not permitted without the consent of the team. ", a("Email us with any inquiries.", href = "mailto:pollinators@wisc.edu"))),
       br(),
       fixedRow(
-        column(width = 8,
+        column(8,
           checkboxGroupInput(
             "dtGroups",
             label = "Select which variables to include in table:",
@@ -300,13 +315,13 @@ ui <- fixedPage(
             choiceValues = c("id", "date", "grid_pt", "habitat", "crop", "management"),
             selected = c("habitat", "crop", "management"),
             inline = T)),
-        column(width = 4, align = "right",
+        column(4, align = "right",
           downloadButton("download_data", "Download data"))
       ),
       DTOutput("summaryTable")
     ),
     
-    # user stats
+    ## User stats ----
     tabPanel("User statistics",
       br(),
       plotlyOutput("plotUserStats", height = "600px"),
@@ -316,7 +331,7 @@ ui <- fixedPage(
   
   
 
-## Credits -----------------------------------------------------------------
+# Credits ----
   
   br(),
   hr(),

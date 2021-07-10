@@ -1,9 +1,24 @@
-# Handles plant lists for WiBee
+# Handles plant lists for WiBee. Not run during app launch, must be sourced manually.
 
 library(tidyverse)
 
 kebab <- function(s) {
   gsub(" ", "-", tolower(s))
+}
+
+plantLabels <- function(sciName, comName) {
+  names <- unlist(strsplit(comName, ", "))
+  n <- length(names)
+  if (n == 1) {
+    label <- paste0(comName, " (", sciName, ")")
+  } else if (n == 2) {
+    label <- paste0(names[1], " or ", names[2], " (", sciName, ")")
+  } else if (n > 2) {
+    label <- paste0(names[1], ", ", names[2], ", etc (", sciName, ")")
+  } else {
+    label <- sciName
+  }
+  label
 }
 
 # crop list
@@ -31,21 +46,21 @@ noncrop_families <-
   mutate(
     TaxonLevel = "Family",
     ScientificName = Family,
-    Label = paste0(Family, " (", CommonName, ")"))
+    Label = paste0(CommonName, " (", Family, ")"))
 
 noncrop_genera <- 
   read_csv("plants/non-crop-genus-list.csv") %>%
   mutate(
     TaxonLevel = "Genus",
     ScientificName = Genus,
-    Label = paste0("Genus ", Genus, " (", str_trunc(CommonName, 20), ")"))
+    Label = mapply(plantLabels, paste0("Genus <em>", Genus, "</em>"), CommonName))
 
 noncrop_species <- 
   read_csv("plants/non-crop-species-list.csv") %>%
   mutate(
     TaxonLevel = "Species",
     ScientificName = Species,
-    Label = paste0(Species, " (", str_trunc(CommonName, 20), ")"))
+    Label = mapply(plantLabels, paste0("<em>", Species, "</em>"), CommonName))
 
 noncrop_other <- 
   tibble(

@@ -5,7 +5,7 @@ library(httr)
 
 
 
-# Load remote data --------------------------------------------------------
+# Load remote data ----
 
 # check when last data refresh occurred
 if (file.exists("./refresh_time")) {
@@ -35,14 +35,48 @@ if (refresh_time < Sys.time() - 3600) {
 }
 
 
-# read data from local csv
-wibee_in <- read_csv("./data/surveys.csv", col_types = cols(), guess_max = 10000)
+# read data from local csv and copy amended data into main columns
+wibee_in <- read_csv("./data/surveys.csv", col_types = cols(), guess_max = 10000) %>%
+  mutate(
+    bumble_bee = bumble_bee_amended,
+    honeybee = honeybee_amended,
+    large_dark_bee = large_dark_bee_amended,
+    small_dark_bee = small_dark_bee_amended,
+    greenbee = greenbee_amended,
+    non_bee = non_bee_amended
+  )
+
+# Check values in columns
+# wibee_in$site_type %>% unique()
+# wibee_in$crop %>% unique()
+# wibee_in$management_type %>% unique()
 
 
 
-# Define local variables --------------------------------------------------
+# Load/create helper data ----
 
-## column names ----
+# bee names and colors
+bees <- read_csv("data/bees.csv", col_types = cols()) %>% mutate_all(fct_inorder)
+
+# formatted bee names for ungrouped
+bee_names <- as.character(filter(bees, type != "wild_bee")$label)
+
+# formatted names for wild bee grouping
+wildbee_names <- levels(bees$group)
+
+
+# load habitat and management types
+habitat_list <- read_csv("data/habitats.csv", col_types = cols())
+management_list <- read_csv("data/managements.csv", col_types = cols())
+
+
+# load plant lists
+plant_list <- read_csv("plants/known-plant-list.csv", col_types = cols())
+legacy_plant_list <- read_csv("plants/legacy-plant-list.csv", col_types = cols())
+focal_plant_list <- read_csv("plants/focal-plant-list.csv", col_types = cols())
+plant_replace <- bind_rows(legacy_plant_list, focal_plant_list)
+
+
 # survey attribute cols to keep
 keep_cols <- c(
   "id",
@@ -54,9 +88,7 @@ keep_cols <- c(
   "site_type",
   "crop",
   "management_type",
-  "picture_url"
-  )
-
+  "picture_url")
 
 # bee cols to pivot
 bee_cols <- c(
@@ -65,42 +97,12 @@ bee_cols <- c(
   "large_dark_bee",
   "small_dark_bee",
   "greenbee",
-  "non_bee"
-  )
-
-
-# bee names
-bees <- read_csv("data/bees.csv", col_types = cols()) %>% mutate_all(fct_inorder)
-
-# formatted bee names for ungrouped
-bee_names <- bees %>% filter(type != "wild_bee") %>% pull(label) %>% as.character()
-
-# formatted names for wild bee grouping
-wildbee_names <- levels(bees$group)
-
-# load habitat types
-habitat_list <- read_csv("data/habitats.csv", col_types = cols())
-
-# load management types
-management_list <- read_csv("data/managements.csv", col_types = cols())
-
-# load plant lists
-plant_list <- read_csv("plants/known-plant-list.csv", col_types = cols())
-legacy_plant_list <- read_csv("plants/legacy-plant-list.csv", col_types = cols())
-focal_plant_list <- read_csv("plants/focal-plant-list.csv", col_types = cols())
-plant_replace <- bind_rows(legacy_plant_list, focal_plant_list)
-
-# content checks ----------------------------------------------------------
-
-# wibee_in$site_type %>% unique()
-# wibee_in$crop %>% unique()
-# wibee_in$management_type %>% unique()
+  "non_bee")
 
 
 
-# Process survey data -----------------------------------------------------
+# Process survey data ----
 
-# generate main dataset
 wibee <- wibee_in %>%
   select(all_of(c(keep_cols, bee_cols))) %>%
   rename(
@@ -150,6 +152,10 @@ wibee <- wibee_in %>%
     plant_group = ifelse(focal, "non-crop focal", plant_group)) %>%
   droplevels()
 
+
+
+# Get habitat/management/plant lists ----
+
 # make ranked list of habitat types
 habitats <- wibee %>%
   group_by(habitat, habitat_name) %>%
@@ -187,9 +193,22 @@ plant_ranks <- wibee %>%
       T ~ plant_label)) %>%
   drop_na()
 
+
+
+# Save main survey data ----
+
 surveys <- wibee %>%
   select(-c(remote_id, picture_url, plant_label)) %>%
   left_join(plant_ranks)
+
+# separate surveys and ids for picture downloads. The ids will change if the filter is changed in the block above
+images <- wibee %>%
+  select(c("id", "remote_id", "picture_url")) %>%
+  filter(!is.na(picture_url))
+
+
+
+# Get final plant lists ----
 
 plants <- surveys %>%
   group_by(plant_group, plant_type, plant_label) %>%
@@ -216,17 +235,8 @@ select_noncrops <- plants %>%
 
 
 
-# separate surveys and ids for picture downloads
-# the ids will change if the filter is changed in the block above
+# Create long-form dataset ----
 
-images <- wibee %>%
-  select(c("id", "remote_id", "picture_url")) %>%
-  filter(!is.na(picture_url))
-
-
-
-
-# pivot longer for some data analysis
 surveys_long <- surveys %>%
   pivot_longer(cols = bees$type, names_to = "bee", values_to = "count") %>%
   left_join(
@@ -236,7 +246,7 @@ surveys_long <- surveys %>%
 
 
 
-# Map data and other summaries --------------------------------------------
+# Map data and other summaries ----
 
 # generate grid points and summary statistics
 map_pts <- surveys %>%
