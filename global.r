@@ -8,8 +8,8 @@ library(httr)
 # Load remote data ----
 
 # check when last data refresh occurred
-if (file.exists("./refresh_time")) {
-  refresh_time <- readRDS("./refresh_time")
+if (file.exists("refresh_time")) {
+  refresh_time <- readRDS("refresh_time")
 } else {
   refresh_time <- as.POSIXct("2020-01-01")
 }
@@ -23,9 +23,9 @@ if (refresh_time < Sys.time() - 3600) {
       config = add_headers(Authorization = Sys.getenv("caracal_token"))))
   })
   if (is.data.frame(get_surveys)) {
-    arrange(get_surveys, ended_at) %>% write_csv("./data/surveys.csv")
+    arrange(get_surveys, ended_at) %>% write_csv("private/surveys.csv")
     refresh_time <- Sys.time()
-    saveRDS(refresh_time, "./refresh_time")
+    saveRDS(refresh_time, "refresh_time")
     message("Survey data refreshed from remote database.")
   } else {
     message("Unable to refresh data from remote server.")
@@ -36,7 +36,7 @@ if (refresh_time < Sys.time() - 3600) {
 
 
 # read data from local csv and copy amended data into main columns
-wibee_in <- read_csv("./data/surveys.csv", col_types = cols(), guess_max = 10000) %>%
+wibee_in <- read_csv("private/surveys.csv", col_types = cols(), guess_max = 10000) %>%
   mutate(
     bumble_bee = bumble_bee_amended,
     honeybee = honeybee_amended,
