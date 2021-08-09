@@ -311,9 +311,9 @@ ui <- fixedPage(
           checkboxGroupInput(
             "dtGroups",
             label = "Select which variables to include in table:",
-            choiceNames = c("Survey ID", "Date", "Location", "Habitat", "Crop", "Management"),
-            choiceValues = c("id", "date", "grid_pt", "habitat", "crop", "management"),
-            selected = c("habitat", "crop", "management"),
+            choiceNames = table_vars$names,
+            choiceValues = table_vars$values,
+            selected = table_vars_selected,
             inline = T)),
         column(4, align = "right",
           downloadButton("download_data", "Download data"))

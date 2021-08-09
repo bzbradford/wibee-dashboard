@@ -77,9 +77,18 @@ focal_plant_list <- read_csv("plants/focal-plant-list.csv", col_types = cols())
 plant_replace <- bind_rows(legacy_plant_list, focal_plant_list)
 
 
+# for data table display
+table_vars <- tibble(
+  names = c("Survey ID", "User ID", "Year", "Date", "Location", "Habitat", "Crop/Plant", "Management"),
+  values = c("id", "user_id", "year", "date", "grid_pt", "habitat", "crop", "management")
+  )
+table_vars_selected <- c("habitat", "crop", "management")
+
+
 # survey attribute cols to keep
 keep_cols <- c(
   "id",
+  "remote_id",
   "user_id",
   "lat",
   "lng",
@@ -104,6 +113,8 @@ bee_cols <- c(
 # Process survey data ----
 
 wibee <- wibee_in %>%
+  arrange(created_at) %>%
+  mutate(remote_id = id, id = 1:length(id)) %>%
   select(all_of(c(keep_cols, bee_cols))) %>%
   rename(
     date = ended_at,
@@ -141,9 +152,6 @@ wibee <- wibee_in %>%
     lng_rnd = round(lng, 1),
     grid_pt = paste(lat_rnd, lng_rnd, sep = ", "),
     inwi = between(lat, 42.49, 47.08) & between(lng, -92.89, -86.80)) %>%
-  mutate(
-    remote_id = id,
-    id = 1:length(id)) %>%
   left_join(plant_replace) %>%
   mutate(crop = ifelse(is.na(new_crop), crop, new_crop)) %>%
   left_join(plant_list) %>%
