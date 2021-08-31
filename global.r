@@ -26,13 +26,14 @@ if (refresh_time < Sys.time() - 3600) {
     arrange(get_surveys, ended_at) %>% write_csv("private/surveys.csv")
     refresh_time <- Sys.time()
     saveRDS(refresh_time, "refresh_time")
-    message("Survey data refreshed from remote database.")
+    status <- "Survey data refreshed from remote database."
   } else {
-    message("Unable to refresh data from remote server.")
+    status <- "Unable to refresh data from remote server."
   }
 } else {
-  message("Skipping refresh, last query < 1 hr ago.")
+  status <- "Skipped data refresh, last query < 1 hr ago."
 }
+message(status)
 
 
 # read data from local csv and copy amended data into main columns
