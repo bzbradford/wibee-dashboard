@@ -280,6 +280,13 @@ ui <- fixedPage(
       br(),
       p(em("This chart shows daily or season trends in pollinator activity by showing the average activity by pollinator group across all surveys conducted on a given day. The date range can be adjusted in the survey filters below the map."), align = "center", style = "margin-top:.5em; margin-bottom:.5em; font-size:small")),
     
+    ## Surveys by date ----
+    tabPanel("Surveys by date",
+      br(),
+      plotlyOutput("plotSurveysByDate"),
+      br(),
+      p(em("This chart shows the number of surveys completed on each day within the date range specified in the data filters above."), align = "center", style = "margin-top:.5em; margin-bottom:.5em; font-size:small")),
+    
     ## Compare habitat ----
     tabPanel("Compare habitats",
       br(),

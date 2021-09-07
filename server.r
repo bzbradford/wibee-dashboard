@@ -499,8 +499,7 @@ server <- function(input, output, session) {
   })
 
   
-  
-  ## Activity by date plot ----
+  ## Plot activity by date ----
 
   output$plotByDate <- renderPlotly({
     df <- filtered_surveys_long()
@@ -519,8 +518,8 @@ server <- function(input, output, session) {
         plotly::layout(
           barmode = "stack",
           title = list(text = "<b>Daily average pollinator visitation rates</b>", font = list(size = 15)),
-          xaxis = list(title = "", type = "date", tickformat = "%b %d<br>%Y", fixedrange = T),
-          yaxis = list(title = "Number of visits per survey", fixedrange = T),
+          xaxis = list(title = "", type = "date", tickformat = "%b %d<br>%Y"),
+          yaxis = list(title = "Number of visits per survey"),
           hovermode = "compare",
           legend = list(orientation = "h"),
           bargap = 0
@@ -529,8 +528,37 @@ server <- function(input, output, session) {
     })
   
   
+  ## Plot surveys by date ----
   
-  ## Plot by habitat ----
+  output$plotSurveysByDate <- renderPlotly({
+    df <- filtered_surveys()
+    if (nrow(df) > 0) {
+      df %>%
+        arrange(user_id) %>%
+        mutate(user_label = fct_inorder(paste("User", user_id))) %>%
+        group_by(date, user_label) %>%
+        summarise(surveys_by_user = n(), .groups = "drop_last") %>%
+        arrange(date, desc(surveys_by_user)) %>%
+        plot_ly(
+          x = ~ date,
+          y = ~ surveys_by_user,
+          type = "bar",
+          name = ~ user_label,
+          marker = list(line = list(color = "#ffffff", width = .25))) %>%
+        plotly::layout(
+          barmode = "stack",
+          title = list(text = "<b>Daily total number of completed surveys</b>", font = list(size = 15)),
+          xaxis = list(title = "", type = "date", tickformat = "%b %d<br>%Y"),
+          yaxis = list(title = "Number of surveys"),
+          hovermode = "x unified",
+          showlegend = F,
+          bargap = 0
+        )
+    }
+  })
+  
+  
+  ## Plot activity by habitat ----
   
   output$plotByHabitat <- renderPlotly({
     filtered_surveys_long() %>%
@@ -559,7 +587,7 @@ server <- function(input, output, session) {
   
   
   
-  ## Plot by management ----
+  ## Plot activity by management ----
   
   output$plotByMgmt <- renderPlotly({
     filtered_surveys_long() %>%
@@ -588,7 +616,7 @@ server <- function(input, output, session) {
   
   
   
-  ## Plot by plant ----
+  ## Plot activity by plant ----
   
   output$plotByCrop <- renderPlotly({
     
@@ -654,7 +682,7 @@ server <- function(input, output, session) {
   
   
   
-  ## Plot of user statistics ----
+  ## Plot user statistics ----
   
   output$plotUserStats <- renderPlotly({
     df <- 
