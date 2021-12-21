@@ -432,8 +432,9 @@ server <- function(input, output, session) {
   
   # reset view to show and select Wisconsin points
   observeEvent(input$map_reset, {
-    leafletProxy("map") %>% setView(lng = -89.7, lat = 44.8, zoom = 7)
+    leafletProxy("map") %>% clearGroup("Selected points")
     map_selection(map_pts_wi)
+    leafletProxy("map") %>% setView(lng = -89.7, lat = 44.8, zoom = 7)
     })
 
 

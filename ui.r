@@ -262,7 +262,7 @@ ui <- fixedPage(
 
 # Tabs with plot and data table displays ----
 
-  h4("View or download survey data:"),
+  h4("View or download data from selected surveys:"),
   
   tabsetPanel(
     
