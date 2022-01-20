@@ -17,7 +17,6 @@ server <- function(input, output, session) {
     filter(surveys, grid_pt %in% map_selection())
     })
   
-  
   # filter survey data by date slider
   surveys_by_date <- reactive({
     surveys_by_loc() %>%
@@ -25,10 +24,23 @@ server <- function(input, output, session) {
       filter(between(date, input$date_range[1], input$date_range[2]))
     })
   
+  rv <- reactiveValues(
+    selected_users = NULL
+  )
+  
+  # filter surveys by user id
+  surveys_by_user <- reactive({
+    if (is.null(rv$selected_users)) {
+      surveys_by_date()
+    } else {
+      surveys_by_date() %>%
+        filter(user_id %in% rv$selected_users)
+    }
+  })
   
   # filter survey data by site characteristics
   surveys_by_site <- reactive({
-    surveys_by_date() %>%
+    surveys_by_user() %>%
       filter(habitat %in% input$which_habitat) %>%
       filter(management %in% input$which_mgmt) %>%
     droplevels()
@@ -43,15 +55,63 @@ server <- function(input, output, session) {
 
   # filter the long survey list
   filtered_surveys_long <- reactive({
-    surveys_long %>%
+    df <- surveys_long %>%
       filter(grid_pt %in% map_selection()) %>%
       filter(between(date, input$date_range[1], input$date_range[2])) %>%
       filter(habitat %in% input$which_habitat) %>%
       filter(management %in% input$which_mgmt) %>%
       filter(plant_type %in% c(input$which_crops, input$which_focal_noncrops, input$which_noncrops)) %>%
-      filter(bee_name %in% input$which_bees) %>%
-      droplevels()
-    })
+      filter(bee_name %in% input$which_bees)
+    if (!is.null(rv$selected_users)) {
+      df <- filter(df, user_id %in% rv$selected_users)
+    }
+    droplevels(df)
+  })
+  
+  
+  
+# User ID selection ----
+  
+  output$selected_users_display <- renderUI({
+    if (is.null(rv$selected_users)) {
+      p(em("No users selected, showing surveys by all users."))
+    } else {
+      p(
+        lapply(rv$selected_users, function(i) {
+          list(
+            strong(i),
+            paste(":", sum(surveys$user_id == i), "surveys"),
+            br()
+          )
+        })
+      )
+    }
+  })
+  
+  observeEvent(input$add_user_id, {
+    tryCatch(
+      {
+        ids <- suppressWarnings(parse_number(unlist(strsplit(input$user_id, ","))))
+      },
+      error = function(cond) {
+        updateTextInput(inputId = "user_id", value = "")
+        return()
+      }
+    )
+    valid_ids <- sort(intersect(ids, user_ids))
+    if (length(valid_ids) > 0) {
+      if (is.null(rv$selected_users)) {
+        rv$selected_users <- valid_ids
+      } else {
+        rv$selected_users <- sort(union(rv$selected_users, valid_ids))
+      }
+    }
+    updateTextInput(inputId = "user_id", value = "")
+  })
+  
+  observeEvent(input$reset_user_ids, {
+    rv$selected_users <- NULL
+  })
   
 
 # Filter checkboxes -------------------------------------------------------
@@ -78,7 +138,7 @@ server <- function(input, output, session) {
   habitat_labels <- reactive({
     habitats %>%
       left_join(
-        count(surveys_by_date(), habitat, .drop = F),
+        count(surveys_by_user(), habitat, .drop = F),
         by = c("type" = "habitat")) %>%
       mutate(
         n = replace_na(n, 0),
@@ -100,7 +160,7 @@ server <- function(input, output, session) {
   mgmt_labels <- reactive({
     managements %>%
       left_join(
-        count(surveys_by_date(), management, .drop = F),
+        count(surveys_by_user(), management, .drop = F),
         by = c("type" = "management")) %>%
       mutate(
         n = replace_na(n, 0),
@@ -190,9 +250,6 @@ server <- function(input, output, session) {
   #   })
 
   
-
-  
-  
   
 # Reset buttons -----------------------------------------------------------
   
@@ -266,6 +323,8 @@ server <- function(input, output, session) {
   ## Master reset button ----
   observeEvent(input$reset, {
     resetDate()
+    updateTextInput(inputId = "user_id", value = "")
+    rv$selected_users <- NULL
     updateCheckboxGroupInput(session, "which_habitat", selected = habitats$type)
     updateCheckboxGroupInput(session, "which_mgmt", selected = managements$type)
     selectAllPlants()
@@ -293,6 +352,13 @@ server <- function(input, output, session) {
     paste(
       nrow(surveys_by_date()), "out of",
       nrow(surveys_by_loc()), "surveys match your date selections.")
+  })
+  
+  # Number of matching surveys after user filter
+  output$survey_count_users <- renderText({
+    paste(
+      nrow(surveys_by_user()), "out of",
+      nrow(surveys_by_date()), "surveys match your user selections.")
   })
   
   # Number of matching surveys after date filter
@@ -432,9 +498,11 @@ server <- function(input, output, session) {
   
   # reset view to show and select Wisconsin points
   observeEvent(input$map_reset, {
-    leafletProxy("map") %>% clearGroup("Selected points")
-    map_selection(map_pts_wi)
     leafletProxy("map") %>% setView(lng = -89.7, lat = 44.8, zoom = 7)
+    leafletProxy("map") %>% clearGroup("Selected points")
+    map_selection(NULL)
+    Sys.sleep(0.01)
+    map_selection(map_pts_wi)
     })
 
 
@@ -520,7 +588,7 @@ server <- function(input, output, session) {
           barmode = "stack",
           title = list(text = "<b>Daily average pollinator visitation rates</b>", font = list(size = 15)),
           xaxis = list(title = "", type = "date", tickformat = "%b %d<br>%Y"),
-          yaxis = list(title = "Number of visits per survey"),
+          yaxis = list(title = "Number of insect visits per survey"),
           hovermode = "compare",
           legend = list(orientation = "h"),
           bargap = 0
@@ -581,7 +649,7 @@ server <- function(input, output, session) {
         barmode = "stack",
         title = list(text = "<b>Pollinator visitation rates by habitat type</b>", font = list(size = 15)),
         xaxis = list(title = "", fixedrange = T),
-        yaxis = list(title = "Number of visits per survey", fixedrange = T),
+        yaxis = list(title = "Number of insect visits per survey", fixedrange = T),
         hovermode = "compare"
       )
     })

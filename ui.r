@@ -97,7 +97,7 @@ ui <- fixedPage(
   br(),
   
   
-  h4("Select and filter bee surveys:"),
+  h4("Select and filter bee surveys:", style = "text-decoration: underline;"),
   
   ## Map ----
   bsCollapse(
@@ -122,7 +122,7 @@ ui <- fixedPage(
   bsCollapse(
     bsCollapsePanel(
       style = "primary",
-      title = "2) Select date range",
+      title = "2) Select survey date range",
       p(em("Filter survey data by selecting which date range you want to see data for."), style = "margin-bottom:.5em"),
       div(
         class = "well",
@@ -147,11 +147,44 @@ ui <- fixedPage(
     )
   ),
   
+  ## User IDs ----
+  bsCollapse(
+    bsCollapsePanel(
+      style = "primary",
+      title = "3) Show surveys from specific user(s)",
+      p(em("Filter survey data by selecting which User IDs you want to show data from. You can find your User ID in the WiBee app under Profile. Add one at a time, or separated by commas. The selected users list will show the total number of surveys submitted by that User ID."), style = "margin-bottom:.5em"),
+      div(
+        class = "well",
+        fluidRow(
+          column(
+            6,
+            textInput(
+              inputId = "user_id",
+              label = "User ID:",
+              value = ""
+            ),
+            div(
+              actionButton("add_user_id", "Add ID to list"),
+              actionButton("reset_user_ids", "Reset list of IDs"),
+              style = "margin-top:15px"
+            )
+          ),
+          column(
+            6,
+            p(strong("Selected users:")),
+            uiOutput("selected_users_display")
+          )
+        ),
+      ),
+      div(style = "text-align: center; font-weight: bold;", textOutput("survey_count_users"))
+    )
+  ),
+  
   ## Habitat/management/pollinator ----
   bsCollapse(
     bsCollapsePanel(
       style = "primary",
-      title = "3) Select by habitat, management type, or pollinator group",
+      title = "4) Select surveys by habitat, management type, or pollinator group",
       p(em("Filter survey data by selecting which habitats, management types, or pollinator groups you want to see data for. Number of matching surveys for each habitat or reported management practice is shown in parentheses."), style = "margin-bottom:.5em"),
       div(class = "well",
         fixedRow(
@@ -199,7 +232,7 @@ ui <- fixedPage(
   bsCollapse(
     bsCollapsePanel(
       style = "primary",
-      title = "4) Select crop(s) or flowering plant(s) observed during survey",
+      title = "5) Select crop(s) or flowering plant(s) observed during surveys",
       p(em("Filter survey data by selecting which crops, focal plants (featured plants for surveys shown in the app), or other non-crop flowering plants you want to see data for. Number of matching surveys for each plant is shown in parentheses."), style = "margin-bottom:.5em"),
       div(class = "well",
         fixedRow(
@@ -244,8 +277,6 @@ ui <- fixedPage(
       )
     ),
   
-  # div(actionButton("reset", "Reset filters"), style = "margin-top:15px"),
-  
   
   
 # Text: Number of selected surveys ----
@@ -262,7 +293,7 @@ ui <- fixedPage(
 
 # Tabs with plot and data table displays ----
 
-  h4("View or download data from selected surveys:"),
+  h4("View or download data from selected surveys:", style = "text-decoration: underline;"),
   
   tabsetPanel(
     
@@ -335,6 +366,9 @@ ui <- fixedPage(
       p(em("This graph shows the total number of surveys conducted each year, further grouped by the number of users who have conducted the same amount of surveys."), align = "center", style = "margin-top:.5em; margin-bottom:.5em; font-size:small;")
     )
   ),
+  
+  br(),
+  div(actionButton("reset", "Reset all filters"), style = "margin-top:15px", align = "center"),
   
   
 

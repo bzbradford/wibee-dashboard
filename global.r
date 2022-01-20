@@ -203,6 +203,11 @@ plant_ranks <- wibee %>%
   drop_na()
 
 
+# Get user IDs ----
+
+user_ids <- unique(wibee_in$user_id)
+
+
 
 # Save main survey data ----
 
