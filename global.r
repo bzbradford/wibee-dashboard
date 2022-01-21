@@ -125,6 +125,7 @@ wibee <- wibee_in %>%
   mutate(
     date = as.Date(date),
     year = lubridate::year(date),
+    doy = lubridate::yday(date),
     .after = "date") %>%
   mutate(across(all_of(bee_cols), replace_na, 0)) %>%
   mutate(wild_bee = bumble_bee + large_dark_bee + small_dark_bee + greenbee) %>%
@@ -288,6 +289,8 @@ map_pts_wi <- filter(map_pts, inwi == T)$grid_pt
 min_date <- min(surveys$date)
 max_date <- max(surveys$date)
 years <- unique(format(surveys$date, "%Y"))
+date_slider_min <- as.Date(format(Sys.Date(), "%Y-01-01"))
+date_slider_max <- as.Date(format(Sys.Date(), "%Y-12-31"))
 
 
 # total counts for project summary

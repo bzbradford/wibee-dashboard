@@ -27,28 +27,34 @@ server <- function(input, output, session) {
     if (is.null(rv$selected_users)) {
       surveys_by_loc()
     } else {
-      surveys_by_loc() %>%
-        filter(user_id %in% rv$selected_users)
+      filter(surveys_by_loc(), user_id %in% rv$selected_users)
     }
   })
   
   # filter survey data by date slider
   surveys_by_date <- reactive({
     surveys_by_user() %>%
-      filter(year %in% input$years) %>%
-      filter(between(date, input$date_range[1], input$date_range[2]))
+      filter(
+        year %in% input$years,
+        between(doy, lubridate::yday(input$date_range[1]), lubridate::yday(input$date_range[2]))
+      )
     })
   
   # filter survey data by site characteristics
   surveys_by_site <- reactive({
     surveys_by_date() %>%
-      filter(habitat %in% input$which_habitat) %>%
-      filter(management %in% input$which_mgmt) %>%
+      filter(
+        habitat %in% input$which_habitat,
+        management %in% input$which_mgmt
+      ) %>%
     droplevels()
     })
   
-  # filter survey data by site characteristics
+  # filter survey data by plant type
   filtered_surveys <- reactive({
+    test_non_matching <<- 
+      surveys_by_site() %>%
+        filter(!(plant_type %in% c(input$which_crops, input$which_focal_noncrops, input$which_noncrops)))
     surveys_by_site() %>%
       filter(plant_type %in% c(input$which_crops, input$which_focal_noncrops, input$which_noncrops)) %>%
       droplevels()
@@ -57,12 +63,15 @@ server <- function(input, output, session) {
   # filter the long survey list
   filtered_surveys_long <- reactive({
     df <- surveys_long %>%
-      filter(grid_pt %in% map_selection()) %>%
-      filter(between(date, input$date_range[1], input$date_range[2])) %>%
-      filter(habitat %in% input$which_habitat) %>%
-      filter(management %in% input$which_mgmt) %>%
-      filter(plant_type %in% c(input$which_crops, input$which_focal_noncrops, input$which_noncrops)) %>%
-      filter(bee_name %in% input$which_bees)
+      filter(
+        grid_pt %in% map_selection(),
+        year %in% input$years,
+        between(doy, lubridate::yday(input$date_range[1]), lubridate::yday(input$date_range[2])),
+        habitat %in% input$which_habitat,
+        management %in% input$which_mgmt,
+        plant_type %in% c(input$which_crops, input$which_focal_noncrops, input$which_noncrops),
+        bee_name %in% input$which_bees
+      )
     if (!is.null(rv$selected_users)) {
       df <- filter(df, user_id %in% rv$selected_users)
     }
@@ -124,12 +133,12 @@ server <- function(input, output, session) {
     df <- surveys %>%
       select(year, date) %>%
       filter(year %in% input$years)
-    updateSliderInput(
-      session,
-      "date_range",
-      min = min(df$date),
-      max = max(df$date),
-      value = c(min(df$date), max(df$date)))
+    # updateSliderInput(
+    #   session,
+    #   "date_range",
+    #   min = min(df$date),
+    #   max = max(df$date),
+    #   value = c(min(df$date), max(df$date)))
     })
   
   
@@ -275,7 +284,7 @@ server <- function(input, output, session) {
   
   resetDate <- function() {
     updateCheckboxGroupButtons(session, "years", selected = years)
-    updateSliderInput(session, "date_range", value = c(min_date, max_date))
+    updateSliderInput(session, "date_range", value = c(date_slider_min, date_slider_max))
   }
   
   selectAllPlants <- function() {

@@ -168,11 +168,12 @@ ui <- fixedPage(
         ),
         sliderInput(
           "date_range",
-          label = "Date range:",
-          min = min_date,
-          max = max_date,
-          value = c(min_date, max_date),
-          width = "100%"),
+          label = "Date range (across all selected years):",
+          min = date_slider_min,
+          max = date_slider_max,
+          value = c(date_slider_min, date_slider_max),
+          width = "100%",
+          timeFormat = "%b %d"),
         div(actionButton("reset_date", "Reset date"), style = "margin-top:15px"),
       ),
       div(style = "text-align: center; font-weight: bold;", textOutput("survey_count_date"))
@@ -335,7 +336,7 @@ ui <- fixedPage(
       p(em("This interactive chart compares total pollinator visitation rates across all of the different crops and non-crop plants surveyed with the app. The number of surveys represented by each plant species or group is shown in parentheses in the labels."), align = "center", style = "margin-top:.5em; margin-bottom:.5em; font-size:small;")),
     
     ## Map of filtered surveys ----
-    tabPanel("View selected surveys on a map",
+    tabPanel("View on a map",
       br(),
       uiOutput("data_map_ui"),
       leafletOutput("data_map", height = "600px"),
