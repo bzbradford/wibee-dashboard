@@ -5,6 +5,7 @@ library(shiny)
 library(leaflet)
 library(DT)
 library(plotly)
+library(RColorBrewer)
 
 
 
@@ -12,35 +13,35 @@ server <- function(input, output, session) {
   
 # Reactive values ---------------------------------------------------------
   
+  rv <- reactiveValues(
+    selected_users = NULL
+  )
+  
   # first filter - by map grid cell
   surveys_by_loc <- reactive({
     filter(surveys, grid_pt %in% map_selection())
     })
   
-  # filter survey data by date slider
-  surveys_by_date <- reactive({
-    surveys_by_loc() %>%
-      filter(year %in% input$years) %>%
-      filter(between(date, input$date_range[1], input$date_range[2]))
-    })
-  
-  rv <- reactiveValues(
-    selected_users = NULL
-  )
-  
   # filter surveys by user id
   surveys_by_user <- reactive({
     if (is.null(rv$selected_users)) {
-      surveys_by_date()
+      surveys_by_loc()
     } else {
-      surveys_by_date() %>%
+      surveys_by_loc() %>%
         filter(user_id %in% rv$selected_users)
     }
   })
   
+  # filter survey data by date slider
+  surveys_by_date <- reactive({
+    surveys_by_user() %>%
+      filter(year %in% input$years) %>%
+      filter(between(date, input$date_range[1], input$date_range[2]))
+    })
+  
   # filter survey data by site characteristics
   surveys_by_site <- reactive({
-    surveys_by_user() %>%
+    surveys_by_date() %>%
       filter(habitat %in% input$which_habitat) %>%
       filter(management %in% input$which_mgmt) %>%
     droplevels()
@@ -322,6 +323,7 @@ server <- function(input, output, session) {
   
   ## Master reset button ----
   observeEvent(input$reset, {
+    resetMap()
     resetDate()
     updateTextInput(inputId = "user_id", value = "")
     rv$selected_users <- NULL
@@ -347,18 +349,18 @@ server <- function(input, output, session) {
     }
   })
   
-  # Number of matching surveys after date filter
-  output$survey_count_date <- renderText({
-    paste(
-      nrow(surveys_by_date()), "out of",
-      nrow(surveys_by_loc()), "surveys match your date selections.")
-  })
-  
   # Number of matching surveys after user filter
   output$survey_count_users <- renderText({
     paste(
       nrow(surveys_by_user()), "out of",
-      nrow(surveys_by_date()), "surveys match your user selections.")
+      nrow(surveys_by_loc()), "surveys match your user selections.")
+  })
+  
+  # Number of matching surveys after date filter
+  output$survey_count_date <- renderText({
+    paste(
+      nrow(surveys_by_date()), "out of",
+      nrow(surveys_by_user()), "surveys match your date selections.")
   })
   
   # Number of matching surveys after date filter
@@ -497,13 +499,14 @@ server <- function(input, output, session) {
     })
   
   # reset view to show and select Wisconsin points
-  observeEvent(input$map_reset, {
+  resetMap <- function() {
     leafletProxy("map") %>% setView(lng = -89.7, lat = 44.8, zoom = 7)
     leafletProxy("map") %>% clearGroup("Selected points")
     map_selection(NULL)
     Sys.sleep(0.01)
     map_selection(map_pts_wi)
-    })
+  }
+  observeEvent(input$map_reset, resetMap())
 
 
 
@@ -717,6 +720,90 @@ server <- function(input, output, session) {
         margin = list(b = margin)
       )
     })
+  
+  
+  
+  ## Map output ----
+  output$data_map_ui <- renderUI({
+    list(
+      radioButtons(
+        inputId = "data_map_summary_type",
+        label = "Choose summary value to show on the map:",
+        choices = c(
+          "Number of surveys",
+          "Insect visits per survey",
+          "Number of users"
+        ),
+        inline = T
+      ),
+      radioButtons(
+        inputId = "data_map_aggr_size",
+        label = "Choose spatial aggregation size (degrees):",
+        choices = c(0.05, 0.1, 0.25, 0.5),
+        selected = 0.1,
+        inline = T
+      )
+    )
+  })
+  
+  output$data_map <- renderLeaflet({
+    
+    req(input$data_map_summary_type)
+    req(input$data_map_aggr_size)
+    
+    validate(
+      need(nrow(filtered_surveys()) > 0, "There are no surveys remaining after all filters.")
+    )
+    
+    div = as.numeric(input$data_map_aggr_size)
+    df <- filtered_surveys() %>%
+      mutate(
+        lat = round(lat / div) * div,
+        lng = round(lng / div) * div
+      ) %>%
+      group_by(lat, lng)
+    
+    df_long <- filtered_surveys_long() %>%
+      mutate(
+        lat = round(lat / div) * div,
+        lng = round(lng / div) * div
+      ) %>%
+      group_by(lat, lng, id)
+    
+    if (input$data_map_summary_type == "Number of surveys") {
+      df <- df %>%
+        summarise(value = n(), .groups = "drop")
+    } else if (input$data_map_summary_type == "Insect visits per survey") {
+      df <- df_long %>%
+        summarise(total_visits = sum(count), .groups = "drop_last") %>%
+        summarise(value = round(mean(total_visits), 1), .groups = "drop")
+    } else if (input$data_map_summary_type == "Number of users") {
+      df <- df %>%
+        summarise(value = n_distinct(user_id), .groups = "drop")
+    }
+    
+    pal <- colorNumeric(
+      palette = "YlOrRd",
+      domain = df$value
+    )
+    
+    df %>%
+      leaflet() %>%
+      addTiles() %>%
+      addRectangles(
+        lng1 = ~ lng - div / 2, lng2 = ~ lng +  div / 2,
+        lat1 = ~ lat - div / 2, lat2 = ~ lat + div / 2,
+        label = ~ paste0(input$data_map_summary_type, ": ", value),
+        weight = 0.25,
+        opacity = 0.9,
+        color = "darkgrey",
+        fillOpacity = .9,
+        fillColor = ~pal(value),
+        highlight = highlightOptions(
+          weight = 2,
+          color = "red")
+      )
+  })
   
   
 

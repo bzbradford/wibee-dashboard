@@ -38,7 +38,7 @@ ui <- fixedPage(
   
   
 
-# Introduction and summary ----
+  # Introduction and summary ----
 
   sidebarLayout(
     mainPanel = mainPanel(
@@ -71,9 +71,8 @@ ui <- fixedPage(
   br(),
   
 
-# bsCollapse panels ----
-
-  ## How to use ----
+  # How to use ----
+  
   bsCollapse(
     bsCollapsePanel(
       title = "Click for help on how to use this dashboard",
@@ -97,11 +96,15 @@ ui <- fixedPage(
   br(),
   
   
+  
+  # Survey filters ----
+  
   h4("Select and filter bee surveys:", style = "text-decoration: underline;"),
   
-  ## Map ----
   bsCollapse(
     open = "map",
+    
+    ## Map ----
     bsCollapsePanel(
       style = "primary",
       value = "map",
@@ -115,43 +118,12 @@ ui <- fixedPage(
         div(actionButton("map_reset", "Reset map"), style = "padding-right:20px; display:inline-block"),
         div(strong(textOutput("survey_count_loc")), style = "display:inline-block")
       )
-    )
-  ),
-  
-  ## Date range ----
-  bsCollapse(
+    ),
+    
+    ## User IDs ----
     bsCollapsePanel(
       style = "primary",
-      title = "2) Select survey date range",
-      p(em("Filter survey data by selecting which date range you want to see data for."), style = "margin-bottom:.5em"),
-      div(
-        class = "well",
-        checkboxGroupButtons(
-          "years",
-          label = "Surveys from year:",
-          choices = years,
-          selected = years,
-          individual = TRUE,
-          checkIcon = list(yes = icon("check-square"), no = icon("square-o"))
-        ),
-        sliderInput(
-          "date_range",
-          label = "Date range:",
-          min = min_date,
-          max = max_date,
-          value = c(min_date, max_date),
-          width = "100%"),
-        div(actionButton("reset_date", "Reset date"), style = "margin-top:15px"),
-      ),
-      div(style = "text-align: center; font-weight: bold;", textOutput("survey_count_date"))
-    )
-  ),
-  
-  ## User IDs ----
-  bsCollapse(
-    bsCollapsePanel(
-      style = "primary",
-      title = "3) Show surveys from specific user(s)",
+      title = "2) Show surveys from specific user(s)",
       p(em("Filter survey data by selecting which User IDs you want to show data from. You can find your User ID in the WiBee app under Profile. Add one at a time, or separated by commas. The selected users list will show the total number of surveys submitted by that User ID."), style = "margin-bottom:.5em"),
       div(
         class = "well",
@@ -177,11 +149,36 @@ ui <- fixedPage(
         ),
       ),
       div(style = "text-align: center; font-weight: bold;", textOutput("survey_count_users"))
-    )
-  ),
+    ),
+    
+    ## Date range ----
+    bsCollapsePanel(
+      style = "primary",
+      title = "3) Select survey date range",
+      p(em("Filter survey data by selecting which date range you want to see data for."), style = "margin-bottom:.5em"),
+      div(
+        class = "well",
+        checkboxGroupButtons(
+          "years",
+          label = "Surveys from year:",
+          choices = years,
+          selected = years,
+          individual = TRUE,
+          checkIcon = list(yes = icon("check-square"), no = icon("square-o"))
+        ),
+        sliderInput(
+          "date_range",
+          label = "Date range:",
+          min = min_date,
+          max = max_date,
+          value = c(min_date, max_date),
+          width = "100%"),
+        div(actionButton("reset_date", "Reset date"), style = "margin-top:15px"),
+      ),
+      div(style = "text-align: center; font-weight: bold;", textOutput("survey_count_date"))
+    ),
   
-  ## Habitat/management/pollinator ----
-  bsCollapse(
+    ## Habitat/management/pollinator ----
     bsCollapsePanel(
       style = "primary",
       title = "4) Select surveys by habitat, management type, or pollinator group",
@@ -225,11 +222,9 @@ ui <- fixedPage(
         )
       ),
       div(style = "text-align: center; font-weight: bold;", textOutput("survey_count_site"))
-    )
-  ),
+    ),
   
   ## Plant selections ----
-  bsCollapse(
     bsCollapsePanel(
       style = "primary",
       title = "5) Select crop(s) or flowering plant(s) observed during surveys",
@@ -338,6 +333,14 @@ ui <- fixedPage(
       plotlyOutput("plotByCrop", height = "600px"),
       br(),
       p(em("This interactive chart compares total pollinator visitation rates across all of the different crops and non-crop plants surveyed with the app. The number of surveys represented by each plant species or group is shown in parentheses in the labels."), align = "center", style = "margin-top:.5em; margin-bottom:.5em; font-size:small;")),
+    
+    ## Map of filtered surveys ----
+    tabPanel("View selected surveys on a map",
+      br(),
+      uiOutput("data_map_ui"),
+      leafletOutput("data_map", height = "600px"),
+      br(),
+      p(em("This map displays a summary of all the surveys currently selected by your filters. Change your filter selections or choose a different summary type to change what is shown on this map."), align = "center", style = "margin-top:.5em; margin-bottom:.5em; font-size:small;")),
     
     ## Tabular survey data ----
     tabPanel("View as data table",
