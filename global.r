@@ -252,11 +252,12 @@ select_noncrops <- plants %>%
 
 # Create long-form dataset ----
 
+bee_join <- bees %>%
+  rename(bee = type, bee_name = label, bee_color = color, bee_group = group)
+
 surveys_long <- surveys %>%
   pivot_longer(cols = bees$type, names_to = "bee", values_to = "count") %>%
-  left_join(
-    rename(bees, bee = type, bee_name = label, bee_color = color, bee_group = group),
-    by = "bee")
+  left_join(bee_join, by = "bee")
 
 
 
@@ -291,6 +292,20 @@ max_date <- max(surveys$date)
 years <- unique(format(surveys$date, "%Y"))
 date_slider_min <- as.Date(format(Sys.Date(), "%Y-01-01"))
 date_slider_max <- as.Date(format(Sys.Date(), "%Y-12-31"))
+year_summary <- surveys %>%
+  group_by(year) %>%
+  summarise(
+    surveys = n(),
+    users = n_distinct(user_id),
+    first_date = min(date),
+    last_date = max(date)
+  ) %>%
+  mutate(label = paste0(
+    "<b>", year, ":</b> ",
+    format(surveys, big.mark = ","), " surveys by ",
+    format(users, big.mark = ","), " contributors, starting ",
+    format(first_date, "%b %d"), " and ending ",
+    format(last_date, "%b %d")))
 
 
 # total counts for project summary

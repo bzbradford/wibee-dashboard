@@ -47,25 +47,25 @@ ui <- fixedPage(
       p("WiBee is a citizen science project where participants use the ", a("WiBee app", href = "http://www.pollinators.wisc.edu/wibee"), " to conduct 5-minute pollinator surveys of a 1 meter square section of flowering plants. Each time a pollinator (such as a honey bee, bumble bee, solitary wild bee, or other non-bee insect) lands on a flower, that's a visit! All the data here is collected by people like you going out and completing surveys with the WiBee App. We invite you to explore the data to see what wild bee populations and their flower visit rates look like across Wisconsin. You can also compare your own data in the WiBee app to the summary data presented here in this dashboard to help you make decisions about managing your local pollinator community or track any change over time. As you explore the data below, remember that this dashboard is a work in progress. If you have specific suggestions, please contact us!"),
       p("To join the project and help collect data, download the WiBee app today or visit", a("pollinators.wisc.edu/wibee", href = "http://www.pollinators.wisc.edu/wibee", target = "_blank"), "to learn more. Questions?", a("Email us.", href = "mailto:pollinators@wisc.edu"), "Comments?", a("Send feedback.", href = "https://forms.gle/6qy9qJLwCxSTTPNT8", target = "_blank"), "Want to stay in the loop?", a("Sign up for our newsletter.", href = "http://eepurl.com/gMqRdr", target = "_blank"), "Thank you for participating!")),
     
-    sidebarPanel = sidebarPanel(
-      p(strong("Project summary")),
-      p("Unique users: ", format(length(unique(surveys$user_id)), big.mark = ",")),
-      p("Total completed surveys: ", format(nrow(surveys), big.mark = ",")),
-      p("Most recent survey: ", max(surveys$date)),
-      p("Total insect observations: ", format(sum(surveys_long$count), big.mark = ",")),
-      tags$ul(tags$li({
-        x = filter(bee_totals, bee_name == "Honey bees")
-        paste0("Honey bees: ", format(x$tot_count, big.mark = ","), " (", x$pct_count, ")")
-      }),
-        tags$li({
-          x = filter(bee_totals, bee_name == "Wild bees")
-          paste0("Wild bees: ", format(x$tot_count, big.mark = ","), " (", x$pct_count, ")")
-        }),
-        tags$li({
-          x = filter(bee_totals, bee_name == "Non-bees")
-          paste0("Non-bees: ", format(x$tot_count, big.mark = ","), " (", x$pct_count, ")")
-        }))
-    ),
+    sidebarPanel = {
+      honeyBeeTotals <- filter(bee_totals, bee_name == "Honey bees")
+      wildBeeTotals <- filter(bee_totals, bee_name == "Wild bees")
+      nonBeeTotals <- filter(bee_totals, bee_name == "Non-bees")
+      sidebarPanel(
+        p(strong("Project summary")),
+        p("Unique users: ", format(length(unique(surveys$user_id)), big.mark = ",")),
+        p("Total completed surveys: ", format(nrow(surveys), big.mark = ",")),
+        p("Most recent survey: ", max(surveys$date)),
+        p("Total insect observations: ", format(sum(surveys_long$count), big.mark = ",")),
+        tags$ul(
+          tags$li(
+            paste0("Honey bees: ", format(honeyBeeTotals$tot_count, big.mark = ","), " (", honeyBeeTotals$pct_count, ")")),
+          tags$li(
+            paste0("Wild bees: ", format(wildBeeTotals$tot_count, big.mark = ","), " (", wildBeeTotals$pct_count, ")")),
+          tags$li(
+            paste0("Non-bees: ", format(nonBeeTotals$tot_count, big.mark = ","), " (", nonBeeTotals$pct_count, ")")))
+      )
+    },
     
     position = "right"),
   br(),
@@ -101,187 +101,217 @@ ui <- fixedPage(
   
   h4("Select and filter bee surveys:", style = "text-decoration: underline;"),
   
+  
+  
   bsCollapse(
+    multiple = TRUE,
+    # open = c("map", "users", "dates", "surveys", "plants"),
     open = "map",
+    
+    bsCollapsePanel(
+      value = "years",
+      style = "primary",
+      title = "Select year(s) to show",
+      list(
+        p(em("Select which year or years of survey data you want to see.")),
+        div(
+          class = "well",
+          checkboxGroupInput(
+            "years",
+            label = "Surveys from year:",
+            choiceNames = lapply(year_summary$label, HTML),
+            choiceValues = year_summary$year,
+            selected = year_summary$year
+            # individual = TRUE,
+            # direction = "vertical",
+            # justified = TRUE,
+            # checkIcon = list(yes = icon("check-square"), no = icon("square-o"))
+          )
+        ),
+        div(style = "text-align: center; font-weight: bold;", textOutput("survey_count_years"))
+      )
+    ),
     
     ## Map ----
     bsCollapsePanel(
-      style = "primary",
       value = "map",
-      title = "1) Filter by survey location",
-      p(em("Click on individual grid cell(s) to show only results from those areas. Note: some surveys are from outside Wisconsin. Click 'Select all' to see them."), style = "margin-top:.5em; margin-bottom:.5em"),
-      leafletOutput("map", height = 600),
-      div(style = "margin-top: 5px;",
-        div(actionButton("map_select_visible", "Select visible"), style = "padding-right:10px; display:inline-block"),
-        div(actionButton("map_zoom_all", "Select all"), style = "padding-right:10px; display:inline-block"),
-        div(actionButton("map_clear_selection", "Clear selection"), style = "padding-right:10px; display:inline-block"),
-        div(actionButton("map_reset", "Reset map"), style = "padding-right:20px; display:inline-block"),
-        div(strong(textOutput("survey_count_loc")), style = "display:inline-block")
+      style = "primary",
+      title = "Select survey locations on the map",
+      list(
+        p(em("Click on individual grid cell(s) to show only results from those areas. Note: some surveys are from outside Wisconsin. Click 'Select all' to see them."), style = "margin-top:.5em; margin-bottom:.5em"),
+        leafletOutput("map", height = 600),
+        div(style = "margin-top: 5px;",
+          div(actionButton("map_select_visible", "Select visible"), style = "padding-right:10px; display:inline-block"),
+          div(actionButton("map_zoom_all", "Select all"), style = "padding-right:10px; display:inline-block"),
+          div(actionButton("map_clear_selection", "Clear selection"), style = "padding-right:10px; display:inline-block"),
+          div(actionButton("map_reset", "Reset map"), style = "padding-right:20px; display:inline-block"),
+          div(strong(textOutput("survey_count_loc")), style = "display:inline-block")
+        )
       )
     ),
     
     ## User IDs ----
     bsCollapsePanel(
+      value = "users",
       style = "primary",
-      title = "2) Show surveys from specific user(s)",
-      p(em("Filter survey data by selecting which User IDs you want to show data from. You can find your User ID in the WiBee app under Profile. Add one at a time, or separated by commas. The selected users list will show the total number of surveys submitted by that User ID."), style = "margin-bottom:.5em"),
-      div(
-        class = "well",
-        fluidRow(
-          column(
-            6,
-            textInput(
-              inputId = "user_id",
-              label = "User ID:",
-              value = ""
+      title = "Show surveys from specific user(s)",
+      list(
+        p(em("Filter survey data by selecting which User IDs you want to show data from. You can find your User ID in the WiBee app under Profile. Add one at a time, or separated by commas. The selected users list will show the total number of surveys submitted by that User ID."), style = "margin-bottom:.5em"),
+        div(
+          class = "well",
+          fluidRow(
+            column(6,
+              textInput(
+                inputId = "user_id",
+                label = "User ID:",
+                value = ""
+              ),
+              div(
+                actionButton("add_user_id", "Add ID to list"),
+                actionButton("reset_user_ids", "Reset list of IDs"),
+                style = "margin-top:15px"
+              )
             ),
-            div(
-              actionButton("add_user_id", "Add ID to list"),
-              actionButton("reset_user_ids", "Reset list of IDs"),
-              style = "margin-top:15px"
+            column(6,
+              p(strong("Selected users:")),
+              uiOutput("selected_users_display")
             )
           ),
-          column(
-            6,
-            p(strong("Selected users:")),
-            uiOutput("selected_users_display")
-          )
         ),
-      ),
-      div(style = "text-align: center; font-weight: bold;", textOutput("survey_count_users"))
+        div(style = "text-align: center; font-weight: bold;", textOutput("survey_count_users"))
+      )
     ),
     
     ## Date range ----
     bsCollapsePanel(
+      value = "dates",
       style = "primary",
-      title = "3) Select survey date range",
-      p(em("Filter survey data by selecting which date range you want to see data for."), style = "margin-bottom:.5em"),
-      div(
-        class = "well",
-        checkboxGroupButtons(
-          "years",
-          label = "Surveys from year:",
-          choices = years,
-          selected = years,
-          individual = TRUE,
-          checkIcon = list(yes = icon("check-square"), no = icon("square-o"))
+      title = "Select survey date range",
+      list(
+        p(em("Filter survey data by selecting which date range you want to see data for."), style = "margin-bottom:.5em"),
+        div(
+          class = "well",
+          sliderInput(
+            "date_range",
+            label = "Date range (across all selected years):",
+            min = date_slider_min,
+            max = date_slider_max,
+            value = c(date_slider_min, date_slider_max),
+            width = "100%",
+            timeFormat = "%b %d"),
+          div(actionButton("reset_date", "Reset date"), style = "margin-top:15px"),
         ),
-        sliderInput(
-          "date_range",
-          label = "Date range (across all selected years):",
-          min = date_slider_min,
-          max = date_slider_max,
-          value = c(date_slider_min, date_slider_max),
-          width = "100%",
-          timeFormat = "%b %d"),
-        div(actionButton("reset_date", "Reset date"), style = "margin-top:15px"),
-      ),
-      div(style = "text-align: center; font-weight: bold;", textOutput("survey_count_date"))
-    ),
-  
-    ## Habitat/management/pollinator ----
-    bsCollapsePanel(
-      style = "primary",
-      title = "4) Select surveys by habitat, management type, or pollinator group",
-      p(em("Filter survey data by selecting which habitats, management types, or pollinator groups you want to see data for. Number of matching surveys for each habitat or reported management practice is shown in parentheses."), style = "margin-bottom:.5em"),
-      div(class = "well",
-        fixedRow(
-          column(4,
-            checkboxGroupInput(
-              "which_habitat",
-              "Habitat:",
-              choiceNames = levels(habitats$label),
-              choiceValues = habitats$type,
-              selected = habitats$type
-              ),
-            div(actionButton("which_habitat_all", "All"), style = "display:inline-block"),
-            div(actionButton("which_habitat_none", "None"), style = "display:inline-block")
-            ),
-          column(4,
-            checkboxGroupInput(
-              "which_mgmt",
-              "Management:",
-              choiceNames = levels(managements$label),
-              choiceValues = managements$type,
-              selected = managements$type
-              ),
-            div(actionButton("which_mgmt_all", "All"), style = "display:inline-block"),
-            div(actionButton("which_mgmt_none", "None"), style = "display:inline-block")
-            ),
-          column(4,
-            checkboxGroupInput(
-              "which_bees",
-              "Bee group:",
-              choiceNames = bee_names,
-              choiceValues = bee_names,
-              selected = bee_names
-            ),
-            materialSwitch("group_wild", label = "Group wild bees together", status = "success"),
-            div(actionButton("which_bees_all", "All"), style = "display:inline-block"),
-            div(actionButton("which_bees_none", "None"), style = "display:inline-block")
-          ),
-        )
-      ),
-      div(style = "text-align: center; font-weight: bold;", textOutput("survey_count_site"))
-    ),
-  
-  ## Plant selections ----
-    bsCollapsePanel(
-      style = "primary",
-      title = "5) Select crop(s) or flowering plant(s) observed during surveys",
-      p(em("Filter survey data by selecting which crops, focal plants (featured plants for surveys shown in the app), or other non-crop flowering plants you want to see data for. Number of matching surveys for each plant is shown in parentheses."), style = "margin-bottom:.5em"),
-      div(class = "well",
-        fixedRow(
-          column(3,
-            checkboxGroupInput(
-              "which_crops",
-              "Crops:",
-              choiceNames = levels(select_crops$label),
-              choiceValues = select_crops$type,
-              selected = select_crops$type
-              ),
-            div(actionButton("which_crops_all", "All"), style = "display:inline-block"),
-            div(actionButton("which_crops_none", "None"), style = "display:inline-block")
-            ),
-          column(4,
-            checkboxGroupInput(
-              "which_focal_noncrops",
-              "Focal non-crop plants:",
-              choiceNames = lapply(as.list(levels(focal_noncrops$label)), HTML),
-              choiceValues = focal_noncrops$type,
-              selected = focal_noncrops$type),
-            div(actionButton("which_focal_noncrops_all", "All"), style = "display:inline-block"),
-            div(actionButton("which_focal_noncrops_none", "None"), style = "display:inline-block")
-          ),
-          column(5,
-            checkboxGroupInput(
-              "which_noncrops",
-              "Other non-crop plant:",
-              choiceNames = lapply(as.list(levels(select_noncrops$label)), HTML),
-              choiceValues = select_noncrops$type,
-              selected = select_noncrops$type),
-            div(actionButton("which_noncrops_all", "All"), style = "display:inline-block"),
-            div(actionButton("which_noncrops_none", "None"), style = "display:inline-block")
-            )
-          ),
-        fixedRow(align = "center", style = "margin-top: 1em;",
-          div(actionButton("select_all_plants", "Select all plants"), style = "display:inline-block"),
-          div(actionButton("select_no_plants", "Clear all plant selections"), style = "display:inline-block")
-          )
-        ),
-      div(style = "text-align: center; font-weight: bold;", textOutput("survey_count_plant"))
+        div(style = "text-align: center; font-weight: bold;", textOutput("survey_count_date"))
       )
     ),
+    
+    ## Habitat/management/pollinator ----
+    bsCollapsePanel(
+      value = "surveys",
+      style = "primary",
+      title = "Select surveys by habitat, management type, or pollinator group",
+      list(
+        p(em("Filter survey data by selecting which habitats, management types, or pollinator groups you want to see data for. Number of matching surveys for each habitat or reported management practice is shown in parentheses."), style = "margin-bottom:.5em"),
+        div(class = "well",
+          fixedRow(
+            column(4,
+              checkboxGroupInput(
+                "which_habitat",
+                "Habitat:",
+                choiceNames = levels(habitats$label),
+                choiceValues = habitats$type,
+                selected = habitats$type
+              ),
+              div(actionButton("which_habitat_all", "All"), style = "display:inline-block"),
+              div(actionButton("which_habitat_none", "None"), style = "display:inline-block")
+            ),
+            column(4,
+              checkboxGroupInput(
+                "which_mgmt",
+                "Management:",
+                choiceNames = levels(managements$label),
+                choiceValues = managements$type,
+                selected = managements$type
+              ),
+              div(actionButton("which_mgmt_all", "All"), style = "display:inline-block"),
+              div(actionButton("which_mgmt_none", "None"), style = "display:inline-block")
+            ),
+            column(4,
+              checkboxGroupInput(
+                "which_bees",
+                "Bee group:",
+                choiceNames = bee_names,
+                choiceValues = bee_names,
+                selected = bee_names
+              ),
+              materialSwitch("group_wild", label = "Group wild bees together", status = "success"),
+              div(actionButton("which_bees_all", "All"), style = "display:inline-block"),
+              div(actionButton("which_bees_none", "None"), style = "display:inline-block")
+            ),
+          )
+        ),
+        div(style = "text-align: center; font-weight: bold;", textOutput("survey_count_site"))
+      )
+    ),
+    
+    ## Plant selections ----
+    bsCollapsePanel(
+      value = "plants",
+      style = "primary",
+      title = "Select crop(s) or flowering plant(s) observed during surveys",
+      list(
+        p(em("Filter survey data by selecting which crops, focal plants (featured plants for surveys shown in the app), or other non-crop flowering plants you want to see data for. Number of matching surveys for each plant is shown in parentheses."), style = "margin-bottom:.5em"),
+        div(class = "well",
+          fixedRow(
+            column(3,
+              checkboxGroupInput(
+                "which_crops",
+                "Crops:",
+                choiceNames = levels(select_crops$label),
+                choiceValues = select_crops$type,
+                selected = select_crops$type
+              ),
+              div(actionButton("which_crops_all", "All"), style = "display:inline-block"),
+              div(actionButton("which_crops_none", "None"), style = "display:inline-block")
+            ),
+            column(4,
+              checkboxGroupInput(
+                "which_focal_noncrops",
+                "Focal non-crop plants:",
+                choiceNames = lapply(as.list(levels(focal_noncrops$label)), HTML),
+                choiceValues = focal_noncrops$type,
+                selected = focal_noncrops$type),
+              div(actionButton("which_focal_noncrops_all", "All"), style = "display:inline-block"),
+              div(actionButton("which_focal_noncrops_none", "None"), style = "display:inline-block")
+            ),
+            column(5,
+              checkboxGroupInput(
+                "which_noncrops",
+                "Other non-crop plant:",
+                choiceNames = lapply(as.list(levels(select_noncrops$label)), HTML),
+                choiceValues = select_noncrops$type,
+                selected = select_noncrops$type),
+              div(actionButton("which_noncrops_all", "All"), style = "display:inline-block"),
+              div(actionButton("which_noncrops_none", "None"), style = "display:inline-block")
+            )
+          ),
+          fixedRow(align = "center", style = "margin-top: 1em;",
+            div(actionButton("select_all_plants", "Select all plants"), style = "display:inline-block"),
+            div(actionButton("select_no_plants", "Clear all plant selections"), style = "display:inline-block")
+          )
+        ),
+        div(style = "text-align: center; font-weight: bold;", textOutput("survey_count_plant"))
+      )
+    )
+  ),
   
+  # Text: Number of selected surveys ----
   
-  
-# Text: Number of selected surveys ----
-
   div(
     class = "well",
     style = "text-align: center; font-size: larger;",
     strong(textOutput('survey_count_final')),
-    ),
+  ),
   br(),
   br(),
   
