@@ -333,6 +333,7 @@ ui <- fixedPage(
     ## Activity by date ----
     tabPanel("Activity by date",
       br(),
+      uiOutput("plotByDateUI"),
       plotlyOutput("plotByDate"),
       br(),
       p(em("This chart shows daily or season trends in pollinator activity by showing the average activity by pollinator group across all surveys conducted on a given day. The date range can be adjusted in the survey filters below the map."), align = "center", style = "margin-top:.5em; margin-bottom:.5em; font-size:small")),

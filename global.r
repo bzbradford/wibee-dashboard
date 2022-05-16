@@ -125,6 +125,9 @@ wibee <- wibee_in %>%
   mutate(
     date = as.Date(date),
     year = lubridate::year(date),
+    month = lubridate::month(date),
+    week = lubridate::week(date),
+    day = lubridate::day(date),
     doy = lubridate::yday(date),
     .after = "date") %>%
   mutate(across(all_of(bee_cols), replace_na, 0)) %>%
@@ -303,9 +306,9 @@ year_summary <- surveys %>%
   mutate(label = paste0(
     "<b>", year, ":</b> ",
     format(surveys, big.mark = ","), " surveys by ",
-    format(users, big.mark = ","), " contributors, starting ",
-    format(first_date, "%b %d"), " and ending ",
-    format(last_date, "%b %d")))
+    format(users, big.mark = ","), " contributors. ",
+    format(first_date, "%b %d"), " - ",
+    format(last_date, "%b %d"), "."))
 
 
 # total counts for project summary
