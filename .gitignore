@@ -5,7 +5,6 @@
 .Ruserdata
 desktop.ini
 shiny-logs/
-rsconnect
 .Renviron
 refresh_time
 private

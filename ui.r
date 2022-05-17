@@ -336,14 +336,14 @@ ui <- fixedPage(
       uiOutput("plotByDateUI"),
       plotlyOutput("plotByDate"),
       br(),
-      p(em("This chart shows daily or season trends in pollinator activity by showing the average activity by pollinator group across all surveys conducted on a given day. The date range can be adjusted in the survey filters below the map."), align = "center", style = "margin-top:.5em; margin-bottom:.5em; font-size:small")),
+      p(em("This chart shows seasonal trends in pollinator activity by showing the average activity by pollinator group across all surveys conducted on a given day, week, or month. The date range and year(s) can be selected in the survey filters above. All selected years are combined in this plot to highlight seasonal trends."), align = "center", style = "margin-top:.5em; margin-bottom:.5em; font-size:small")),
     
     ## Surveys by date ----
     tabPanel("Surveys by date",
       br(),
       plotlyOutput("plotSurveysByDate"),
       br(),
-      p(em("This chart shows the number of surveys completed on each day within the date range specified in the data filters above."), align = "center", style = "margin-top:.5em; margin-bottom:.5em; font-size:small")),
+      p(em("This chart shows the number of surveys completed each week and the user ID of the person who conducted the survey, within the date range specified in the data filters above."), align = "center", style = "margin-top:.5em; margin-bottom:.5em; font-size:small")),
     
     ## Compare habitat ----
     tabPanel("Compare habitats",
@@ -377,7 +377,7 @@ ui <- fixedPage(
     ## Tabular survey data ----
     tabPanel("View as data table",
       br(),
-      p("The table below shows the average visitation rate per minute for the surveys and insect categories selected by the filters above. Check or uncheck the grouping variables to simplify or expand the summary table. Click the download button to save a copy of the data you have selected.", em("Note: this data is for personal or educational use only. Other use or use in a publication is not permitted without the consent of the team. ", a("Email us with any inquiries.", href = "mailto:pollinators@wisc.edu"))),
+      p("The table below shows the surveys you have currently selected by the filters above. Check or uncheck the grouping variables to simplify or expand the summary table. If a row shows n > 1, some surveys were averaged together. You can select all the columns to get each individual survey. Click the download button to save a copy of the table.", em("Note: this data is for personal or educational use only. Other use or use in a publication is not permitted without the consent of the team. ", a("Email us with any inquiries.", href = "mailto:pollinators@wisc.edu"))),
       br(),
       fixedRow(
         column(8,
@@ -414,8 +414,8 @@ ui <- fixedPage(
   br(),
   div(
     align = "center",
-    style = "font-size:small; color:grey; border-top:2px darkgrey",    
-    p(strong("©2021 University of Wisconsin Board of Regents"), style = "font-size:small; color:grey"),
+    style = "font-size:small; color:grey; border-top:2px darkgrey",
+    p(strong(paste0("©", format(Sys.Date(), "%Y"), " University of Wisconsin Board of Regents")), style = "font-size:small; color:grey"),
     p(
       a("More information", href = "http://www.pollinators.wisc.edu/wibee", target = "_blank"),
       " - ", a("Email us", href = "mailto:pollinators@wisc.edu"),
@@ -423,8 +423,8 @@ ui <- fixedPage(
       " - ", a("Send feedback", href = "https://forms.gle/6qy9qJLwCxSTTPNT8", target = "_blank")
     ),
     br(),
-    p("dashboard developed by", a("tanuki.tech", href = "https://github.com/bzbradford", target = "_blank"), style = "font-size:small; color:grey"),
-    p("WiBee app developed by", a("caracal.tech", href = "https://caracal.tech/", target = "_blank"), style = "font-size:small; color:grey"),
+    p("Dashboard developed by", a("Ben Bradford", href = "https://github.com/bzbradford", target = "_blank"), style = "font-size:small; color:grey"),
+    p("WiBee app developed by", a("Dan Imhoff", href = "https://caracal.tech/", target = "_blank"), style = "font-size:small; color:grey"),
     br(),
     p(em(status), br(), em(paste("Data last updated:", as.character(refresh_time, format = "%Y-%m-%d %H:%M:%S %Z"))))
   )

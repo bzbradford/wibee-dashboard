@@ -709,7 +709,7 @@ server <- function(input, output, session) {
           xaxis = list(
             title = "",
             type = "date",
-            tickformat = "%B %d"),
+            tickformat = "%b %d"),
           yaxis = list(title = "Number of insect visits per survey"),
           hovermode = "x unified",
           legend = list(orientation = "h"),
@@ -754,29 +754,36 @@ server <- function(input, output, session) {
   
   output$plotSurveysByDate <- renderPlotly({
     df <- filtered_surveys()
-    if (nrow(df) > 0) {
-      df %>%
-        arrange(user_id) %>%
-        mutate(user_label = fct_inorder(paste("User", user_id))) %>%
-        group_by(date, user_label) %>%
-        summarise(surveys_by_user = n(), .groups = "drop_last") %>%
-        arrange(date, desc(surveys_by_user)) %>%
-        plot_ly(
-          x = ~ date,
-          y = ~ surveys_by_user,
-          type = "bar",
-          name = ~ user_label,
-          marker = list(line = list(color = "#ffffff", width = .25))) %>%
-        plotly::layout(
-          barmode = "stack",
-          title = list(text = "<b>Daily total number of completed surveys</b>", font = list(size = 15)),
-          xaxis = list(title = "", type = "date", tickformat = "%b %d<br>%Y"),
-          yaxis = list(title = "Number of surveys"),
-          hovermode = "x unified",
-          showlegend = F,
-          bargap = 0
-        )
-    }
+    validate(need(nrow(df) > 0, "No surveys selected."))
+    
+    df %>%
+      arrange(user_id) %>%
+      mutate(user_label = fct_inorder(paste("User", user_id))) %>%
+      group_by(year, week, user_label) %>%
+      summarise(surveys_by_user = n(), .groups = "drop_last") %>%
+      mutate(date = ISOdate(year, 1, 1) + lubridate::weeks(week - 1)) %>%
+      arrange(date, desc(surveys_by_user)) %>%
+      plot_ly(
+        x = ~ date,
+        y = ~ surveys_by_user,
+        type = "bar",
+        name = ~ user_label,
+        xperiodalignment = "left",
+        marker = list(line = list(color = "#ffffff", width = .25))) %>%
+      plotly::layout(
+        barmode = "stack",
+        title = list(
+          text = "<b>Weekly total number of completed surveys</b>",
+          font = list(size = 15)),
+        xaxis = list(
+          title = "",
+          type = "date",
+          tickformat = "%b %d<br>%Y"),
+        yaxis = list(title = "Number of surveys"),
+        hovermode = "x unified",
+        showlegend = F,
+        bargap = 0
+      )
   })
   
   
@@ -786,7 +793,7 @@ server <- function(input, output, session) {
     filtered_surveys_long() %>%
       group_by(habitat_name, bee_name, bee_color) %>%
       summarise(
-        visit_rate = round(mean(count), 2),
+        visit_rate = round(mean(count), 1),
         n = n(),
         .groups = "drop") %>%
       droplevels() %>%
@@ -803,7 +810,7 @@ server <- function(input, output, session) {
         title = list(text = "<b>Pollinator visitation rates by habitat type</b>", font = list(size = 15)),
         xaxis = list(title = "", fixedrange = T),
         yaxis = list(title = "Number of insect visits per survey", fixedrange = T),
-        hovermode = "compare"
+        hovermode = "x unified"
       )
     })
   
@@ -815,7 +822,7 @@ server <- function(input, output, session) {
     filtered_surveys_long() %>%
       group_by(management_name, bee_name, bee_color) %>%
       summarise(
-        visit_rate = round(mean(count), 2),
+        visit_rate = round(mean(count), 1),
         n = n(),
         .groups = "drop") %>%
       droplevels() %>%
@@ -832,7 +839,7 @@ server <- function(input, output, session) {
         title = list(text = "<b>Pollinator visitation rates by management type</b>", font = list(size = 15)),
         xaxis = list(title = "", fixedrange = T),
         yaxis = list(title = "Number of visits per survey", fixedrange = T),
-        hovermode = "compare"
+        hovermode = "x unified"
       )
     })
   
@@ -849,7 +856,7 @@ server <- function(input, output, session) {
     filtered_surveys_long() %>%
       group_by(plant_label, bee_name, bee_color) %>%
       summarise(
-        visit_rate = round(mean(count), 2),
+        visit_rate = round(mean(count), 1),
         n = n(),
         .groups = "drop") %>%
       droplevels() %>%
@@ -866,7 +873,7 @@ server <- function(input, output, session) {
         title = list(text = "<b>Pollinator visitation rates by plant type</b>", font = list(size = 15)),
         xaxis = list(title = "", fixedrange = T, tickangle = 45),
         yaxis = list(title = "Number of visits per survey", fixedrange = T),
-        hovermode = "compare",
+        hovermode = "x unified",
         margin = list(b = margin)
       )
     })
@@ -966,7 +973,7 @@ server <- function(input, output, session) {
       group_by(bee_name, .add = T) %>%
       summarise(
         n = n(),
-        visit_rate = round(mean(count) / 5, 1),
+        visit_rate = round(mean(count), 1),
         .groups = "drop_last") %>%
       mutate("Total rate" = sum(visit_rate)) %>%
       ungroup() %>%
