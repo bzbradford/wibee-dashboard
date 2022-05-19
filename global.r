@@ -17,19 +17,20 @@ if (file.exists("refresh_time")) {
 
 # update surveys at most once an hour. Writes to local csv
 if (refresh_time < Sys.time() - 3600) {
+  status <- "Unable to refresh data from remote server."
   try({
     get_surveys <- content(GET(
       url = "https://wibee.caracal.tech/api/data/survey-summaries",
       config = add_headers(Authorization = Sys.getenv("caracal_token"))))
+    if (is.data.frame(get_surveys)) {
+      get_surveys %>%
+        arrange(ended_at) %>%
+        write_csv("private/surveys.csv")
+      refresh_time <- Sys.time()
+      saveRDS(refresh_time, "refresh_time")
+      status <- "Survey data refreshed from remote database."
+    }
   })
-  if (is.data.frame(get_surveys)) {
-    arrange(get_surveys, ended_at) %>% write_csv("private/surveys.csv")
-    refresh_time <- Sys.time()
-    saveRDS(refresh_time, "refresh_time")
-    status <- "Survey data refreshed from remote database."
-  } else {
-    status <- "Unable to refresh data from remote server."
-  }
 } else {
   status <- "Skipped data refresh, last query < 1 hr ago."
 }
