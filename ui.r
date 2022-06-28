@@ -14,11 +14,14 @@ library(plotly)
 
 ui <- fixedPage(
   
-  # Google analytics
-  tags$head(includeHTML(("google-analytics.html"))),
+  # Google analytics and favicon
+  tags$head(
+    includeHTML("google-analytics.html"),
+    tags$link(rel = "shortcut icon", href = "favicon.ico")
+  ),
   
   # forces fixed width page
-  HTML('<meta name="viewport" content="width=1024">'),  
+  HTML('<meta name="viewport" content="width=1024">'),
   
   title = "WiBee Dashboard",
   theme = shinytheme("flatly"),

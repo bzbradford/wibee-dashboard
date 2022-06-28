@@ -183,10 +183,7 @@ server <- function(input, output, session) {
     proxy <- leafletProxy("map")
     
     # on first click deselect all other grids
-    if (setequal(rv$map_selection, map_pts_all) | setequal(rv$map_selection, map_pts_wi)) {
-      proxy %>% clearGroup("selected_grids")
-      rv$map_selection <- grid_pt
-    } else if (grepl("selected", click$id, fixed = T)) {
+    if (grepl("selected", click$id, fixed = T)) {
       if (length(rv$map_selection) == 1) {return()}
       proxy %>% removeShape(click$id)
       old_sel <- rv$map_selection
@@ -695,7 +692,7 @@ server <- function(input, output, session) {
       df %>%
         group_by(week, bee_name, bee_color) %>%
         summarise(count = round(mean(count), 1), .groups = "drop") %>%
-        mutate(date = ISOdate(cur_year, 1, 1) + lubridate::weeks(week - 1)) %>%
+        mutate(date = as.Date(paste(cur_year, 1 + (week - 1) * 7), "%Y %j")) %>%
         plot_ly(
           x = ~ date,
           y = ~ count,
