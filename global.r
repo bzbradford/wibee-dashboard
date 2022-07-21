@@ -99,6 +99,7 @@ keep_cols <- c(
   "site_type",
   "crop",
   "management_type",
+  "master_gardener",
   "picture_url")
 
 # bee cols to pivot

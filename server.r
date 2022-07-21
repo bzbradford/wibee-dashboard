@@ -663,73 +663,135 @@ server <- function(input, output, session) {
 
     # bring all dates to same year
     cur_year <- max(df$year)
-    df <- df %>% mutate(date = ISOdate(cur_year, month, day))
+    df <- df %>%
+      mutate(date = as.Date(paste(cur_year, month, day, sep = "-")))
+    counts <- filtered_surveys() %>%
+      mutate(date = as.Date(paste(cur_year, month, day, sep = "-")))
     
     grouping <- input$plotByDateGrouping
     
     if (grouping == "Day") {
-      df %>%
+      survey_counts <- count(counts, date)
+      
+      plot_data <- df %>%
         group_by(date, bee_name, bee_color) %>%
-        summarise(visit_rate = round(mean(count), 1), .groups = "drop") %>%
-        droplevels() %>%
-        plot_ly(
-          x = ~ date,
-          y = ~ visit_rate,
+        summarise(count = round(mean(count), 1), .groups = "drop") %>%
+        droplevels()
+      
+      bee_colors <- levels(plot_data$bee_color)
+      
+      plot_ly() %>%
+        add_trace(
+          data = survey_counts,
+          x = ~date,
+          y = 0,
+          type = "bar",
+          opacity = 0,
+          text = ~n,
+          colors = bee_colors,
+          hovertemplate = "<i>Surveys: %{text}</i><extra></extra>",
+          showlegend = F
+        ) %>%
+        add_trace(
+          data = plot_data,
+          x = ~date,
+          y = ~count,
           type = "bar",
           color = ~ bee_name,
-          colors = ~ levels(.$bee_color),
-          marker = list(line = list(color = "#ffffff", width = .25))) %>%
+          colors = bee_colors,
+          marker = list(line = list(color = "#ffffff", width = .25))
+        ) %>%
         plotly::layout(
           barmode = "stack",
-          title = list(text = "<b>Daily average pollinator visitation rates</b>", font = list(size = 15)),
+          title = list(text = "<b>Daily average pollinator visits per survey</b>", font = list(size = 15)),
           xaxis = list(title = "", type = "date", tickformat = "%B %d"),
-          yaxis = list(title = "Number of insect visits per survey"),
+          yaxis = list(title = "Insect visits per survey"),
           hovermode = "x unified",
           legend = list(orientation = "h"),
           bargap = 0
         )
     } else if (grouping == "Week") {
-      df %>%
+      survey_counts <- count(counts, week) %>%
+        mutate(date = as.Date(paste(cur_year, 1 + (week - 1) * 7), "%Y %j"))
+      
+      plot_data <- df %>%
         group_by(week, bee_name, bee_color) %>%
         summarise(count = round(mean(count), 1), .groups = "drop") %>%
         mutate(date = as.Date(paste(cur_year, 1 + (week - 1) * 7), "%Y %j")) %>%
-        plot_ly(
-          x = ~ date,
-          y = ~ count,
+        droplevels()
+      
+      bee_colors <- levels(plot_data$bee_color)
+      
+      plot_ly() %>%
+        add_trace(
+          data = survey_counts,
+          x = ~date,
+          y = 0,
+          type = "bar",
+          opacity = 0,
+          text = ~n,
+          colors = bee_colors,
+          hovertemplate = "<i>Surveys: %{text}</i><extra></extra>",
+          showlegend = F
+        ) %>%
+        add_trace(
+          data = plot_data,
+          x = ~date,
+          y = ~count,
           type = "bar",
           color = ~ bee_name,
-          colors = ~ levels(.$bee_color),
-          marker = list(line = list(color = "#ffffff", width = .25))) %>%
+          colors = bee_colors,
+          marker = list(line = list(color = "#ffffff", width = .25))
+        ) %>%
         plotly::layout(
           barmode = "stack",
-          title = list(text = "<b>Weekly average pollinator visitation rates</b>", font = list(size = 15)),
+          title = list(text = "<b>Weekly average pollinator visits per survey</b>", font = list(size = 15)),
           xaxis = list(
             title = "",
             type = "date",
             tickformat = "%b %d"),
-          yaxis = list(title = "Number of insect visits per survey"),
+          yaxis = list(title = "Insect visits per survey"),
           hovermode = "x unified",
           legend = list(orientation = "h"),
           bargap = 0
         )
     } else if (grouping == "Month") {
-      df %>%
+      survey_counts <- count(counts, month) %>%
+        mutate(date = as.Date(paste(cur_year, month, 15, sep = "-")))
+      
+      plot_data <- df %>%
         group_by(month, bee_name, bee_color) %>%
         summarise(count = round(mean(count), 1), .groups = "drop") %>%
-        mutate(date = ISOdate(cur_year, month, 1)) %>%
-        plot_ly(
-          x = ~ date,
-          y = ~ count,
+        mutate(date = as.Date(paste(cur_year, month, 15, sep = "-"))) %>%
+        droplevels()
+      
+      bee_colors <- levels(plot_data$bee_color)
+      
+      plot_ly() %>%
+        add_trace(
+          data = survey_counts,
+          x = ~date,
+          y = 0,
           type = "bar",
-          xperiod = "M1",
-          xperiodalignment = "middle",
+          opacity = 0,
+          text = ~n,
+          colors = bee_colors,
+          hovertemplate = "<i>Surveys: %{text}</i><extra></extra>",
+          showlegend = F
+        ) %>%
+        add_trace(
+          data = plot_data,
+          x = ~date,
+          y = ~count,
+          type = "bar",
           color = ~ bee_name,
-          colors = ~ levels(.$bee_color),
-          marker = list(line = list(color = "#ffffff", width = .25))) %>%
+          colors = bee_colors,
+          marker = list(line = list(color = "#ffffff", width = .25))
+        ) %>%
         plotly::layout(
           barmode = "stack",
           title = list(
-            text = "<b>Monthly average pollinator visitation rates</b>",
+            text = "<b>Monthly average pollinator visits per survey</b>",
             font = list(size = 15)),
           xaxis = list(
             title = "",
@@ -738,7 +800,7 @@ server <- function(input, output, session) {
             dtick = "M1",
             ticklabelmode = "period"),
           yaxis = list(
-            title = "Number of insect visits per survey"),
+            title = "Insect visits per survey"),
           hovermode = "x unified",
           legend = list(orientation = "h"),
           bargap = 0
@@ -758,7 +820,7 @@ server <- function(input, output, session) {
       mutate(user_label = fct_inorder(paste("User", user_id))) %>%
       group_by(year, week, user_label) %>%
       summarise(surveys_by_user = n(), .groups = "drop_last") %>%
-      mutate(date = ISOdate(year, 1, 1) + lubridate::weeks(week - 1)) %>%
+      mutate(date = as.Date(paste0(year, "-01-01")) + lubridate::weeks(week - 1)) %>%
       arrange(date, desc(surveys_by_user)) %>%
       plot_ly(
         x = ~ date,
