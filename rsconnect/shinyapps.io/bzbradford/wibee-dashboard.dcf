@@ -1,0 +1,14 @@
+name: wibee-dashboard
+title: wibee-dashboard
+username:
+account: bzbradford
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 2360407
+bundleId: 6130707
+url: https://bzbradford.shinyapps.io/wibee-dashboard/
+when: 1658759359.66379
+lastSyncTime: 1658759359.6638
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: .RData
