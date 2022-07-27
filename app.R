@@ -1,8 +1,8 @@
-# WiBee Shiny App
-# developed by Ben Bradford, UW-Madison
+# app.R
 
-
-library(shiny)
+suppressMessages({
+  library(shiny)
+})
 
 source("global.r")
 source("ui.r")

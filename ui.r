@@ -1,13 +1,14 @@
-#---- UI ----#
+# ui.R
 
-library(shiny)
-library(shinythemes)
-library(shinyWidgets)
-library(shinyBS)
-library(leaflet)
-library(DT)
-library(plotly)
-
+suppressMessages({
+  library(shiny)
+  library(shinythemes)
+  library(shinyWidgets)
+  library(shinyBS)
+  library(leaflet)
+  library(DT)
+  library(plotly)
+})
 
 
 # Define UI ----
@@ -344,9 +345,14 @@ ui <- fixedPage(
     ## Surveys by date ----
     tabPanel("Surveys by date",
       br(),
+      materialSwitch(
+        inputId = "plotSurveysByDateShowUserId",
+        label = "Show User IDs",
+        status = "primary"
+      ),
       plotlyOutput("plotSurveysByDate"),
       br(),
-      p(em("This chart shows the number of surveys completed each week and the user ID of the person who conducted the survey, within the date range specified in the data filters above."), align = "center", style = "margin-top:.5em; margin-bottom:.5em; font-size:small")),
+      p(em("This chart shows the number of surveys completed each week and (optionally) the user ID of the person who conducted the survey, within the date range specified in the data filters above."), align = "center", style = "margin-top:.5em; margin-bottom:.5em; font-size:small")),
     
     ## Compare habitat ----
     tabPanel("Compare habitats",

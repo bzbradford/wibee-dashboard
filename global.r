@@ -1,8 +1,9 @@
-#---- GLOBAL ----#
+# global.R
 
-library(tidyverse)
-library(httr)
-
+suppressMessages({
+  library(tidyverse)
+  library(httr)
+})
 
 
 # Load remote data ----
@@ -141,7 +142,9 @@ wibee <- wibee_in %>%
       grepl("lawn", habitat) | grepl("garden", habitat) ~ "lawn-and-garden",
       T ~ "other"),
     habitat = factor(habitat, levels = habitat_list$type)) %>%
-  left_join(rename(habitat_list, habitat = type, habitat_name = label)) %>%
+  left_join(
+    rename(habitat_list, habitat = type, habitat_name = label),
+    by = "habitat") %>%
   mutate(
     management = replace_na(management, "none"),
     management = case_when(
@@ -153,15 +156,17 @@ wibee <- wibee_in %>%
       grepl("spray", management) & grepl("no", management) ~ "no spray",
       T ~ "other"),
     management = factor(management, levels = management_list$type)) %>%
-  left_join(rename(management_list, management = type, management_name = label)) %>%
+  left_join(
+    rename(management_list, management = type, management_name = label),
+    by = "management") %>%
   mutate(
     lat_rnd = round(lat, 1),
     lng_rnd = round(lng, 1),
     grid_pt = paste(lat_rnd, lng_rnd, sep = ", "),
     inwi = between(lat, 42.49, 47.08) & between(lng, -92.89, -86.80)) %>%
-  left_join(plant_replace) %>%
+  left_join(plant_replace, by = "crop") %>%
   mutate(crop = ifelse(is.na(new_crop), crop, new_crop)) %>%
-  left_join(plant_list) %>%
+  left_join(plant_list, by = "crop") %>%
   mutate(
     focal = new_crop %in% focal_plant_list$new_crop,
     plant_group = ifelse(focal, "non-crop focal", plant_group)) %>%
@@ -219,7 +224,7 @@ user_ids <- unique(wibee_in$user_id)
 
 surveys <- wibee %>%
   select(-c(remote_id, picture_url, plant_label)) %>%
-  left_join(plant_ranks)
+  left_join(plant_ranks, by = c("plant_id", "plant_group"))
 
 # separate surveys and ids for picture downloads. The ids will change if the filter is changed in the block above
 images <- wibee %>%

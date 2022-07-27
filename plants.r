@@ -1,6 +1,8 @@
+# plants.R
 # Handles plant lists for WiBee. Not run during app launch, must be sourced manually.
 
 library(tidyverse)
+
 
 kebab <- function(s) {
   gsub(" ", "-", tolower(s))
@@ -22,7 +24,7 @@ plantLabels <- function(sciName, comName) {
 }
 
 # crop list
-crops <- read_csv("plants/crop-list.csv") %>%
+crops <- read_csv("plants/crop-list.csv", show_col_types = F) %>%
   mutate(
     PlantGroup = "crop",
     Label = CommonName) %>%
@@ -42,21 +44,21 @@ crops <- read_csv("plants/crop-list.csv") %>%
 
 # non-crops
 noncrop_families <- 
-  read_csv("plants/non-crop-family-list.csv") %>%
+  read_csv("plants/non-crop-family-list.csv", show_col_types = F) %>%
   mutate(
     TaxonLevel = "Family",
     ScientificName = Family,
     Label = paste0(CommonName, " (", Family, ")"))
 
 noncrop_genera <- 
-  read_csv("plants/non-crop-genus-list.csv") %>%
+  read_csv("plants/non-crop-genus-list.csv", show_col_types = F) %>%
   mutate(
     TaxonLevel = "Genus",
     ScientificName = Genus,
     Label = mapply(plantLabels, paste0("Genus <em>", Genus, "</em>"), CommonName))
 
 noncrop_species <- 
-  read_csv("plants/non-crop-species-list.csv") %>%
+  read_csv("plants/non-crop-species-list.csv", show_col_types = F) %>%
   mutate(
     TaxonLevel = "Species",
     ScientificName = Species,
