@@ -1,16 +1,5 @@
 # ui.R
 
-suppressMessages({
-  library(shiny)
-  library(shinythemes)
-  library(shinyWidgets)
-  library(shinyBS)
-  library(leaflet)
-  library(DT)
-  library(plotly)
-})
-
-
 # Define UI ----
 
 ui <- fixedPage(

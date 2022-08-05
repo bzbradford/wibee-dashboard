@@ -1,16 +1,5 @@
 # server.R
 
-suppressMessages({
-  library(tidyverse)
-  library(shiny)
-  library(leaflet)
-  library(DT)
-  library(plotly)
-  library(RColorBrewer)
-})
-
-
-
 server <- function(input, output, session) {
   
 # Reactive values ---------------------------------------------------------
@@ -42,7 +31,7 @@ server <- function(input, output, session) {
     surveys_by_user() %>%
       filter(
         year %in% input$years,
-        between(doy, lubridate::yday(input$date_range[1]), lubridate::yday(input$date_range[2]))
+        between(doy, yday(input$date_range[1]), yday(input$date_range[2]))
       )
     })
   
@@ -67,7 +56,7 @@ server <- function(input, output, session) {
   #     filter(
   #       grid_pt %in% rv$map_selection,
   #       year %in% input$years,
-  #       between(doy, lubridate::yday(input$date_range[1]), lubridate::yday(input$date_range[2])),
+  #       between(doy, yday(input$date_range[1]), yday(input$date_range[2])),
   #       habitat %in% input$which_habitat,
   #       management %in% input$which_mgmt,
   #       plant_type %in% c(input$which_crops, input$which_focal_noncrops, input$which_noncrops),
@@ -703,7 +692,7 @@ server <- function(input, output, session) {
           colors = bee_colors,
           marker = list(line = list(color = "#ffffff", width = .25))
         ) %>%
-        plotly::layout(
+        layout(
           barmode = "stack",
           title = list(text = "<b>Daily average pollinator visits per survey</b>", font = list(size = 15)),
           xaxis = list(title = "", type = "date", tickformat = "%B %d"),
@@ -745,7 +734,7 @@ server <- function(input, output, session) {
           colors = bee_colors,
           marker = list(line = list(color = "#ffffff", width = .25))
         ) %>%
-        plotly::layout(
+        layout(
           barmode = "stack",
           title = list(text = "<b>Weekly average pollinator visits per survey</b>", font = list(size = 15)),
           xaxis = list(
@@ -790,7 +779,7 @@ server <- function(input, output, session) {
           colors = bee_colors,
           marker = list(line = list(color = "#ffffff", width = .25))
         ) %>%
-        plotly::layout(
+        layout(
           barmode = "stack",
           title = list(
             text = "<b>Monthly average pollinator visits per survey</b>",
@@ -823,7 +812,7 @@ server <- function(input, output, session) {
         mutate(user_label = fct_inorder(paste("User", user_id))) %>%
         group_by(year, week, user_label) %>%
         summarise(surveys_by_user = n(), .groups = "drop_last") %>%
-        mutate(date = as.Date(paste0(year, "-01-01")) + lubridate::weeks(week - 1)) %>%
+        mutate(date = as.Date(paste0(year, "-01-01")) + weeks(week - 1)) %>%
         arrange(date, desc(surveys_by_user)) %>%
         plot_ly(
           x = ~ date,
@@ -832,7 +821,7 @@ server <- function(input, output, session) {
           name = ~ user_label,
           xperiodalignment = "left",
           marker = list(line = list(color = "#ffffff", width = .25))) %>%
-        plotly::layout(
+        layout(
           barmode = "stack",
           title = list(
             text = "<b>Weekly total number of completed surveys</b>",
@@ -850,14 +839,14 @@ server <- function(input, output, session) {
       df %>%
         group_by(year, week) %>%
         summarise(n_surveys = n(), .groups = "drop_last") %>%
-        mutate(date = as.Date(paste0(year, "-01-01")) + lubridate::weeks(week - 1)) %>%
+        mutate(date = as.Date(paste0(year, "-01-01")) + weeks(week - 1)) %>%
         plot_ly(
           x = ~ date,
           y = ~ n_surveys,
           type = "bar",
           xperiodalignment = "left",
           marker = list(line = list(color = "#ffffff", width = .25))) %>%
-        plotly::layout(
+        layout(
           barmode = "stack",
           title = list(
             text = "<b>Weekly total number of completed surveys</b>",
@@ -893,7 +882,7 @@ server <- function(input, output, session) {
         color = ~ bee_name,
         colors = ~ levels(.$bee_color),
         marker = list(line = list(color = "#ffffff", width = .25))) %>%
-      plotly::layout(
+      layout(
         barmode = "stack",
         title = list(text = "<b>Pollinator visitation rates by habitat type</b>", font = list(size = 15)),
         xaxis = list(title = "", fixedrange = T),
@@ -922,7 +911,7 @@ server <- function(input, output, session) {
         color = ~ bee_name,
         colors = ~ levels(.$bee_color),
         marker = list(line = list(color = "#ffffff", width = .25))) %>%
-      plotly::layout(
+      layout(
         barmode = "stack",
         title = list(text = "<b>Pollinator visitation rates by management type</b>", font = list(size = 15)),
         xaxis = list(title = "", fixedrange = T),
@@ -956,7 +945,7 @@ server <- function(input, output, session) {
         color = ~ bee_name,
         colors = ~ levels(.$bee_color),
         marker = list(line = list(color = "#ffffff", width = .25))) %>%
-      plotly::layout(
+      layout(
         barmode = "stack",
         title = list(text = "<b>Pollinator visitation rates by plant type</b>", font = list(size = 15)),
         xaxis = list(title = "", fixedrange = T, tickangle = 45),

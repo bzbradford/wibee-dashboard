@@ -1,8 +1,22 @@
 # global.R
 
 suppressMessages({
+  # core
   library(tidyverse)
+  library(lubridate)
+  library(RColorBrewer)
   library(httr)
+  
+  # shiny
+  library(shiny)
+  library(shinythemes)
+  library(shinyWidgets)
+  library(shinyBS)
+  
+  # display
+  library(DT)
+  library(leaflet)
+  library(plotly)
 })
 
 
@@ -39,7 +53,7 @@ message(status)
 
 
 # read data from local csv and copy amended data into main columns
-wibee_in <- read_csv("private/surveys.csv", col_types = cols(), guess_max = 10000) %>%
+wibee_in <- read_csv("private/surveys.csv", guess_max = 10000, show_col_types = F) %>%
   mutate(
     bumble_bee = bumble_bee_amended,
     honeybee = honeybee_amended,
@@ -59,7 +73,7 @@ wibee_in <- read_csv("private/surveys.csv", col_types = cols(), guess_max = 1000
 # Load/create helper data ----
 
 # bee names and colors
-bees <- read_csv("data/bees.csv", col_types = cols()) %>% mutate_all(fct_inorder)
+bees <- read_csv("data/bees.csv", show_col_types = F) %>% mutate_all(fct_inorder)
 
 # formatted bee names for ungrouped
 bee_names <- as.character(filter(bees, type != "wild_bee")$label)
@@ -69,14 +83,14 @@ wildbee_names <- levels(bees$group)
 
 
 # load habitat and management types
-habitat_list <- read_csv("data/habitats.csv", col_types = cols())
-management_list <- read_csv("data/managements.csv", col_types = cols())
+habitat_list <- read_csv("data/habitats.csv", show_col_types = F)
+management_list <- read_csv("data/managements.csv", show_col_types = F)
 
 
 # load plant lists
-plant_list <- read_csv("plants/known-plant-list.csv", col_types = cols())
-legacy_plant_list <- read_csv("plants/legacy-plant-list.csv", col_types = cols())
-focal_plant_list <- read_csv("plants/focal-plant-list.csv", col_types = cols())
+plant_list <- read_csv("plants/known-plant-list.csv", show_col_types = F)
+legacy_plant_list <- read_csv("plants/legacy-plant-list.csv", show_col_types = F)
+focal_plant_list <- read_csv("plants/focal-plant-list.csv", show_col_types = F)
 plant_replace <- bind_rows(legacy_plant_list, focal_plant_list)
 
 
