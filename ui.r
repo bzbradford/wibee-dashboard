@@ -4,18 +4,18 @@
 
 ui <- fixedPage(
   
-  # Google analytics and favicon
-  tags$head(
-    includeHTML("google-analytics.html"),
-    tags$link(rel = "shortcut icon", href = "favicon.ico")
-  ),
-  
-  # forces fixed width page
-  HTML('<meta name="viewport" content="width=1024">'),
-  
   title = "WiBee Dashboard",
   theme = shinytheme("flatly"),
   
+  tags$head(
+    tags$meta(charset = "UTF-8"),
+    tags$meta(name = "description", content = "An online data dashboard for viewing pollinator activity surveys recorded by the WiBee app"),
+    tags$meta(name = "keywords", content = "insect, pollinator, bee, dashboard, wisconsin, wibee, wisconsin"),
+    tags$meta(name = "viewport", content = "width=1024"),
+    tags$link(rel = "shortcut icon", href = "favicon.ico"),
+    tags$link(rel = "stylesheet", type = "text/css", href = "style.css"),
+    includeHTML("google-analytics.html")
+  ),
   
   # Page header
   fixedRow(
@@ -295,13 +295,7 @@ ui <- fixedPage(
   h4("View or download data from selected surveys:", style = "text-decoration: underline;"),
   
   tabsetPanel(
-    
-    ## Species pie charts ----
-    tabPanel("Species composition",
-      br(),
-      plotlyOutput("map_chart_all", width = "45%", inline = T),
-      plotlyOutput("map_chart_selected", width = "45%", inline = T),
-      br()),
+    tabPanel("Species composition", speciesCompUI()),
     
     ## Activity by date ----
     tabPanel("Activity by date",

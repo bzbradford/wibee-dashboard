@@ -577,61 +577,11 @@ server <- function(input, output, session) {
   
   ## Bee activity pie charts ----
   
-  # left pie chart: whole dataset
-  output$map_chart_all <- renderPlotly({
-    df <- surveys_long %>%
-      filter(bee_name %in% input$which_bees) %>%
-      droplevels() %>%
-      group_by(bee_name, bee_color) %>%
-      summarise(mean_count = round(mean(count), 1), .groups = "drop")
-    
-    df %>% 
-      plot_ly(labels = ~ bee_name, values = ~ mean_count, type = "pie",
-        textposition = "inside",
-        textinfo = "label+percent",
-        hoverinfo = "text",
-        text = ~ paste(mean_count, bee_name, "per survey"),
-        marker = list(
-          colors = levels(df$bee_color),
-          line = list(color = "#ffffff", width = 1)),
-        sort = F,
-        direction = "clockwise",
-        showlegend = F
-        ) %>%
-      add_annotations(
-        y = 1.075,
-        x = 0.5, 
-        text = paste0("<b>All surveys (", nrow(surveys), ")</b>"), 
-        showarrow = F,
-        font = list(size = 15))
-  })
-  
-  # right pie chart: selected data
-  output$map_chart_selected <- renderPlotly({
-    df <- filtered_surveys_long() %>%
-      group_by(bee_name, bee_color) %>%
-      summarise(mean_count = round(mean(count), 1), .groups = "drop")
-    
-    df %>% 
-      plot_ly(labels = ~ bee_name, values = ~ mean_count, type = "pie",
-        textposition = "inside",
-        textinfo = "label+percent",
-        hoverinfo = "text",
-        text = ~ paste(mean_count, bee_name, "per survey"),
-        marker = list(
-          colors = levels(df$bee_color),
-          line = list(color = "#ffffff", width = 1)),
-        sort = F,
-        direction = "clockwise",
-        showlegend = F
-      ) %>%
-      add_annotations(
-        y = 1.075, 
-        x = 0.5, 
-        text = paste0("<b>Selected surveys (", nrow(filtered_surveys()), ")</b>"), 
-        showarrow = F,
-        font = list(size = 15))
-  })
+  speciesCompServer(
+    filtered_surveys = reactive(filtered_surveys()),
+    filtered_surveys_long = reactive(filtered_surveys_long()),
+    which_bees = reactive(input$which_bees)
+  )
 
   
   ## Plot activity by date ----
