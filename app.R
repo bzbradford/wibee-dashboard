@@ -7,3 +7,4 @@ source("server.r")
 shiny::shinyApp(ui, server)
 
 # renv::snapshot()
+# renv::update()
