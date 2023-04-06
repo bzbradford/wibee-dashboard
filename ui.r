@@ -296,14 +296,7 @@ ui <- fixedPage(
   
   tabsetPanel(
     tabPanel("Species composition", speciesCompUI()),
-    
-    ## Activity by date ----
-    tabPanel("Activity by date",
-      br(),
-      uiOutput("plotByDateUI"),
-      plotlyOutput("plotByDate"),
-      br(),
-      p(em("This chart shows seasonal trends in pollinator activity by showing the average activity by pollinator group across all surveys conducted on a given day, week, or month. The date range and year(s) can be selected in the survey filters above. All selected years are combined in this plot to highlight seasonal trends."), align = "center", style = "margin-top:.5em; margin-bottom:.5em; font-size:small")),
+    tabPanel("Activity by date", activityByDateUI()),
     
     ## Surveys by date ----
     tabPanel("Surveys by date",
