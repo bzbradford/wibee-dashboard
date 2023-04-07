@@ -299,13 +299,7 @@ ui <- fixedPage(
     tabPanel("Activity by date", activityByDateUI()),
     tabPanel("Surveys by date", surveysByDateUI()),
     tabPanel("Compare habitats", activityByHabitatUI()),
-    
-    ## Compare management ----
-    tabPanel("Compare managements",
-      br(),
-      plotlyOutput("plotByMgmt"),
-      br(),
-      p(em("This chart compares total pollinator visitation rates by user-reported management practices. The number of surveys represented by each practice is shown in parentheses in the labels."), align = "center", style = "margin-top:.5em; margin-bottom:.5em; font-size:small")),
+    tabPanel("Compare managements", activityByMgmtUI()),
     
     ## Compare plants ----
     tabPanel("Compare crops/flowers",
