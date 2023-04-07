@@ -2,18 +2,9 @@
 
 # UI ----
 
-#' requires global vars:
-#' - surveys
-#' - surveys_long
-
 speciesCompUI <- function() {
-  ns <- NS("species-comp")
-  
-  div(
-    class = "data-tab",
-    plotlyOutput(ns("allChart"), width = "45%", inline = T),
-    plotlyOutput(ns("selectedChart"), width = "45%", inline = T)
-  )
+  ns <- NS("speciesComp")
+  uiOutput(ns("ui"))
 }
 
 
@@ -23,27 +14,40 @@ speciesCompUI <- function() {
 #' - surveys
 #' - surveys_long
 #' 
-#' @param filtered_surveys a `reactive()` expression containing `filtered_surveys()`
-#' @param filtered_surveys_long a `reactive()` expression containing `filtered_surveys_long()`
+#' @param data a `reactive()` expression containing `filtered_surveys()`
+#' @param data_long a `reactive()` expression containing `filtered_surveys_long()`
 #' @param which_bees a `reactive()` expression containing `input$which_bees`
 
-speciesCompServer <- function(filtered_surveys, filtered_surveys_long, which_bees) {
+speciesCompServer <- function(data, data_long, which_bees) {
   moduleServer(
-    id = "species-comp",
+    id = "speciesComp",
     function(input, output, session) {
       ns <- session$ns
       
+      # data_ready <- reactive({
+      #   (nrow(data()) > 0) &
+      #     (nrow(data_long()) > 0) &
+      #     (!is.null(which_bees()))
+      # })
       
-      ## whole dataset chart ----
+      output$ui <- renderUI({
+        div(
+          class = "data-tab",
+          plotlyOutput(ns("plotAll"), width = "45%", inline = T),
+          plotlyOutput(ns("plotSelected"), width = "45%", inline = T)
+        )
+      })
       
-      output$allChart <- renderPlotly({
-        df <- surveys_long %>%
+      output$plotAll <- renderPlotly({
+        plot_data <- surveys_long %>%
           filter(bee_name %in% which_bees()) %>%
           droplevels() %>%
           group_by(bee_name, bee_color) %>%
           summarise(mean_count = round(mean(count), 1), .groups = "drop")
         
-        df %>% 
+        bee_colors <- levels(plot_data$bee_color)
+        
+        plot_data %>%
           plot_ly(
             labels = ~ bee_name,
             values = ~ mean_count,
@@ -53,7 +57,7 @@ speciesCompServer <- function(filtered_surveys, filtered_surveys_long, which_bee
             hoverinfo = "text",
             text = ~ paste(mean_count, bee_name, "per survey"),
             marker = list(
-              colors = levels(df$bee_color),
+              colors = bee_colors,
               line = list(color = "#ffffff", width = 1)),
             sort = F,
             direction = "clockwise",
@@ -67,21 +71,22 @@ speciesCompServer <- function(filtered_surveys, filtered_surveys_long, which_bee
             font = list(size = 15))
       })
       
-      
-      ## selected data chart ----
-      output$selectedChart <- renderPlotly({
-        df <- filtered_surveys_long() %>%
+      output$plotSelected <- renderPlotly({
+        plot_data <- data_long() %>%
           group_by(bee_name, bee_color) %>%
           summarise(mean_count = round(mean(count), 1), .groups = "drop")
         
-        df %>% 
+        n_surveys <- nrow(data())
+        bee_colors <- levels(plot_data$bee_color)
+        
+        plot_data %>% 
           plot_ly(labels = ~ bee_name, values = ~ mean_count, type = "pie",
             textposition = "inside",
             textinfo = "label+percent",
             hoverinfo = "text",
             text = ~ paste(mean_count, bee_name, "per survey"),
             marker = list(
-              colors = levels(df$bee_color),
+              colors = bee_colors,
               line = list(color = "#ffffff", width = 1)),
             sort = F,
             direction = "clockwise",
@@ -90,7 +95,7 @@ speciesCompServer <- function(filtered_surveys, filtered_surveys_long, which_bee
           add_annotations(
             y = 1.075, 
             x = 0.5, 
-            text = paste0("<b>Selected surveys (", nrow(filtered_surveys()), ")</b>"), 
+            text = paste0("<b>Selected surveys (", n_surveys, ")</b>"), 
             showarrow = F,
             font = list(size = 15))
       })

@@ -4,16 +4,7 @@
 
 activityByDateUI <- function() {
   ns <- NS("activityByDate")
-  
-  div(
-    class = "data-tab",
-    radioButtons(
-      inputId = ns("grouping"),
-      label = "Choose time period for grouping:",
-      choices = c("Day", "Week", "Month"),
-      inline = T
-    ),
-    uiOutput(ns("plotUI"))
+  div(class = "data-tab", uiOutput(ns("ui"))
   )
 }
 
@@ -36,10 +27,16 @@ activityByDateServer <- function(data, data_long) {
       
       ## Plot UI ----
       
-      output$plotUI <- renderUI({
+      output$ui <- renderUI({
         if (!data_ready()) return(div(class = "well", "No surveys selected. Change your filters above or hit 'reset filters' below."))
         
         tagList(
+          radioButtons(
+            inputId = ns("grouping"),
+            label = "Choose time period for grouping:",
+            choices = c("Day", "Week", "Month"),
+            inline = T
+          ),
           plotlyOutput(ns("plot")),
           div(class = "plot-caption", "This chart shows seasonal trends in pollinator activity by showing the average activity by pollinator group across all surveys conducted on a given day, week, or month. The date range and year(s) can be selected in the survey filters above. All selected years are combined in this plot to highlight seasonal trends.")
         )

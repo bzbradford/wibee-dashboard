@@ -573,59 +573,30 @@ server <- function(input, output, session) {
   
   
 
-# Outputs -----------------------------------------------------------------
+# Module servers -----------------------------------------------------------------
   
-  ## Bee activity pie charts ----
-  
+  # species composition pie charts
   speciesCompServer(
-    filtered_surveys = reactive(filtered_surveys()),
-    filtered_surveys_long = reactive(filtered_surveys_long()),
+    data = reactive(filtered_surveys()),
+    data_long = reactive(filtered_surveys_long()),
     which_bees = reactive(input$which_bees)
   )
 
-  
-  ## Plot activity by date ----
-  
+  # bee activity by date
   activityByDateServer(
     data = reactive(filtered_surveys()),
     data_long = reactive(filtered_surveys_long())
   )
   
-  
-  ## Plot surveys by date ----
-  
+  # number of surveys by date
   surveysByDateServer(
     data = reactive(filtered_surveys())
   )
   
-  
-  ## Plot activity by habitat ----
-  
-  output$plotByHabitat <- renderPlotly({
-    filtered_surveys_long() %>%
-      group_by(habitat_name, bee_name, bee_color) %>%
-      summarise(
-        visit_rate = round(mean(count), 1),
-        n = n(),
-        .groups = "drop") %>%
-      droplevels() %>%
-      mutate(x = fct_inorder(paste0("(", n, ") ", habitat_name))) %>%
-      plot_ly(
-        type = "bar",
-        x = ~ x,
-        y = ~ visit_rate,
-        color = ~ bee_name,
-        colors = ~ levels(.$bee_color),
-        marker = list(line = list(color = "#ffffff", width = .25))) %>%
-      layout(
-        barmode = "stack",
-        title = list(text = "<b>Pollinator visitation rates by habitat type</b>", font = list(size = 15)),
-        xaxis = list(title = "", fixedrange = T),
-        yaxis = list(title = "Number of insect visits per survey", fixedrange = T),
-        hovermode = "x unified"
-      )
-    })
-  
+  # bee activity by date
+  activityByDateServer(
+    data_long = reactive(filtered_surveys_long())
+  )
   
   
   ## Plot activity by management ----

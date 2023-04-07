@@ -5,16 +5,7 @@
 
 surveysByDateUI <- function() {
   ns <- NS("surveysByDate")
-  
-  div(
-    class = "data-tab",
-    # materialSwitch(
-    #   inputId = ns("showUsers"),
-    #   label = "Show User IDs",
-    #   status = "primary"
-    # ),
-    uiOutput(ns("plotUI"))
-  )
+  div(class = "data-tab", uiOutput(ns("ui")))
 }
 
 
@@ -32,7 +23,7 @@ surveysByDateServer <- function(data) {
         nrow(data()) > 0
       })
       
-      output$plotUI <- renderUI({
+      output$ui <- renderUI({
         if (!data_ready()) return(div(class = "well", "No surveys selected. Change your filters above or hit 'reset filters' below."))
         
         tagList(
@@ -70,37 +61,6 @@ surveysByDateServer <- function(data) {
             showlegend = F,
             bargap = 0
           )
-
-        # if (input$showUsers) {
-        #   data() %>%
-        #     arrange(user_id) %>%
-        #     mutate(user_label = fct_inorder(paste("User", user_id))) %>%
-        #     group_by(year, week, user_label) %>%
-        #     summarise(surveys_by_user = n(), .groups = "drop_last") %>%
-        #     mutate(date = as.Date(paste0(year, "-01-01")) + weeks(week - 1)) %>%
-        #     arrange(date, desc(surveys_by_user)) %>%
-        #     plot_ly(
-        #       x = ~ date,
-        #       y = ~ surveys_by_user,
-        #       type = "bar",
-        #       name = ~ user_label,
-        #       xperiodalignment = "left",
-        #       marker = list(line = list(color = "#ffffff", width = .25))) %>%
-        #     layout(
-        #       barmode = "stack",
-        #       title = list(
-        #         text = "<b>Weekly total number of completed surveys</b>",
-        #         font = list(size = 15)),
-        #       xaxis = list(
-        #         title = "",
-        #         type = "date",
-        #         tickformat = "%b %d<br>%Y"),
-        #       yaxis = list(title = "Number of surveys"),
-        #       hovermode = "x unified",
-        #       showlegend = F,
-        #       bargap = 0
-        #     )
-        # }
       })
     }
   )
