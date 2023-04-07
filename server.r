@@ -594,66 +594,9 @@ server <- function(input, output, session) {
   
   ## Plot surveys by date ----
   
-  output$plotSurveysByDate <- renderPlotly({
-    df <- filtered_surveys()
-    validate(need(nrow(df) > 0, "No surveys selected."))
-    
-    if (input$plotSurveysByDateShowUserId) {
-      df %>%
-        arrange(user_id) %>%
-        mutate(user_label = fct_inorder(paste("User", user_id))) %>%
-        group_by(year, week, user_label) %>%
-        summarise(surveys_by_user = n(), .groups = "drop_last") %>%
-        mutate(date = as.Date(paste0(year, "-01-01")) + weeks(week - 1)) %>%
-        arrange(date, desc(surveys_by_user)) %>%
-        plot_ly(
-          x = ~ date,
-          y = ~ surveys_by_user,
-          type = "bar",
-          name = ~ user_label,
-          xperiodalignment = "left",
-          marker = list(line = list(color = "#ffffff", width = .25))) %>%
-        layout(
-          barmode = "stack",
-          title = list(
-            text = "<b>Weekly total number of completed surveys</b>",
-            font = list(size = 15)),
-          xaxis = list(
-            title = "",
-            type = "date",
-            tickformat = "%b %d<br>%Y"),
-          yaxis = list(title = "Number of surveys"),
-          hovermode = "x unified",
-          showlegend = F,
-          bargap = 0
-        )
-    } else {
-      df %>%
-        group_by(year, week) %>%
-        summarise(n_surveys = n(), .groups = "drop_last") %>%
-        mutate(date = as.Date(paste0(year, "-01-01")) + weeks(week - 1)) %>%
-        plot_ly(
-          x = ~ date,
-          y = ~ n_surveys,
-          type = "bar",
-          xperiodalignment = "left",
-          marker = list(line = list(color = "#ffffff", width = .25))) %>%
-        layout(
-          barmode = "stack",
-          title = list(
-            text = "<b>Weekly total number of completed surveys</b>",
-            font = list(size = 15)),
-          xaxis = list(
-            title = "",
-            type = "date",
-            tickformat = "%b %d<br>%Y"),
-          yaxis = list(title = "Number of surveys"),
-          hovermode = "x unified",
-          showlegend = F,
-          bargap = 0
-        )
-    }
-  })
+  surveysByDateServer(
+    data = reactive(filtered_surveys())
+  )
   
   
   ## Plot activity by habitat ----

@@ -299,16 +299,7 @@ ui <- fixedPage(
     tabPanel("Activity by date", activityByDateUI()),
     
     ## Surveys by date ----
-    tabPanel("Surveys by date",
-      br(),
-      materialSwitch(
-        inputId = "plotSurveysByDateShowUserId",
-        label = "Show User IDs",
-        status = "primary"
-      ),
-      plotlyOutput("plotSurveysByDate"),
-      br(),
-      p(em("This chart shows the number of surveys completed each week and (optionally) the user ID of the person who conducted the survey, within the date range specified in the data filters above."), align = "center", style = "margin-top:.5em; margin-bottom:.5em; font-size:small")),
+    tabPanel("Surveys by date", surveysByDateUI()),
     
     ## Compare habitat ----
     tabPanel("Compare habitats",
