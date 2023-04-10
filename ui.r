@@ -300,41 +300,9 @@ ui <- fixedPage(
     tabPanel("Surveys by date", surveysByDateUI()),
     tabPanel("Compare habitats", activityByHabitatUI()),
     tabPanel("Compare managements", activityByMgmtUI()),
-    
-    ## Compare plants ----
-    tabPanel("Compare crops/flowers",
-      br(),
-      plotlyOutput("plotByCrop", height = "600px"),
-      br(),
-      p(em("This interactive chart compares total pollinator visitation rates across all of the different crops and non-crop plants surveyed with the app. The number of surveys represented by each plant species or group is shown in parentheses in the labels."), align = "center", style = "margin-top:.5em; margin-bottom:.5em; font-size:small;")),
-    
-    ## Map of filtered surveys ----
-    tabPanel("View on a map",
-      br(),
-      uiOutput("data_map_ui"),
-      leafletOutput("data_map", height = "600px"),
-      br(),
-      p(em("This map displays a summary of all the surveys currently selected by your filters. Change your filter selections or choose a different summary type to change what is shown on this map."), align = "center", style = "margin-top:.5em; margin-bottom:.5em; font-size:small;")),
-    
-    ## Tabular survey data ----
-    tabPanel("View as data table",
-      br(),
-      p("The table below shows the surveys you have currently selected by the filters above. Check or uncheck the grouping variables to simplify or expand the summary table. If a row shows n > 1, some surveys were averaged together. You can select all the columns to get each individual survey. Click the download button to save a copy of the table.", em("Note: this data is for personal or educational use only. Other use or use in a publication is not permitted without the consent of the team. ", a("Email us with any inquiries.", href = "mailto:pollinators@wisc.edu"))),
-      br(),
-      fixedRow(
-        column(8,
-          checkboxGroupInput(
-            "dtGroups",
-            label = "Select which variables to include in table:",
-            choiceNames = table_vars$names,
-            choiceValues = table_vars$values,
-            selected = table_vars_selected,
-            inline = T)),
-        column(4, align = "right",
-          downloadButton("download_data", "Download data"))
-      ),
-      DTOutput("summaryTable")
-    ),
+    tabPanel("Compare crops/flowers", activityByCropUI()),
+    tabPanel("View on a map", activityMapUI()),
+    tabPanel("View as data table", dataTableUI()),
     
     ## User stats ----
     tabPanel("User statistics",

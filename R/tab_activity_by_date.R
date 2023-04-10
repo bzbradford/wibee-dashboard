@@ -4,7 +4,9 @@
 
 activityByDateUI <- function() {
   ns <- NS("activityByDate")
-  div(class = "data-tab", uiOutput(ns("ui"))
+  div(
+    class = "data-tab",
+    uiOutput(ns("ui"))
   )
 }
 
@@ -28,7 +30,7 @@ activityByDateServer <- function(data, data_long) {
       ## Plot UI ----
       
       output$ui <- renderUI({
-        if (!data_ready()) return(div(class = "well", "No surveys selected. Change your filters above or hit 'reset filters' below."))
+        if (!data_ready()) return(noSurveysMsg())
         
         tagList(
           radioButtons(

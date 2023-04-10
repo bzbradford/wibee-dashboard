@@ -5,7 +5,10 @@
 
 surveysByDateUI <- function() {
   ns <- NS("surveysByDate")
-  div(class = "data-tab", uiOutput(ns("ui")))
+  div(
+    class = "data-tab",
+    uiOutput(ns("ui"))
+  )
 }
 
 
@@ -24,7 +27,7 @@ surveysByDateServer <- function(data) {
       })
       
       output$ui <- renderUI({
-        if (!data_ready()) return(div(class = "well", "No surveys selected. Change your filters above or hit 'reset filters' below."))
+        if (!data_ready()) return(noSurveysMsg())
         
         tagList(
           plotlyOutput(ns("plot")),

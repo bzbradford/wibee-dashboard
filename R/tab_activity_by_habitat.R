@@ -4,7 +4,10 @@
 
 activityByHabitatUI <- function() {
   ns <- NS("activityByHabitat")
-  uiOutput(ns("ui"))
+  div(
+    class = "data-tab",
+    uiOutput(ns("ui"))
+  )
 }
 
 
@@ -18,10 +21,12 @@ activityByHabitatServer <- function(data_long) {
     function(input, output, session) {
       ns <- session$ns
       
-      data_ready <- reactive({nrow(data_long()) > 0})
+      data_ready <- reactive({
+        nrow(data_long()) > 0
+      })
       
       output$ui <- renderUI({
-        if (!data_ready()) return(div(class = "well", "No surveys selected. Change your filters above or hit 'reset filters' below."))
+        if (!data_ready()) return(noSurveysMsg())
         
         tagList(
           plotlyOutput(ns("plot")),

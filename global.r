@@ -93,14 +93,6 @@ focal_plant_list <- read_csv("plants/focal-plant-list.csv", show_col_types = F)
 plant_replace <- bind_rows(legacy_plant_list, focal_plant_list)
 
 
-# for data table display
-table_vars <- tibble(
-  names = c("Survey ID", "User ID", "Year", "Date", "Location", "Habitat", "Crop/Plant", "Management"),
-  values = c("id", "user_id", "year", "date", "grid_pt", "habitat", "crop", "management")
-  )
-table_vars_selected <- c("habitat", "crop", "management")
-
-
 ## survey attribute cols to keep ----
 
 keep_cols <- c(
@@ -153,7 +145,7 @@ surveys_raw <- wibee_in %>%
     day = lubridate::day(date),
     doy = lubridate::yday(date),
     .after = "date") %>%
-  mutate(across(all_of(bee_cols), replace_na, 0)) %>%
+  mutate(across(all_of(bee_cols), ~ replace_na(.x, 0))) %>%
   mutate(wild_bee = bumble_bee + large_dark_bee + small_dark_bee + greenbee) %>%
   mutate(
     habitat = replace_na(habitat, "other"),

@@ -4,7 +4,11 @@
 
 speciesCompUI <- function() {
   ns <- NS("speciesComp")
-  uiOutput(ns("ui"))
+  div(
+    class = "data-tab",
+    plotlyOutput(ns("plotAll"), width = "45%", inline = T),
+    plotlyOutput(ns("plotSelected"), width = "45%", inline = T)
+  )
 }
 
 
@@ -23,20 +27,6 @@ speciesCompServer <- function(data, data_long, which_bees) {
     id = "speciesComp",
     function(input, output, session) {
       ns <- session$ns
-      
-      # data_ready <- reactive({
-      #   (nrow(data()) > 0) &
-      #     (nrow(data_long()) > 0) &
-      #     (!is.null(which_bees()))
-      # })
-      
-      output$ui <- renderUI({
-        div(
-          class = "data-tab",
-          plotlyOutput(ns("plotAll"), width = "45%", inline = T),
-          plotlyOutput(ns("plotSelected"), width = "45%", inline = T)
-        )
-      })
       
       output$plotAll <- renderPlotly({
         plot_data <- surveys_long %>%

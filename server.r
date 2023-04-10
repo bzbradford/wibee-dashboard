@@ -573,7 +573,7 @@ server <- function(input, output, session) {
   
   
 
-# Module servers -----------------------------------------------------------------
+# Module servers ----
   
   # species composition pie charts
   speciesCompServer(
@@ -603,154 +603,21 @@ server <- function(input, output, session) {
     data_long = reactive(filtered_surveys_long())
   )
   
+  # bee activity by crop type
+  activityByCropServer(
+    data_long = reactive(filtered_surveys_long())
+  )
   
-  ## Plot activity by plant ----
+  # map showing surveys or bee activity
+  activityMapServer(
+    data = reactive(filtered_surveys()),
+    data_long = reactive(filtered_surveys_long())
+  )
   
-  output$plotByCrop <- renderPlotly({
-    
-    # estimate label lengths to increase plot margin
-    margin <- min(max(40, 10 + 4 * max(nchar(filtered_surveys()$plant_label))), 200)
-    
-    # plot
-    filtered_surveys_long() %>%
-      group_by(plant_label, bee_name, bee_color) %>%
-      summarise(
-        visit_rate = round(mean(count), 1),
-        n = n(),
-        .groups = "drop") %>%
-      droplevels() %>%
-      mutate(x = fct_inorder(paste0("(", n, ") ", plant_label))) %>%
-      plot_ly(
-        type = "bar",
-        x = ~ x,
-        y = ~ visit_rate,
-        color = ~ bee_name,
-        colors = ~ levels(.$bee_color),
-        marker = list(line = list(color = "#ffffff", width = .25))) %>%
-      layout(
-        barmode = "stack",
-        title = list(text = "<b>Pollinator visitation rates by plant type</b>", font = list(size = 15)),
-        xaxis = list(title = "", fixedrange = T, tickangle = 45),
-        yaxis = list(title = "Number of visits per survey", fixedrange = T),
-        hovermode = "x unified",
-        margin = list(b = margin)
-      )
-    })
-  
-  
-  
-  ## Map output ----
-  output$data_map_ui <- renderUI({
-    list(
-      radioButtons(
-        inputId = "data_map_summary_type",
-        label = "Choose summary value to show on the map:",
-        choices = c(
-          "Number of surveys",
-          "Insect visits per survey",
-          "Number of users"
-        ),
-        inline = T
-      ),
-      radioButtons(
-        inputId = "data_map_aggr_size",
-        label = "Choose spatial aggregation size (degrees):",
-        choices = c(0.05, 0.1, 0.25, 0.5),
-        selected = 0.1,
-        inline = T
-      )
-    )
-  })
-  
-  output$data_map <- renderLeaflet({
-    
-    req(input$data_map_summary_type)
-    req(input$data_map_aggr_size)
-    
-    validate(
-      need(nrow(filtered_surveys()) > 0, "There are no surveys remaining after all filters.")
-    )
-    
-    div = as.numeric(input$data_map_aggr_size)
-    df <- filtered_surveys() %>%
-      mutate(
-        lat = round(lat / div) * div,
-        lng = round(lng / div) * div
-      ) %>%
-      group_by(lat, lng)
-    
-    df_long <- filtered_surveys_long() %>%
-      mutate(
-        lat = round(lat / div) * div,
-        lng = round(lng / div) * div
-      ) %>%
-      group_by(lat, lng, id)
-    
-    if (input$data_map_summary_type == "Number of surveys") {
-      df <- df %>%
-        summarise(value = n(), .groups = "drop")
-    } else if (input$data_map_summary_type == "Insect visits per survey") {
-      df <- df_long %>%
-        summarise(total_visits = sum(count), .groups = "drop_last") %>%
-        summarise(value = round(mean(total_visits), 1), .groups = "drop")
-    } else if (input$data_map_summary_type == "Number of users") {
-      df <- df %>%
-        summarise(value = n_distinct(user_id), .groups = "drop")
-    }
-    
-    pal <- colorNumeric(
-      palette = "YlOrRd",
-      domain = df$value
-    )
-    
-    df %>%
-      leaflet() %>%
-      addTiles() %>%
-      addRectangles(
-        lng1 = ~ lng - div / 2, lng2 = ~ lng +  div / 2,
-        lat1 = ~ lat - div / 2, lat2 = ~ lat + div / 2,
-        label = ~ paste0(input$data_map_summary_type, ": ", value),
-        weight = 0.25,
-        opacity = 0.9,
-        color = "darkgrey",
-        fillOpacity = .9,
-        fillColor = ~pal(value),
-        highlight = highlightOptions(
-          weight = 2,
-          color = "red")
-      )
-  })
-  
-  
-
-  ## Data table ----
-
-  filteredTable <- reactive({
-    filtered_surveys_long() %>%
-      mutate(date = as.character(date)) %>%
-      group_by_at(input$dtGroups) %>%
-      group_by(bee_name, .add = T) %>%
-      summarise(
-        n = n(),
-        visit_rate = round(mean(count), 1),
-        .groups = "drop_last") %>%
-      mutate("Total rate" = sum(visit_rate)) %>%
-      ungroup() %>%
-      pivot_wider(names_from = bee_name, values_from = visit_rate) %>%
-      mutate("row" = row_number()) %>%
-      select("row", everything())
-    })
-  
-  output$summaryTable <- renderDT(
-    filteredTable(),
-    rownames = F,
-    options = list(pageLength = 25)
-    )
-  
-  output$download_data <- downloadHandler(
-    filename = function() { paste0("WiBee data ", format(Sys.time(), "%Y-%m-%d %H%M%S"), ".csv") },
-    content = function(file) { write_csv(filteredTable(), file) }
-    )
+  # data table
+  dataTableServer(
+    data_long = reactive(filtered_surveys_long())
+  )
   
   
   
