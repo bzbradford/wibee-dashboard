@@ -303,13 +303,7 @@ ui <- fixedPage(
     tabPanel("Compare crops/flowers", activityByCropUI()),
     tabPanel("View on a map", activityMapUI()),
     tabPanel("View as data table", dataTableUI()),
-    
-    ## User stats ----
-    tabPanel("User statistics",
-      br(),
-      plotlyOutput("plotUserStats", height = "600px"),
-      p(em("This graph shows the total number of surveys conducted each year, further grouped by the number of users who have conducted the same amount of surveys."), align = "center", style = "margin-top:.5em; margin-bottom:.5em; font-size:small;")
-    )
+    tabPanel("User statistics", userStatsUI())
   ),
   
   br(),

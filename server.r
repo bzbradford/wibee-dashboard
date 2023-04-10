@@ -619,51 +619,9 @@ server <- function(input, output, session) {
     data_long = reactive(filtered_surveys_long())
   )
   
-  
-  
-  ## Plot user statistics ----
-  
-  output$plotUserStats <- renderPlotly({
-    df <- 
-      filtered_surveys() %>%
-      mutate(year = format(date, "%Y")) %>%
-      group_by(year, user_id) %>%
-      summarise(surveys_per_user = n(), .groups = "drop") %>%
-      group_by(year, surveys_per_user) %>%
-      summarise(n_users = n(), total_surveys = sum(surveys_per_user), .groups = "drop") %>%
-      arrange(desc(total_surveys)) %>%
-      mutate(
-        parent = year,
-        label = paste0("<B>", total_surveys, " surveys</B>\n", n_users, " users with\n", surveys_per_user, " surveys each"),
-        id = interaction(year, label),
-        value = total_surveys)
-    
-    df2 <- df %>%
-      group_by(year) %>%
-      summarise(
-        total_surveys = sum(total_surveys),
-        total_users = sum(n_users)) %>%
-      mutate(
-        parent = "All surveys",
-        label = paste0("<B>", year, ": ", total_surveys, " surveys by ", total_users, " users</B>"),
-        id = year,
-        value = total_surveys)
-    
-    df3 <- df %>%
-      bind_rows(df2) %>%
-      arrange(id)
-    
-    df3 %>%
-      plot_ly(
-        type = "treemap",
-        ids = ~ id,
-        labels = ~ label,
-        values = ~ value,
-        parents = ~ parent,
-        hoverinfo = "label",
-        marker = list(colorscale = "Greens", reversescale = T),
-        branchvalues = "total"
-      )
-    })
+  # user stats
+  userStatsServer(
+    data = reactive(filtered_surveys())
+  )
   
 }
