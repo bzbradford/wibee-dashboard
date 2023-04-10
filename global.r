@@ -299,9 +299,12 @@ map_pts_wi <- filter(map_pts, inwi == T)$grid_pt
 # get date range of data
 min_date <- min(surveys$date)
 max_date <- max(surveys$date)
+
 years <- unique(format(surveys$date, "%Y"))
+
 date_slider_min <- as.Date(format(Sys.Date(), "%Y-01-01"))
 date_slider_max <- as.Date(format(Sys.Date(), "%Y-12-31"))
+
 year_summary <- surveys %>%
   group_by(year) %>%
   summarise(
