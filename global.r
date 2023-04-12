@@ -15,6 +15,7 @@ suppressMessages({
   library(shinythemes)
   library(shinyWidgets)
   library(shinyBS)
+  library(shinyjs)
   
   # display
   library(DT)

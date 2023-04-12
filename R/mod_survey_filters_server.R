@@ -64,7 +64,29 @@ surveyFiltersServer <- function(data) {
           addTiles() %>%
           addMapPane("base_grids", zIndex = 410) %>%
           addMapPane("selected_grids", zIndex = 420) %>%
-          setView(lng = -89.7, lat = 44.8, zoom = 7)
+          setView(lng = -89.7, lat = 44.8, zoom = 7) %>%
+          addEasyButtonBar(
+            easyButton(
+              position = "topleft",
+              icon = "fa-crosshairs",
+              title = "Get my location",
+              onClick = JS("
+            function(btn, map) {
+              map.locate({
+                setView: true,
+                enableHighAccuracy: false,
+                maxZoom: 12
+              })
+            }
+          ")
+            ),
+            easyButton(
+              position = "topleft",
+              icon = "fa-globe",
+              title = "Reset map view",
+              onClick = JS("function(btn, map) { map.setView([44.8, -89.7], 7) }")
+            )
+          )
       })
       
       observeEvent(map_grids(), {
@@ -126,6 +148,8 @@ surveyFiltersServer <- function(data) {
         click <- input$map_shape_click
         grid_pt <- str_remove(click$id, " selected")
         proxy <- leafletProxy("map")
+        
+        print(click)
         
         # on first click deselect all other grids
         if (grepl("selected", click$id, fixed = T)) {

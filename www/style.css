@@ -14,3 +14,7 @@
   font-style: italic;
   text-align: center;
 }
+
+.section-heading {
+  border-bottom: 4px solid #ecf0f1;
+}
