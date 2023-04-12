@@ -1,0 +1,20 @@
+/* Modifications of existing classes */
+
+
+/* New classes */
+
+.data-tab {
+  min-height: 300px;
+  margin-top: 1em;
+}
+
+.plot-caption {
+  margin: 0.5em 2em;
+  font-size: smaller;
+  font-style: italic;
+  text-align: center;
+}
+
+.section-heading {
+  border-bottom: 4px solid #ecf0f1;
+}

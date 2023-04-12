@@ -1,9 +1,12 @@
 # global.R
 
+# Required packages ----
+
 suppressMessages({
   # core
   library(tidyverse)
   library(lubridate)
+  library(janitor)
   library(RColorBrewer)
   library(httr)
   
@@ -12,6 +15,7 @@ suppressMessages({
   library(shinythemes)
   library(shinyWidgets)
   library(shinyBS)
+  library(shinyjs)
   
   # display
   library(DT)
@@ -31,6 +35,7 @@ if (file.exists("refresh_time")) {
 
 
 # update surveys at most once an hour. Writes to local csv
+status <- "Skipped data refresh, last query < 1 hr ago."
 if (refresh_time < Sys.time() - 3600) {
   status <- "Unable to refresh data from remote server."
   try({
@@ -40,20 +45,20 @@ if (refresh_time < Sys.time() - 3600) {
     if (is.data.frame(get_surveys)) {
       get_surveys %>%
         arrange(ended_at) %>%
-        write_csv("private/surveys.csv")
+        write_csv("surveys/surveys.csv")
       refresh_time <- Sys.time()
       saveRDS(refresh_time, "refresh_time")
       status <- "Survey data refreshed from remote database."
     }
   })
-} else {
-  status <- "Skipped data refresh, last query < 1 hr ago."
 }
 message(status)
 
 
+# Load surveys csv ----
 # read data from local csv and copy amended data into main columns
-wibee_in <- read_csv("private/surveys.csv", guess_max = 10000, show_col_types = F) %>%
+
+wibee_in <- read_csv("surveys/surveys.csv", guess_max = 10000, show_col_types = F) %>%
   mutate(
     bumble_bee = bumble_bee_amended,
     honeybee = honeybee_amended,
@@ -63,17 +68,12 @@ wibee_in <- read_csv("private/surveys.csv", guess_max = 10000, show_col_types = 
     non_bee = non_bee_amended
   )
 
-# Check values in columns
-# wibee_in$site_type %>% unique()
-# wibee_in$crop %>% unique()
-# wibee_in$management_type %>% unique()
-
-
 
 # Load/create helper data ----
 
 # bee names and colors
-bees <- read_csv("data/bees.csv", show_col_types = F) %>% mutate_all(fct_inorder)
+bees <- read_csv("data/bees.csv", show_col_types = F) %>%
+  mutate_all(fct_inorder)
 
 # formatted bee names for ungrouped
 bee_names <- as.character(filter(bees, type != "wild_bee")$label)
@@ -82,27 +82,20 @@ bee_names <- as.character(filter(bees, type != "wild_bee")$label)
 wildbee_names <- levels(bees$group)
 
 
-# load habitat and management types
+## load habitat and management types ----
 habitat_list <- read_csv("data/habitats.csv", show_col_types = F)
 management_list <- read_csv("data/managements.csv", show_col_types = F)
 
 
-# load plant lists
+## load plant lists ----
 plant_list <- read_csv("plants/known-plant-list.csv", show_col_types = F)
 legacy_plant_list <- read_csv("plants/legacy-plant-list.csv", show_col_types = F)
 focal_plant_list <- read_csv("plants/focal-plant-list.csv", show_col_types = F)
 plant_replace <- bind_rows(legacy_plant_list, focal_plant_list)
 
 
-# for data table display
-table_vars <- tibble(
-  names = c("Survey ID", "User ID", "Year", "Date", "Location", "Habitat", "Crop/Plant", "Management"),
-  values = c("id", "user_id", "year", "date", "grid_pt", "habitat", "crop", "management")
-  )
-table_vars_selected <- c("habitat", "crop", "management")
+## survey attribute cols to keep ----
 
-
-# survey attribute cols to keep
 keep_cols <- c(
   "id",
   "remote_id",
@@ -117,7 +110,9 @@ keep_cols <- c(
   "master_gardener",
   "picture_url")
 
-# bee cols to pivot
+
+## bee column names ----
+
 bee_cols <- c(
   "honeybee",
   "bumble_bee",
@@ -127,10 +122,14 @@ bee_cols <- c(
   "non_bee")
 
 
+## Get user IDs ----
+
+user_ids <- unique(wibee_in$user_id)
+
 
 # Process survey data ----
 
-wibee <- wibee_in %>%
+surveys_raw <- wibee_in %>%
   arrange(created_at) %>%
   mutate(remote_id = id, id = 1:length(id)) %>%
   select(all_of(c(keep_cols, bee_cols))) %>%
@@ -147,7 +146,7 @@ wibee <- wibee_in %>%
     day = lubridate::day(date),
     doy = lubridate::yday(date),
     .after = "date") %>%
-  mutate(across(all_of(bee_cols), replace_na, 0)) %>%
+  mutate(across(all_of(bee_cols), ~ replace_na(.x, 0))) %>%
   mutate(wild_bee = bumble_bee + large_dark_bee + small_dark_bee + greenbee) %>%
   mutate(
     habitat = replace_na(habitat, "other"),
@@ -191,7 +190,7 @@ wibee <- wibee_in %>%
 # Get habitat/management/plant lists ----
 
 # make ranked list of habitat types
-habitats <- wibee %>%
+habitats <- surveys_raw %>%
   group_by(habitat, habitat_name) %>%
   summarise(surveys = n(), .groups = "drop") %>%
   arrange(desc(surveys)) %>%
@@ -200,7 +199,7 @@ habitats <- wibee %>%
   drop_na()
 
 # make ranked list of management types
-managements <- wibee %>%
+managements <- surveys_raw %>%
   group_by(management, management_name) %>%
   summarise(surveys = n(), .groups = "drop") %>%
   arrange(desc(surveys)) %>%
@@ -209,7 +208,7 @@ managements <- wibee %>%
   drop_na()
 
 # make ranked list of plants and reclass low-frequency ones
-plant_ranks <- wibee %>%
+plant_ranks <- surveys_raw %>%
   group_by(plant_group, plant_id, plant_label) %>%
   summarise(surveys = n(), .groups = "drop") %>%
   group_by(plant_group) %>%
@@ -228,22 +227,11 @@ plant_ranks <- wibee %>%
   drop_na()
 
 
-# Get user IDs ----
-
-user_ids <- unique(wibee_in$user_id)
-
-
-
 # Save main survey data ----
 
-surveys <- wibee %>%
+surveys <- surveys_raw %>%
   select(-c(remote_id, picture_url, plant_label)) %>%
   left_join(plant_ranks, by = c("plant_id", "plant_group"))
-
-# separate surveys and ids for picture downloads. The ids will change if the filter is changed in the block above
-images <- wibee %>%
-  select(c("id", "remote_id", "picture_url")) %>%
-  filter(!is.na(picture_url))
 
 
 
@@ -285,7 +273,6 @@ surveys_long <- surveys %>%
 
 
 
-
 # Map data and other summaries ----
 
 # generate grid points and summary statistics
@@ -313,9 +300,12 @@ map_pts_wi <- filter(map_pts, inwi == T)$grid_pt
 # get date range of data
 min_date <- min(surveys$date)
 max_date <- max(surveys$date)
+
 years <- unique(format(surveys$date, "%Y"))
+
 date_slider_min <- as.Date(format(Sys.Date(), "%Y-01-01"))
 date_slider_max <- as.Date(format(Sys.Date(), "%Y-12-31"))
+
 year_summary <- surveys %>%
   group_by(year) %>%
   summarise(
