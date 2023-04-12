@@ -15,10 +15,8 @@ surveyFiltersServer <- function(data) {
       
     # Reactive values ----
       
-      rv <- reactiveValues(
-        map_selection = map_pts_wi,
-        selected_users = NULL
-      )
+      map_selection <- reactiveVal(map_pts_wi)
+      selected_users <- reactiveVal()
       
       
     # Filter by year ----
@@ -47,7 +45,7 @@ surveyFiltersServer <- function(data) {
       
       surveys_by_loc <- reactive({
         surveys_by_year() %>%
-          filter(grid_pt %in% rv$map_selection)
+          filter(grid_pt %in% map_selection())
       })
       
       
@@ -115,15 +113,16 @@ surveyFiltersServer <- function(data) {
       
       # deselect grids that are no longer available
       observeEvent(map_grids(), {
-        rv$map_selection <- intersect(rv$map_selection, map_grids()$grid_pt)
+        new_selection <- intersect(map_selection(), map_grids()$grid_pt)
+        map_selection(new_selection)
       })
       
       # reactive portion of map showing selected grids
-      observeEvent(rv$map_selection, {
+      observeEvent(map_selection(), {
         leafletProxy("map") %>%
           clearGroup("selected_grids") %>%
           addRectangles(
-            data = filter(map_pts, grid_pt %in% rv$map_selection),
+            data = filter(map_pts, grid_pt %in% map_selection()),
             layerId = ~ paste(grid_pt, "selected"),
             group = "selected_grids",
             lng1 = ~ lng - .05, lng2 = ~ lng + .05,
@@ -147,20 +146,22 @@ surveyFiltersServer <- function(data) {
       observeEvent(input$map_shape_click, {
         click <- input$map_shape_click
         grid_pt <- str_remove(click$id, " selected")
-        proxy <- leafletProxy("map")
         
-        print(click)
-        
-        # on first click deselect all other grids
+        # clicked on a selected grid
         if (grepl("selected", click$id, fixed = T)) {
-          if (length(rv$map_selection) == 1) {return()}
-          proxy %>% removeShape(click$id)
-          old_sel <- rv$map_selection
-          new_sel <- old_sel[old_sel != grid_pt]
-          rv$map_selection <- new_sel
+          # on first click, select only that grid
+          if (setequal(map_selection(), map_pts_wi)) {
+            map_selection(grid_pt)
+          } else {
+            leafletProxy("map") %>%
+              removeShape(click$id)
+            old_sel <- map_selection()
+            new_sel <- old_sel[old_sel != grid_pt]
+            map_selection(new_sel)
+          }
         } else {
-          new_sel <- c(rv$map_selection, grid_pt)
-          rv$map_selection <- new_sel
+          new_sel <- c(map_selection(), grid_pt)
+          map_selection(new_sel)
         }
       })
       
@@ -175,7 +176,7 @@ surveyFiltersServer <- function(data) {
             lat1 = min(map_grids()$lat),
             lng2 = max(map_grids()$lng),
             lat2 = max(map_grids()$lat))
-        rv$map_selection <- map_grids()$grid_pt
+        map_selection(map_grids()$grid_pt)
       })
       
       # select grids visible in map window
@@ -191,14 +192,14 @@ surveyFiltersServer <- function(data) {
           pull(grid_pt)
         leafletProxy("map") %>%
           clearGroup("selected_grids")
-        rv$map_selection <- new_pts
+        map_selection(new_pts)
       })
       
       # clear selection
       observeEvent(input$map_clear_selection, {
         leafletProxy("map") %>%
           clearGroup("selected_grids")
-        rv$map_selection <- NULL
+        map_selection(NULL)
       })
       
       observeEvent(input$map_reset, resetMap())
@@ -210,7 +211,8 @@ surveyFiltersServer <- function(data) {
       }
       
       resetMapGrids <- function() {
-        rv$map_selection <- filter(map_grids(), inwi)$grid_pt
+        new_sel <- filter(map_grids(), inwi)$grid_pt
+        map_selection(new_sel)
       }
       
       resetMapView <- function() {
@@ -222,11 +224,11 @@ surveyFiltersServer <- function(data) {
       ## Survey count text ----
       
       output$survey_count_loc <- renderText({
-        if (is.null(rv$map_selection)) {
+        if (is.null(map_selection())) {
           "0 zones and 0 surveys selected on the map."
         } else {
           paste(
-            length(rv$map_selection), "zones and ",
+            length(map_selection()), "zones and ",
             nrow(surveys_by_loc()), " surveys selected on the map.")
         }
       })
@@ -236,10 +238,10 @@ surveyFiltersServer <- function(data) {
     # Filter by user id ----
       
       surveys_by_user <- reactive({
-        if (is.null(rv$selected_users)) {
+        if (is.null(selected_users())) {
           surveys_by_loc()
         } else {
-          filter(surveys_by_loc(), user_id %in% rv$selected_users)
+          filter(surveys_by_loc(), user_id %in% selected_users())
         }
       })
       
@@ -247,11 +249,11 @@ surveyFiltersServer <- function(data) {
       ## UI ----
       
       output$selected_users_display <- renderUI({
-        if (is.null(rv$selected_users)) {
+        if (is.null(selected_users())) {
           p(em("No users selected, showing surveys by all users."))
         } else {
           p(
-            lapply(rv$selected_users, function(i) {
+            lapply(selected_users(), function(i) {
               list(
                 strong(i),
                 paste(":", sum(surveys$user_id == i), "surveys"),
@@ -272,10 +274,12 @@ surveyFiltersServer <- function(data) {
         )
         valid_ids <- sort(intersect(ids, user_ids))
         if (length(valid_ids) > 0) {
-          if (is.null(rv$selected_users)) {
-            rv$selected_users <- valid_ids
+          if (is.null(selected_users())) {
+            selected_users(valid_ids)
           } else {
-            rv$selected_users <- sort(union(rv$selected_users, valid_ids))
+            selected_users(
+              sort(union(selected_users(), valid_ids))
+            )
           }
         }
         updateTextInput(inputId = "user_id", value = "")
@@ -288,7 +292,7 @@ surveyFiltersServer <- function(data) {
       
       resetUserIds <- function() {
         updateTextInput(inputId = "user_id", value = "")
-        rv$selected_users <- NULL
+        selected_users(NULL)
       }
       
       output$survey_count_users <- renderText({
@@ -686,7 +690,7 @@ surveyFiltersServer <- function(data) {
         resetBees()
         resetDate()
         resetUserIds()
-        rv$map_selection <- map_pts_wi
+        map_selection(map_pts_wi)
         resetMapView()
         resetYears()
       })
