@@ -57,7 +57,7 @@ ui <- fixedPage(
   br(),
   
   
-  # Data tabs ----
+  ## Data tabs ----
 
   h3(class = "section-heading", "View or download data from selected surveys"),
   
