@@ -8,7 +8,7 @@ speciesCompUI <- function() {
   div(
     class = "data-tab",
     wellPanel(
-      h4("Pollinator composition pie charts"),
+      h4("Pollinator species composition pie charts"),
       p(em("Compare pollinator species compositions across different survey groups with this display tool. You select a set of surveys using the filters above (for instance, select surveys conducted in prairies), then pin the pie chart to your list for comparison with other survey sets.")),
       strong("Input a chart title, then pin to list"),
       uiOutput(ns("plotControls"))
@@ -16,7 +16,6 @@ speciesCompUI <- function() {
     uiOutput(ns("pinnedPlots"))
   )
 }
-
 
 
 # Pie builder ----
@@ -84,7 +83,7 @@ speciesCompServer <- function(cur_surveys_long) {
     function(input, output, session) {
       ns <- session$ns
       
-      pinned_plots <- reactiveVal(tagList())
+      pinned_plots <- reactiveVal(c())
       show_current <- reactiveVal(TRUE)
       first_run <- reactiveVal(TRUE)
       
@@ -130,7 +129,6 @@ speciesCompServer <- function(cur_surveys_long) {
       
       observeEvent(input$removePlot, {
         id <- input$removePlot
-        print(id)
         
         if (id == 999) {
           show_current(FALSE)

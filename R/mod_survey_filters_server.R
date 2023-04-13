@@ -26,6 +26,10 @@ surveyFiltersServer <- function(data) {
           filter(year %in% input$years)
       })
       
+      observeEvent(input$years, {
+        resetMap()
+      })
+      
       output$year_survey_count <- renderText({
         paste(
           nrow(surveys_by_year()), "out of",
@@ -690,8 +694,7 @@ surveyFiltersServer <- function(data) {
         resetBees()
         resetDate()
         resetUserIds()
-        map_selection(map_pts_wi)
-        resetMapView()
+        resetMap()
         resetYears()
       })
       
