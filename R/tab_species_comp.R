@@ -86,6 +86,7 @@ speciesCompServer <- function(cur_surveys_long) {
         droplevels()
       
       pinned_plots <- reactiveVal(list())
+      plot_num <- reactiveVal(0)
       show_current <- reactiveVal(TRUE)
       first_run <- reactiveVal(TRUE)
       msg <- reactiveVal()
@@ -139,7 +140,8 @@ speciesCompServer <- function(cur_surveys_long) {
         
         msg(NULL)
         plots <- pinned_plots()
-        plot_id <- gsub("[^[:alnum:]]", "", input$title)
+        plot_num(plot_num() + 1)
+        plot_id <- paste0("plt_", plot_num())
         plots[[plot_id]] <- make_pie(cur_surveys_long(), input$title, plot_id)
         pinned_plots(plots)
         updateTextInput(inputId = "title", value = "")
@@ -153,7 +155,6 @@ speciesCompServer <- function(cur_surveys_long) {
           show_current(FALSE)
         } else {
           plots <- pinned_plots()
-          print(plots)
           plots[[input$removePlot]] <- NULL
           pinned_plots(plots)
         }
@@ -168,6 +169,7 @@ speciesCompServer <- function(cur_surveys_long) {
         pinned_plots(c())
         first_run(TRUE)
         show_current(TRUE)
+        plot_num(0)
         msg(NULL)
       })
     }
