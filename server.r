@@ -19,9 +19,7 @@ server <- function(input, output, session) {
   
   # species composition pie charts
   speciesCompServer(
-    data = reactive(filtered_surveys()),
-    data_long = reactive(filtered_surveys_long()),
-    which_bees = reactive(input$`surveyFilters-which_bees`)
+    cur_surveys_long = reactive(filtered_surveys_long())
   )
 
   # bee activity by date

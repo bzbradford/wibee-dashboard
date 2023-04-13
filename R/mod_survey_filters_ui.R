@@ -16,8 +16,10 @@ surveyFiltersUI <- function() {
         style = "primary",
         title = "Select year(s) to show",
         tagList(
-          p(em("Select which year or years of survey data you want to see.")),
-          wellPanel(
+          p(em("Select which year or years of survey data you want to see. After changing your year selections, grid point selections may have changed on the map.")),
+          div(
+            class = "well",
+            style = "padding-bottom: 0px;",
             checkboxGroupInput(
               inputId = ns("years"),
               label = "Surveys from year:",
