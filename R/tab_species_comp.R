@@ -50,15 +50,13 @@ make_pie <- function(df, title, id) {
       paper_bgcolor = "rgba(0, 0, 0, 0)"
     )
   
-  onclick <- paste0("Shiny.onInputChange('", ns("removePlot"), "', ", id, ", {priority: 'event'})")
+  plot_title <- paste0(title, " (", n_surveys, ")")
+  onclick <- paste0("Shiny.onInputChange('", ns("removePlot"), "', '", id, "', {priority: 'event'})")
   
   tagList(
     div(
       class = "pie",
-      h4(
-        class = "plot-title",
-        paste0(title, " (", n_surveys, ")")
-      ),
+      h4(class = "plot-title", plot_title),
       renderPlotly(plt),
       div(
         align = "right",
@@ -83,20 +81,27 @@ speciesCompServer <- function(cur_surveys_long) {
     function(input, output, session) {
       ns <- session$ns
       
-      pinned_plots <- reactiveVal(c())
+      wi_surveys <- surveys_long %>%
+        filter(inwi, bee_name != "Wild bees") %>%
+        droplevels()
+      
+      pinned_plots <- reactiveVal(list())
       show_current <- reactiveVal(TRUE)
       first_run <- reactiveVal(TRUE)
+      msg <- reactiveVal()
       
       output$pinnedPlots <- renderUI({
         if (length(pinned_plots()) == 0 & first_run()) {
-          first_plot <- make_pie(cur_surveys_long(), "All Wisconsin surveys", 1)
-          pinned_plots(first_plot)
+          plots <- list()
+          plot_id <- "_all"
+          plots[[plot_id]] <- make_pie(wi_surveys, "All Wisconsin surveys", plot_id)
+          pinned_plots(plots)
           first_run(FALSE)
         }
         
         plots <- pinned_plots()
-        if (show_current()) {
-          cur_plot <- make_pie(cur_surveys_long(), "Currently selected surveys", 999)
+        if (show_current() & nrow(cur_surveys_long()) > 0) {
+          cur_plot <- make_pie(cur_surveys_long(), "Currently selected surveys", "cur")
           plots <- c(plots, cur_plot)
         }
         
@@ -104,42 +109,58 @@ speciesCompServer <- function(cur_surveys_long) {
       })
       
       output$plotControls <- renderUI({
-        div(
-          class = "flex-row",
-          div(textInput(ns("title"), label = NULL)),
-          div(actionButton(ns("addPlot"), "Pin current plot")),
-          {
-            if (!show_current()) div(actionButton(ns("toggleCurrent"), "Show current plot"))
-          },
-          div(actionButton(ns("clearPlots"), "Reset plots"))
+        tagList(
+          div(
+            class = "flex-row",
+            div(textInput(ns("title"), label = NULL, value = isolate(input$title))),
+            div(actionButton(ns("addPlot"), "Pin current plot")),
+            {if (!show_current()) div(actionButton(ns("toggleCurrent"), "Show current plot"))},
+            div(actionButton(ns("clearPlots"), "Reset plots"))
+          ),
+          {if (!is.null(msg())) div(style = "color: red; font-style: italic;", msg())}
         )
       })
       
       observeEvent(input$addPlot, {
-        req(input$title != "")
-        req(nrow(cur_surveys_long()) > 0)
+        if (nrow(cur_surveys_long()) == 0) {
+          msg("There aren't any surveys currently selected.")
+          return()
+        }
         
-        new_plot <- make_pie(
-          cur_surveys_long(),
-          input$title,
-          length(pinned_plots()) + 1
-        )
-        pinned_plots(c(pinned_plots(), new_plot))
+        if (input$title == "") {
+          msg("Please give your plot a title to pin it.")
+          return()
+        }
+        
+        if (length(pinned_plots()) >= 8) {
+          msg("You can pin up to 8 plots, delete some to pin another.")
+          return()
+        }
+        
+        msg(NULL)
+        plots <- pinned_plots()
+        plot_id <- gsub("[^[:alnum:]]", "", input$title)
+        plots[[plot_id]] <- make_pie(cur_surveys_long(), input$title, plot_id)
+        pinned_plots(plots)
+        updateTextInput(inputId = "title", value = "")
       })
       
       observeEvent(input$removePlot, {
+        msg(NULL)
         id <- input$removePlot
         
-        if (id == 999) {
+        if (id == "cur") {
           show_current(FALSE)
         } else {
           plots <- pinned_plots()
-          plots[input$removePlot] <- NULL
+          print(plots)
+          plots[[input$removePlot]] <- NULL
           pinned_plots(plots)
         }
       })
       
       observeEvent(input$toggleCurrent, {
+        msg(NULL)
         show_current(!show_current())
       })
       
@@ -147,6 +168,7 @@ speciesCompServer <- function(cur_surveys_long) {
         pinned_plots(c())
         first_run(TRUE)
         show_current(TRUE)
+        msg(NULL)
       })
     }
   )
