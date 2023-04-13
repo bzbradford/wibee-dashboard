@@ -1,7 +1,34 @@
-/* Modifications of existing classes */
+/* WiBee Dashboard CSS Styles */
 
+body {
+  max-width: 100%;
+}
 
-/* New classes */
+.container {
+  max-width: 1000px;
+}
+
+.flex-row {
+  display: flex;
+  flex-wrap: wrap;
+  flex-direction: row;
+  gap: 10px;
+}
+
+.page-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.section-heading {
+  border-bottom: 4px solid #ecf0f1;
+}
+
+.map-btns {
+  margin-top: 10px;
+  align-items: center;
+}
 
 .data-tab {
   min-height: 300px;
@@ -15,19 +42,11 @@
   text-align: center;
 }
 
-.section-heading {
-  border-bottom: 4px solid #ecf0f1;
-}
-
-.flex-row {
-  display: flex;
-  flex-wrap: wrap;
-  flex-direction: row;
-  gap: 10px;
-}
-
 .pie {
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
   min-width: 250px;
   padding: 10px;
   border: 2px solid #ecf0f1;

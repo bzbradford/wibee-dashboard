@@ -5,10 +5,10 @@ account: bzbradford
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 2360407
-bundleId: 6130707
+bundleId: 7086077
 url: https://bzbradford.shinyapps.io/wibee-dashboard/
-when: 1658759359.66379
-lastSyncTime: 1658759359.6638
+when: 1681408877.76763
+lastSyncTime: 1681408877.76763
 asMultiple: FALSE
 asStatic: FALSE
-ignoredFiles: .RData
+ignoredFiles: _test.r

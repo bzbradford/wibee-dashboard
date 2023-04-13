@@ -14,31 +14,27 @@ ui <- fixedPage(
     tags$meta(charset = "UTF-8"),
     tags$meta(name = "description", content = "An online data dashboard for viewing pollinator activity surveys recorded by the WiBee app"),
     tags$meta(name = "keywords", content = "insect, pollinator, bee, dashboard, wisconsin, wibee, wisconsin"),
-    tags$meta(name = "viewport", content = "width=1024"),
+    tags$meta(id = "vp", name = "viewport", content = "width=device-width"),
+    
     tags$link(rel = "shortcut icon", href = "favicon.ico"),
     tags$link(rel = "stylesheet", type = "text/css", href = "style.css"),
-    includeHTML("google-analytics.html")
+    includeHTML("google-analytics.html"),
+    tags$script(src = "setViewport.js")
   ),
   useShinyjs(),
   
   
   ## Page header ----
   
-  fixedRow(
-    column(
-      width = 1,
-      h2(img(src = "wibee-logo.png", height = 60))
-    ),
-    column(
-      width = 10,
+  div(
+    class = "page-title",
+    div(img(src = "wibee-logo.png", height = 60)),
+    div(
       align = "center",
       h2("WiBee Data Dashboard"),
       h4("View and explore pollinator data collected with the WiBee app")
     ),
-    column(
-      width = 1,
-      h2(img(src = "uw-crest.png", height = 60))
-    )
+    div(img(src = "uw-crest.png", height = 60))
   ),
   hr(style = "margin-top:0px"),
   br(),

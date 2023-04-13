@@ -49,25 +49,13 @@ surveyFiltersUI <- function() {
           ),
           leafletOutput(ns("map"), height = 600),
           div(
-            style = "margin-top: 5px;",
+            class = "flex-row map-btns",
+            div(actionButton(ns("map_select_visible"), "Select visible")),
+            div(actionButton(ns("map_zoom_all"), "Select all")),
+            div(actionButton(ns("map_clear_selection"), "Clear selection")),
+            div(actionButton(ns("map_reset"), "Reset map")),
             div(
-              style = "padding-right:10px; display:inline-block",
-              actionButton(ns("map_select_visible"), "Select visible")
-            ),
-            div(
-              style = "padding-right:10px; display:inline-block",
-              actionButton(ns("map_zoom_all"), "Select all")
-            ),
-            div(
-              style = "padding-right:10px; display:inline-block",
-              actionButton(ns("map_clear_selection"), "Clear selection")
-            ),
-            div(
-              style = "padding-right:20px; display:inline-block",
-              actionButton(ns("map_reset"), "Reset map")
-            ),
-            div(
-              style = "display:inline-block",
+              style = "max-width: 60%;",
               strong(textOutput(ns("survey_count_loc")))
             )
           )
