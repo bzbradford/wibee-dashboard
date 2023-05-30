@@ -24,52 +24,85 @@ suppressMessages({
 })
 
 
-# Load remote data ----
+# Refresh surveys --------------------------------------------------------------
 
-# check when last data refresh occurred
-if (file.exists("refresh_time")) {
-  refresh_time <- readRDS("refresh_time")
-} else {
-  refresh_time <- as.POSIXct("2020-01-01")
-}
-
-
-# update surveys at most once an hour. Writes to local csv
-status <- "Skipped data refresh, last query < 1 hr ago."
-if (refresh_time < Sys.time() - 3600) {
-  status <- "Unable to refresh data from remote server."
-  try({
-    get_surveys <- content(GET(
-      url = "https://wibee.caracal.tech/api/data/survey-summaries",
-      config = add_headers(Authorization = Sys.getenv("caracal_token"))))
-    if (is.data.frame(get_surveys)) {
-      get_surveys %>%
-        arrange(ended_at) %>%
-        write_csv("surveys/surveys.csv")
-      refresh_time <- Sys.time()
-      saveRDS(refresh_time, "refresh_time")
-      status <- "Survey data refreshed from remote database."
-    }
-  })
-}
-message(status)
-
-
-# Load surveys csv ----
-# read data from local csv and copy amended data into main columns
-
-wibee_in <- read_csv("surveys/surveys.csv", guess_max = 10000, show_col_types = F) %>%
-  mutate(
-    bumble_bee = bumble_bee_amended,
-    honeybee = honeybee_amended,
-    large_dark_bee = large_dark_bee_amended,
-    small_dark_bee = small_dark_bee_amended,
-    greenbee = greenbee_amended,
-    non_bee = non_bee_amended
+# pull data from remote db
+fetch_remote <- function(start_date = NULL) {
+  endpoint <- "https://wibee.caracal.tech/api/data/survey-summaries"
+  if (!is.null(start_date)) {
+    endpoint <- sprintf("%s?start_date=%s", endpoint, start_date)
+  }
+  response <- content(
+    GET(
+      url = endpoint,
+      config = add_headers(Authorization = Sys.getenv("caracal_token"))
+    ),
+    show_col_types = F
   )
+  if (!is.data.frame(response)) stop("Invalid response from remote database")
+  response
+}
+
+# handle pulling or merging new surveys with stored surveys
+get_surveys <- function(force = FALSE) {
+  
+  # check when last data refresh occurred
+  refresh_time <- ifelse(
+    file.exists("refresh_time"),
+    readRDS("refresh_time"),
+    as.POSIXct("2020-01-01")
+  )
+  
+  # if we already have surveys.csv, just load recent surveys and merge with stored surveys
+  if (file.exists("surveys.csv.gz")) {
+    existing_surveys <- read_csv("surveys.csv.gz", show_col_types = FALSE)
+    
+    if (refresh_time > Sys.time() - 60 * 60 | force) {
+      
+      tryCatch({
+        max_date <- as.Date(max(existing_surveys$ended_at))
+        new_surveys <- fetch_remote(max_date - 7)
+        updated_surveys <- existing_surveys %>%
+          bind_rows(new_surveys) %>%
+          distinct(id, .keep_all = TRUE)
+        survey_count <- nrow(updated_surveys)
+        new_survey_count <- survey_count - nrow(existing_surveys)
+        
+        # only rewrite csv if there are new surveys
+        if (new_survey_count > 0) {
+          write_csv(updated_surveys, "surveys.csv.gz")
+        }
+        
+        status <- sprintf("Survey data refreshed from remote database. %s total surveys found (%s since last refresh).", survey_count, new_survey_count)
+      },
+        error = function(e) {
+          status <- sprintf("Unable to refresh surveys from remote database. Reason: %s.", e)
+          updated_surveys <- existing_surveys
+        }
+      )
+    } else {
+      status <- "Skipped data refresh, last query < 1 hr ago."
+      updated_surveys <- existing_surveys
+    }
+  } else {
+    updated_surveys <- fetch_remote()
+    write_csv(updated_surveys, "surveys.csv.gz")
+    status <- sprintf("Survey data refreshed from remote database. %s total surveys found.", nrow(updated_surveys))
+  }
+  
+  # save data to global env
+  assign("refresh_time", Sys.time(), envir = .GlobalEnv)
+  saveRDS(refresh_time, "refresh_time")
+  assign("status", status, envir = .GlobalEnv)
+  message(status)
+  return(updated_surveys)
+}
+
+raw_surveys <- get_surveys()
 
 
-# Load/create helper data ----
+
+# Load/create helper data ------------------------------------------------------
 
 # bee names and colors
 bees <- read_csv("data/bees.csv", show_col_types = F) %>%
@@ -95,7 +128,6 @@ plant_replace <- bind_rows(legacy_plant_list, focal_plant_list)
 
 
 ## survey attribute cols to keep ----
-
 keep_cols <- c(
   "id",
   "remote_id",
@@ -112,7 +144,6 @@ keep_cols <- c(
 
 
 ## bee column names ----
-
 bee_cols <- c(
   "honeybee",
   "bumble_bee",
@@ -121,15 +152,21 @@ bee_cols <- c(
   "greenbee",
   "non_bee")
 
-
 ## Get user IDs ----
+user_ids <- sort(unique(raw_surveys$user_id))
 
-user_ids <- unique(wibee_in$user_id)
 
+# Process survey data ----------------------------------------------------------
 
-# Process survey data ----
-
-surveys_raw <- wibee_in %>%
+processed_surveys <- raw_surveys %>%
+  mutate(
+    bumble_bee = bumble_bee_amended,
+    honeybee = honeybee_amended,
+    large_dark_bee = large_dark_bee_amended,
+    small_dark_bee = small_dark_bee_amended,
+    greenbee = greenbee_amended,
+    non_bee = non_bee_amended
+  ) %>%
   arrange(created_at) %>%
   mutate(remote_id = id, id = 1:length(id)) %>%
   select(all_of(c(keep_cols, bee_cols))) %>%
@@ -187,10 +224,10 @@ surveys_raw <- wibee_in %>%
 
 
 
-# Get habitat/management/plant lists ----
+# Get habitat/management/plant lists -------------------------------------------
 
 # make ranked list of habitat types
-habitats <- surveys_raw %>%
+habitats <- processed_surveys %>%
   group_by(habitat, habitat_name) %>%
   summarise(surveys = n(), .groups = "drop") %>%
   arrange(desc(surveys)) %>%
@@ -199,7 +236,7 @@ habitats <- surveys_raw %>%
   drop_na()
 
 # make ranked list of management types
-managements <- surveys_raw %>%
+managements <- processed_surveys %>%
   group_by(management, management_name) %>%
   summarise(surveys = n(), .groups = "drop") %>%
   arrange(desc(surveys)) %>%
@@ -208,7 +245,7 @@ managements <- surveys_raw %>%
   drop_na()
 
 # make ranked list of plants and reclass low-frequency ones
-plant_ranks <- surveys_raw %>%
+plant_ranks <- processed_surveys %>%
   group_by(plant_group, plant_id, plant_label) %>%
   summarise(surveys = n(), .groups = "drop") %>%
   group_by(plant_group) %>%
@@ -227,15 +264,15 @@ plant_ranks <- surveys_raw %>%
   drop_na()
 
 
-# Save main survey data ----
+# Merge plant data and save final surveys --------------------------------------
 
-surveys <- surveys_raw %>%
+surveys <- processed_surveys %>%
   select(-c(remote_id, picture_url, plant_label)) %>%
   left_join(plant_ranks, by = c("plant_id", "plant_group"))
 
 
 
-# Get final plant lists ----
+# Get final plant lists based on survey data -----------------------------------
 
 plants <- surveys %>%
   group_by(plant_group, plant_type, plant_label) %>%
@@ -262,7 +299,7 @@ select_noncrops <- plants %>%
 
 
 
-# Create long-form dataset ----
+# Create long-form dataset -----------------------------------------------------
 
 bee_join <- bees %>%
   rename(bee = type, bee_name = label, bee_color = color, bee_group = group)
@@ -273,7 +310,7 @@ surveys_long <- surveys %>%
 
 
 
-# Map data and other summaries ----
+# Map data and other summaries -------------------------------------------------
 
 # generate grid points and summary statistics
 map_pts <- surveys %>%
