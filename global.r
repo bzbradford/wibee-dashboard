@@ -59,7 +59,8 @@ get_surveys <- function(force = FALSE) {
         new_surveys <- fetch_remote(max_date - 7)
         updated_surveys <- existing_surveys %>%
           bind_rows(new_surveys) %>%
-          distinct(id, .keep_all = TRUE)
+          distinct(id, .keep_all = TRUE) %>%
+          arrange(ended_at)
         survey_count <- nrow(updated_surveys)
         new_survey_count <- survey_count - nrow(existing_surveys)
         
@@ -80,11 +81,12 @@ get_surveys <- function(force = FALSE) {
       status <- sprintf(
         "Skipped data refresh, last query < 1 hr ago. %s total surveys in database, most recent completed on %s.",
         nrow(existing_surveys),
-        max(existing_surveys$ended_at)
+        format(max(existing_surveys$ended_at), format = "%Y-%m-%d %H:%M:%S", tz = "America/Chicago", usetz = TRUE)
       )
     }
   } else {
-    updated_surveys <- fetch_remote()
+    updated_surveys <- fetch_remote() %>%
+      arrange(ended_at)
     write_csv(updated_surveys, "surveys.csv.gz")
     status <- sprintf("Survey data refreshed from remote database. %s total surveys found.", nrow(updated_surveys))
   }
@@ -137,7 +139,6 @@ keep_cols <- c(
   "site_type",
   "crop",
   "management_type",
-  "master_gardener",
   "picture_url")
 
 
