@@ -69,6 +69,11 @@ ui <- fixedPage(
     tabPanel("User statistics", userStatsUI())
   ),
   br(),
+  materialSwitch(
+    inputId = "group_wild",
+    label = "Group wild bees together",
+    status = "success"
+  ),
   div(
     align = "center",
     style = "margin-top:15px",

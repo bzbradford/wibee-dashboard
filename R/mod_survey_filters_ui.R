@@ -137,18 +137,18 @@ surveyFiltersUI <- function() {
       bsCollapsePanel(
         value = "surveys",
         style = "primary",
-        title = "Select surveys by habitat, management type, or pollinator group",
+        title = "Select surveys by habitat or management type",
         tagList(
           p(
             style = "margin-bottom:.5em",
-            em("Filter survey data by selecting which habitats, management types, or pollinator groups you want to see data for. Number of matching surveys for each habitat or reported management practice is shown in parentheses.")
+            em("Filter survey data by selecting which habitats or management types you want to see surveys for. Number of matching surveys for each habitat or reported management practice is shown in parentheses.")
           ),
           wellPanel(
             fixedRow(
-              column(4,
+              column(6,
                 checkboxGroupInput(
                   inputId = ns("which_habitat"),
-                  label = "Habitat:",
+                  label = "Survey habitat:",
                   choiceNames = levels(habitats$label),
                   choiceValues = habitats$type,
                   selected = habitats$type
@@ -156,33 +156,17 @@ surveyFiltersUI <- function() {
                 div(actionButton(ns("which_habitat_all"), "All"), style = "display:inline-block"),
                 div(actionButton(ns("which_habitat_none"), "None"), style = "display:inline-block")
               ),
-              column(4,
+              column(6,
                 checkboxGroupInput(
                   inputId = ns("which_mgmt"),
-                  label = "Management:",
+                  label = "Management type:",
                   choiceNames = levels(managements$label),
                   choiceValues = managements$type,
                   selected = managements$type
                 ),
                 div(actionButton(ns("which_mgmt_all"), "All"), style = "display:inline-block"),
                 div(actionButton(ns("which_mgmt_none"), "None"), style = "display:inline-block")
-              ),
-              column(4,
-                checkboxGroupInput(
-                  inputId = ns("which_bees"),
-                  label = "Bee group:",
-                  choiceNames = bee_names,
-                  choiceValues = bee_names,
-                  selected = bee_names
-                ),
-                materialSwitch(
-                  inputId = ns("group_wild"),
-                  label = "Group wild bees together",
-                  status = "success"
-                ),
-                div(actionButton(ns("which_bees_all"), "All"), style = "display:inline-block"),
-                div(actionButton(ns("which_bees_none"), "None"), style = "display:inline-block")
-              ),
+              )
             )
           ),
           div(

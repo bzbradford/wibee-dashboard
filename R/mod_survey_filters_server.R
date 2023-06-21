@@ -435,51 +435,6 @@ surveyFiltersServer <- function(data) {
       }
       
       
-      ## Bee groups ----
-      
-      # Buttons
-      observeEvent(
-        input$which_bees_all,
-        resetBees()
-      )
-      
-      observeEvent(
-        input$which_bees_none,
-        updateCheckboxGroupInput(
-          inputId = "which_bees",
-          selected = ""
-        )
-      )
-      
-      # Reset bee selections on grouping
-      observeEvent(input$group_wild, resetBees())
-      
-      # Refresh bee selection checkbox, depending on yes/no wild bee grouping selection
-      resetBees <- function() {
-        if (input$group_wild) {
-          updateCheckboxGroupInput(
-            inputId = "which_bees",
-            choiceNames = wildbee_names,
-            choiceValues = wildbee_names,
-            selected = wildbee_names
-          )
-        } else {
-          updateCheckboxGroupInput(
-            inputId = "which_bees",
-            choiceNames = bee_names,
-            choiceValues = bee_names,
-            selected = bee_names
-          )
-        }
-      }
-      
-      resetBeeGrouping <- function() {
-        updateCheckboxInput(
-          inputId = "group_wild",
-          value = F
-        )
-      }
-      
       
       ## Survey count text ----
       
@@ -672,9 +627,7 @@ surveyFiltersServer <- function(data) {
       filtered_surveys_long <- reactive({
         filtered_surveys() %>%
           pivot_longer(cols = bees$type, names_to = "bee", values_to = "count") %>%
-          left_join(bee_join, by = "bee") %>%
-          filter(bee_name %in% input$which_bees) %>%
-          droplevels()
+          left_join(bee_join, by = "bee")
       })
       
       output$survey_count_final <- renderText({
@@ -690,8 +643,6 @@ surveyFiltersServer <- function(data) {
         selectAllPlants()
         selectAllHabitats()
         selectAllMgmts()
-        resetBeeGrouping()
-        resetBees()
         resetDate()
         resetUserIds()
         resetMap()

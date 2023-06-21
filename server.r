@@ -11,7 +11,17 @@ server <- function(input, output, session) {
   })
   
   filtered_surveys_long <- reactive({
-    filter_returns$long()
+    df <- filter_returns$long()
+    
+    if (input$group_wild) {
+      df %>%
+        filter(bee_name %in% wildbee_names) %>%
+        droplevels()
+    } else {
+      df %>%
+        filter(bee_name != "Wild bees") %>%
+        droplevels()
+    }
   })
   
 
