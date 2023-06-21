@@ -47,18 +47,13 @@ fetch_remote <- function(start_date = NULL) {
 get_surveys <- function(force = FALSE) {
   
   # check when last data refresh occurred
-  refresh_time <- ifelse(
-    file.exists("refresh_time"),
-    readRDS("refresh_time"),
-    as.POSIXct("2020-01-01")
-  )
+  if (!exists("refresh_time")) refresh_time <- as.POSIXct("2020-1-1")
   
   # if we already have surveys.csv, just load recent surveys and merge with stored surveys
   if (file.exists("surveys.csv.gz")) {
     existing_surveys <- read_csv("surveys.csv.gz", show_col_types = FALSE)
     
-    if (refresh_time > Sys.time() - 60 * 60 | force) {
-      
+    if ((refresh_time < Sys.time() - 60 * 60) | force) {
       tryCatch({
         max_date <- as.Date(max(existing_surveys$ended_at))
         new_surveys <- fetch_remote(max_date - 7)
@@ -81,8 +76,12 @@ get_surveys <- function(force = FALSE) {
         }
       )
     } else {
-      status <- "Skipped data refresh, last query < 1 hr ago."
       updated_surveys <- existing_surveys
+      status <- sprintf(
+        "Skipped data refresh, last query < 1 hr ago. %s total surveys in database, most recent completed on %s.",
+        nrow(existing_surveys),
+        max(existing_surveys$ended_at)
+      )
     }
   } else {
     updated_surveys <- fetch_remote()
@@ -92,7 +91,6 @@ get_surveys <- function(force = FALSE) {
   
   # save data to global env
   assign("refresh_time", Sys.time(), envir = .GlobalEnv)
-  saveRDS(refresh_time, "refresh_time")
   assign("status", status, envir = .GlobalEnv)
   message(status)
   return(updated_surveys)
