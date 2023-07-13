@@ -18,7 +18,7 @@ ui <- fixedPage(
     
     tags$link(rel = "shortcut icon", href = "favicon.ico"),
     tags$link(rel = "stylesheet", type = "text/css", href = "style.css"),
-    includeHTML("google-analytics.html"),
+    includeHTML("www/google-analytics.html"),
     tags$script(src = "setViewport.js")
   ),
   useShinyjs(),
