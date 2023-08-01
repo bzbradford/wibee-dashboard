@@ -47,7 +47,7 @@ fetch_remote <- function(start_date = NULL) {
 get_surveys <- function(force = FALSE) {
   
   # check when last data refresh occurred
-  if (!exists("refresh_time")) refresh_time <- as.POSIXct("2020-1-1")
+  if (!exists("refresh_time")) refresh_time <- as.Date("2020-1-1")
   
   # if we already have surveys.csv, just load recent surveys and merge with stored surveys
   if (file.exists("surveys.csv.gz")) {

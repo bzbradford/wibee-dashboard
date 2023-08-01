@@ -1,0 +1,14 @@
+name: wibee_dashboard4
+title: WiBee Dashboard
+username: bbradford
+account: bbradford
+server: connect.doit.wisc.edu
+hostUrl: https://connect.doit.wisc.edu/__api__
+appId: 13
+bundleId: 34
+url: https://connect.doit.wisc.edu/content/114c5f26-c145-4b7a-ad35-9634fcc74720/
+when: 1690925450.49249
+lastSyncTime: 1690925450.4925
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: .Rprofile|test/test.r

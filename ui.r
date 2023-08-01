@@ -100,6 +100,6 @@ ui <- fixedPage(
     p("Dashboard developed by", a("Ben Bradford", href = "https://github.com/bzbradford", target = "_blank"), style = "font-size:small; color:grey"),
     p("WiBee app developed by", a("Dan Imhoff", href = "https://caracal.tech/", target = "_blank"), style = "font-size:small; color:grey"),
     br(),
-    p(em(status), br(), em(paste("Data last updated:", as.character(refresh_time, format = "%Y-%m-%d %H:%M:%S %Z"))))
+    p(em(status), br(), em(paste("Data last updated:", format(refresh_time, "%Y-%m-%d %H:%M:%S %Z"))))
   )
 )
