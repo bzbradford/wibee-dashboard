@@ -121,7 +121,10 @@ surveyFiltersUI <- function() {
               timeFormat = "%b %d"),
             div(
               style = "margin-top:15px",
-              actionButton(ns("reset_date"), "Reset date")
+              actionButton(ns("set_date_spring"), "Spring"),
+              actionButton(ns("set_date_summer"), "Summer"),
+              actionButton(ns("set_date_fall"), "Fall"),
+              actionButton(ns("reset_date"), "Reset")
             ),
           ),
           div(

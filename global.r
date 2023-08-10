@@ -267,7 +267,10 @@ plant_ranks <- processed_surveys %>%
 
 surveys <- processed_surveys %>%
   select(-c(remote_id, picture_url, plant_label)) %>%
-  left_join(plant_ranks, by = c("plant_id", "plant_group"))
+  left_join(
+    select(plant_ranks, -"surveys"),
+    by = c("plant_id", "plant_group")
+  )
 
 
 

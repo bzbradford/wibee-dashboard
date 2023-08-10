@@ -50,6 +50,11 @@ ui <- fixedPage(
   
   h3(class = "section-heading", "Select and filter pollinator surveys"),
   surveyFiltersUI(),
+  div(
+    align = "center",
+    style = "margin-top: 15px;",
+    actionButton("surveyFilters-reset", "Reset all filters")
+  ),
   br(),
   
   
@@ -71,18 +76,13 @@ ui <- fixedPage(
   br(),
   materialSwitch(
     inputId = "group_wild",
-    label = "Group wild bees together",
+    label = "Group wild bees together?",
     status = "success"
-  ),
-  div(
-    align = "center",
-    style = "margin-top:15px",
-    actionButton("surveyFilters-reset", "Reset all filters")
   ),
   
 
   ## Credits ----
-  
+
   br(),
   hr(),
   br(),

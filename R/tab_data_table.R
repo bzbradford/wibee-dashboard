@@ -70,7 +70,7 @@ dataTableServer <- function(data_long) {
             n = n(),
             visit_rate = round(mean(count), 1),
             .groups = "drop_last") %>%
-          mutate("Total rate" = sum(visit_rate)) %>%
+          mutate("Total rate" = round(sum(visit_rate), 1)) %>%
           ungroup() %>%
           pivot_wider(names_from = bee_name, values_from = visit_rate) %>%
           mutate("row" = row_number()) %>%

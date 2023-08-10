@@ -308,6 +308,14 @@ surveyFiltersServer <- function(data) {
       
     # Filter by date of survey ----
       
+      resetDate <- function(min = date_slider_min, max = date_slider_max) {
+        updateSliderInput(
+          inputId = "date_range",
+          value = c(min, max),
+          timeFormat = "%b %d"
+        )
+      }
+      
       surveys_by_date <- reactive({
         surveys_by_user() %>%
           filter(
@@ -317,17 +325,24 @@ surveyFiltersServer <- function(data) {
       })
       
       
-      ## Reset ----
+      ## Action buttons ----
+      
+      observeEvent(input$set_date_spring, resetDate(
+        max = as.Date(format(Sys.Date(), "%Y-05-31"))
+      ))
+      
+      observeEvent(input$set_date_summer, resetDate(
+        min = as.Date(format(Sys.Date(), "%Y-06-01")),
+        max = as.Date(format(Sys.Date(), "%Y-08-31"))
+      ))
+      
+      observeEvent(input$set_date_fall, resetDate(
+        min = as.Date(format(Sys.Date(), "%Y-09-01"))
+      ))
       
       observeEvent(input$reset_date, resetDate())
       
-      resetDate <- function() {
-        updateSliderInput(
-          inputId = "date_range",
-          value = c(date_slider_min, date_slider_max),
-          timeFormat = "%b %d"
-        )
-      }
+
       
       
       ## Survey count text ----
