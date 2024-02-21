@@ -2,6 +2,10 @@
 
 # Define UI ----
 
+lnk <- function(text, href) {
+  a(text, href = href, target = "_blank")
+}
+
 ui <- fixedPage(
   
   title = "WiBee Dashboard",
@@ -87,18 +91,21 @@ ui <- fixedPage(
   hr(),
   br(),
   div(
-    align = "center",
-    style = "font-size:small; color:grey; border-top:2px darkgrey",
-    p(strong(paste0("©", format(Sys.Date(), "%Y"), " University of Wisconsin Board of Regents")), style = "font-size:small; color:grey"),
+    align = "center", style = "font-size: small; color: grey; border-top: 2px darkgrey;",
     p(
-      a("More information", href = "http://www.pollinators.wisc.edu/wibee", target = "_blank"),
+      style = "line-height: 2em;",
+      "WiBee is a project of the", lnk("UW-Madison Department of Entomology", "https://entomology.wisc.edu/"), "and the", lnk("Gratton Lab", "https://gratton.entomology.wisc.edu/"),
+      br(),
+      lnk("More information", "http://www.pollinators.wisc.edu/wibee"),
       " - ", a("Email us", href = "mailto:pollinators@wisc.edu"),
-      " - ", a("Sign up for our newsletter", href = "http://eepurl.com/gMqRdr", target = "_blank"),
-      " - ", a("Send feedback", href = "https://forms.gle/6qy9qJLwCxSTTPNT8", target = "_blank")
+      " - ", lnk("Sign up for our newsletter", "http://eepurl.com/gMqRdr"),
+      " - ", lnk("Send feedback", "https://forms.gle/6qy9qJLwCxSTTPNT8"),
+      " - ", lnk("View source code", "https://github.com/bzbradford/wibee-dashboard"),
+      br(),
+      "Dashboard developed by", lnk("Ben Bradford", "https://entomology.wisc.edu/directory/ben-bradford/"),
+      " - ",
+      "WiBee app developed by", lnk("Dan Imhoff", "https://caracal.tech/"),
     ),
-    br(),
-    p("Dashboard developed by", a("Ben Bradford", href = "https://github.com/bzbradford", target = "_blank"), style = "font-size:small; color:grey"),
-    p("WiBee app developed by", a("Dan Imhoff", href = "https://caracal.tech/", target = "_blank"), style = "font-size:small; color:grey"),
     br(),
     p(em(status), br(), em(paste("Data last updated:", format(refresh_time, "%Y-%m-%d %H:%M:%S %Z"))))
   )

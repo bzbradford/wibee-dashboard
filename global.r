@@ -173,7 +173,6 @@ processed_surveys <- raw_surveys %>%
     date = ended_at,
     habitat = site_type,
     management = management_type) %>%
-  filter(duration == "5 minutes", date >= "2020-04-01") %>%
   mutate(
     date = as.Date(date),
     year = lubridate::year(date),
@@ -182,6 +181,11 @@ processed_surveys <- raw_surveys %>%
     day = lubridate::day(date),
     doy = lubridate::yday(date),
     .after = "date") %>%
+  
+  # remove incomplete surveys except the apple surveys in 2023 by IPM
+  filter(date >= "2020-04-01") %>%
+  filter(duration == "5 minutes" | ((user_id %in% c(2631, 2647, 2655, 2656)) & (year == 2023) & (crop == "apple"))) %>%
+  
   mutate(across(all_of(bee_cols), ~ replace_na(.x, 0))) %>%
   mutate(wild_bee = bumble_bee + large_dark_bee + small_dark_bee + greenbee) %>%
   mutate(

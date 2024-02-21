@@ -5,10 +5,8 @@ account: bbradford
 server: connect.doit.wisc.edu
 hostUrl: https://connect.doit.wisc.edu/__api__
 appId: 11
-bundleId: 75
-url: https://connect.doit.wisc.edu/content/aeef1a84-22e6-410a-895d-63de9bed4fb7/
-when: 1691695164.79298
-lastSyncTime: 1691695164.79299
+bundleId: 637
+url: https://connect.doit.wisc.edu/wibee/
 asMultiple: FALSE
 asStatic: FALSE
 ignoredFiles: .Rprofile|test/test.r
