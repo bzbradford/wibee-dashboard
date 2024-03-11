@@ -56,8 +56,35 @@ surveyFiltersServer <- function(data) {
       ## Initialize map ----
       
       map_grids <- reactive({
-        map_pts %>%
-          filter(grid_pt %in% surveys_by_year()$grid_pt)
+        surveys_by_year() %>%
+          mutate(lat = lat_rnd, lng = lng_rnd) %>%
+          summarise(
+            n_surveys = n(),
+            n_users = n_distinct(user_id),
+            total_visits = sum(total_visits),
+            hb = round(sum(honeybee) / total_visits * 100),
+            wb = round(sum(wild_bee) / total_visits * 100),
+            nb = round(sum(non_bee) / total_visits * 100),
+            .by = c(lat, lng, grid_pt, inwi)
+          ) %>%
+          mutate(
+            label = str_glue("
+              <strong>Grid point [{grid_pt}]</strong><br>
+              {n_surveys} surveys by {n_users} users<br>
+              {total_visits} total pollinators
+            "),
+            label = if_else(
+              total_visits > 0,
+              str_glue("
+                {label}<br>
+                {hb}% honeybees<br>
+                {wb}% wild bees<br>
+                {nb}% non-bees
+              "),
+              label
+            ),
+            label = lapply(label, shiny::HTML)
+          )
       })
       
       # Initial map condition
@@ -73,14 +100,14 @@ surveyFiltersServer <- function(data) {
               icon = "fa-crosshairs",
               title = "Get my location",
               onClick = JS("
-            function(btn, map) {
-              map.locate({
-                setView: true,
-                enableHighAccuracy: false,
-                maxZoom: 12
-              })
-            }
-          ")
+                function(btn, map) {
+                  map.locate({
+                    setView: true,
+                    enableHighAccuracy: false,
+                    maxZoom: 12
+                  })
+                }
+              ")
             ),
             easyButton(
               position = "topleft",
@@ -100,17 +127,13 @@ surveyFiltersServer <- function(data) {
             lat1 = ~ lat - .05, lat2 = ~ lat + .05,
             layerId = ~ grid_pt,
             group = "base_grids",
-            label = ~ paste(n_surveys, "surveys by", n_users, "users"),
-            weight = 1,
-            opacity = 1,
-            color = "orange",
-            fillOpacity = .25,
-            fillColor = "yellow",
+            label = ~ label,
+            color = "orange", weight = 1, opacity = 1,
+            fillColor = "yellow", fillOpacity = .25,
             highlight = highlightOptions(
-              weight = 3,
-              color = "red",
-              fillColor = "orange",
-              fillOpacity = 0.7),
+              weight = 3, color = "red",
+              fillColor = "orange", fillOpacity = 0.7
+            ),
             options = pathOptions(pane = "base_grids")
           )
       })
@@ -126,20 +149,19 @@ surveyFiltersServer <- function(data) {
         leafletProxy("map") %>%
           clearGroup("selected_grids") %>%
           addRectangles(
-            data = filter(map_pts, grid_pt %in% map_selection()),
-            layerId = ~ paste(grid_pt, "selected"),
-            group = "selected_grids",
+            data = filter(map_grids(), grid_pt %in% map_selection()),
             lng1 = ~ lng - .05, lng2 = ~ lng + .05,
             lat1 = ~ lat - .05, lat2 = ~ lat + .05,
-            label = ~ paste(n_surveys, "surveys by", n_users, "users"),
-            weight = 1, opacity = 1, color = "red",
-            fillOpacity = .25, fillColor = "orange",
-            options = pathOptions(pane = "selected_grids"),
+            layerId = ~ paste(grid_pt, "selected"),
+            group = "selected_grids",
+            label = ~ label,
+            color = "red", weight = 1, opacity = 1,
+            fillColor = "orange", fillOpacity = .25,
             highlight = highlightOptions(
-              weight = 3,
-              color = "red",
-              fillColor = "orange",
-              fillOpacity = 0.7)
+              color = "red", weight = 3,
+              fillColor = "orange", fillOpacity = 0.7
+            ),
+            options = pathOptions(pane = "selected_grids")
           )
       })
       

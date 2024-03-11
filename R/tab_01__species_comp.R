@@ -81,8 +81,8 @@ speciesCompServer <- function(cur_surveys_long) {
     function(input, output, session) {
       ns <- session$ns
       
-      wi_surveys <- surveys_long %>%
-        filter(inwi, bee_name != "Wild bees") %>%
+      all_surveys <- surveys_long %>%
+        filter(bee_name != "Wild bees") %>%
         droplevels()
       
       pinned_plots <- reactiveVal(list())
@@ -95,7 +95,7 @@ speciesCompServer <- function(cur_surveys_long) {
         if (length(pinned_plots()) == 0 & first_run()) {
           plots <- list()
           plot_id <- "_all"
-          plots[[plot_id]] <- make_pie(wi_surveys, "All Wisconsin surveys", plot_id)
+          plots[[plot_id]] <- make_pie(all_surveys, "All surveys", plot_id)
           pinned_plots(plots)
           first_run(FALSE)
         }

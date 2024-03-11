@@ -24,6 +24,14 @@ suppressMessages({
 })
 
 
+
+# Functions ---------------------------------------------------------------
+
+# UI element returned on data tabs when no surveys are selected
+noSurveysMsg <- function() {
+  div(class = "well", "No surveys selected. Change your filters above or hit 'reset filters' below.")
+}
+
 # Refresh surveys --------------------------------------------------------------
 
 # pull data from remote db
@@ -66,7 +74,7 @@ get_surveys <- function(force = FALSE) {
         
         # only rewrite csv if there are new surveys
         if (new_survey_count > 0) {
-          write_csv(updated_surveys, "surveys.csv.gz")
+          write_csv(updated_surveys, "surveys.csv.gz", na = "")
         }
         
         status <- sprintf("Survey data refreshed from remote database. %s total surveys found (%s since last refresh).", survey_count, new_survey_count)
@@ -121,9 +129,9 @@ management_list <- read_csv("data/managements.csv", show_col_types = F)
 
 
 ## load plant lists ----
-plant_list <- read_csv("plants/known-plant-list.csv", show_col_types = F)
-legacy_plant_list <- read_csv("plants/legacy-plant-list.csv", show_col_types = F)
-focal_plant_list <- read_csv("plants/focal-plant-list.csv", show_col_types = F)
+plant_list <- read_csv("data/plants/known-plant-list.csv", show_col_types = F)
+legacy_plant_list <- read_csv("data/plants/legacy-plant-list.csv", show_col_types = F)
+focal_plant_list <- read_csv("data/plants/focal-plant-list.csv", show_col_types = F)
 plant_replace <- bind_rows(legacy_plant_list, focal_plant_list)
 
 
@@ -188,6 +196,7 @@ processed_surveys <- raw_surveys %>%
   
   mutate(across(all_of(bee_cols), ~ replace_na(.x, 0))) %>%
   mutate(wild_bee = bumble_bee + large_dark_bee + small_dark_bee + greenbee) %>%
+  mutate(total_visits = honeybee + wild_bee + non_bee) %>%
   mutate(
     habitat = replace_na(habitat, "other"),
     habitat = case_when(
@@ -215,7 +224,7 @@ processed_surveys <- raw_surveys %>%
   mutate(
     lat_rnd = round(lat, 1),
     lng_rnd = round(lng, 1),
-    grid_pt = paste(lat_rnd, lng_rnd, sep = ", "),
+    grid_pt = sprintf("%.1f, %.1f", lat_rnd, lng_rnd),
     inwi = between(lat, 42.49, 47.08) & between(lng, -92.89, -86.80)) %>%
   left_join(plant_replace, by = "crop") %>%
   mutate(crop = ifelse(is.na(new_crop), crop, new_crop)) %>%
@@ -318,26 +327,7 @@ surveys_long <- surveys %>%
 
 # Map data and other summaries -------------------------------------------------
 
-# generate grid points and summary statistics
-map_pts <- surveys %>%
-  drop_na(lat, lng) %>%
-  mutate(
-    lat = round(lat, 1),
-    lng = round(lng, 1)) %>%
-  group_by(lat, lng, inwi) %>%
-  summarise(
-    n_surveys = n(),
-    n_users = n_distinct(user_id),
-    hb = round(mean(honeybee)/5,1),
-    wb = round(mean(wild_bee)/5,1),
-    nb = round(mean(non_bee)/5,1),
-    .groups = "drop") %>%
-  mutate(grid_pt = paste(lat, lng, sep = ", "))
-
-
-# get list of all grid cells for initial selection
-map_pts_all <- map_pts$grid_pt
-map_pts_wi <- filter(map_pts, inwi == T)$grid_pt
+map_pts_wi <- surveys %>% filter(inwi) %>% pull(grid_pt) %>% unique() %>% sort()
 
 
 # get date range of data
@@ -368,7 +358,7 @@ year_summary <- surveys %>%
 # total counts for project summary
 bee_totals <- surveys_long %>%
   filter(bee_name %in% wildbee_names) %>%
-  group_by(bee_name) %>%
-  summarise(tot_count = sum(count), .groups = "drop") %>%
-  mutate(pct_count = sprintf("%1.1f%%", tot_count / sum(.$tot_count) * 100))
+  summarise(tot_count = sum(count), .by = bee_name) %>%
+  mutate(pct_count = sprintf("%1.1f%%", tot_count / sum(.$tot_count) * 100)) %>%
+  mutate(label = sprintf("%s: %s (%s)", bee_name, format(tot_count, big.mark = ","), pct_count))
 

@@ -65,7 +65,12 @@ ui <- fixedPage(
   ## Data tabs ----
 
   h3(class = "section-heading", "View or download data from selected surveys"),
-  
+  materialSwitch(
+    inputId = "group_wild",
+    label = "Group wild bees together in plots and data?",
+    status = "success",
+    inline = T
+  ),
   tabsetPanel(
     tabPanel("Species composition", speciesCompUI()),
     tabPanel("Activity by date", activityByDateUI()),
@@ -77,12 +82,7 @@ ui <- fixedPage(
     tabPanel("View as data table", dataTableUI()),
     tabPanel("User statistics", userStatsUI())
   ),
-  br(),
-  materialSwitch(
-    inputId = "group_wild",
-    label = "Group wild bees together?",
-    status = "success"
-  ),
+
   
 
   ## Credits ----

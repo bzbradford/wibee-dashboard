@@ -52,60 +52,76 @@ activityMapServer <- function(data, data_long) {
         )
       })
       
-      output$map <- renderLeaflet({
-        req(data_ready())
-        req(input$type)
-        req(input$size)
+      map_data <- reactive({
+        req(data_ready(), input$type, input$size)
         
         div <- as.numeric(input$size)
-        df <- data() %>%
-          mutate(
-            lat = round(lat / div) * div,
-            lng = round(lng / div) * div
-          ) %>%
-          group_by(lat, lng)
-        
-        df_long <- data_long() %>%
-          mutate(
-            lat = round(lat / div) * div,
-            lng = round(lng / div) * div
-          ) %>%
-          group_by(lat, lng, id)
-        
+
         if (input$type == "Number of surveys") {
-          df <- df %>%
-            summarise(value = n(), .groups = "drop")
-        } else if (input$type == "Insect visits per survey") {
-          df <- df_long %>%
-            summarise(total_visits = sum(count), .groups = "drop_last") %>%
-            summarise(value = round(mean(total_visits), 1), .groups = "drop")
+          df <- data() %>%
+            mutate(across(c(lat, lng), ~ round(.x / div) * div)) %>%
+            summarise(value = n(), .by = c(lat, lng))
         } else if (input$type == "Number of users") {
-          df <- df %>%
-            summarise(value = n_distinct(user_id), .groups = "drop")
+          df <- data() %>%
+            mutate(across(c(lat, lng), ~ round(.x / div) * div)) %>%
+            summarise(value = n_distinct(user_id), .by = c(lat, lng))
+        } else {
+          # "Insect visits per survey"
+          df <- data_long() %>%
+            mutate(across(c(lat, lng), ~ round(.x / div) * div)) %>%
+            summarise(total_visits = sum(count), .by = c(lat, lng, id)) %>%
+            summarise(value = round(mean(total_visits), 1), .by = c(lat, lng))
         }
         
-        pal <- colorNumeric(
-          palette = "YlOrRd",
-          domain = df$value
-        )
-        
         df %>%
-          leaflet() %>%
-          addTiles() %>%
-          addRectangles(
-            lng1 = ~ lng - div / 2, lng2 = ~ lng +  div / 2,
-            lat1 = ~ lat - div / 2, lat2 = ~ lat + div / 2,
-            label = ~ paste0(input$data_map_summary_type, ": ", value),
-            weight = 0.25,
-            opacity = 0.9,
-            color = "darkgrey",
-            fillOpacity = .9,
-            fillColor = ~pal(value),
-            highlight = highlightOptions(
-              weight = 2,
-              color = "red")
+          mutate(
+            lat1 = lat - div/2, lat2 = lat + div/2,
+            lng1 = lng - div/2, lng2 = lng + div/2,
+            label = paste0(input$type, ": ", value)
           )
       })
+      
+      addGrids <- function(map, df, div) {
+        pal <- colorNumeric(
+          palette = "viridis",
+          domain = sqrt(df$value),
+          reverse = F
+        )
+        
+        map %>%
+          addRectangles(
+            data = df,
+            lat1 = ~lat1,
+            lat2 = ~lat2,
+            lng1 = ~lng1,
+            lng2 = ~lng2,
+            label = ~label,
+            group = "grids",
+            color = "darkgrey",
+            weight = 0.25,
+            opacity = 0.9,
+            fillColor = ~pal(sqrt(value)),
+            fillOpacity = .9,
+            highlight = highlightOptions(
+              weight = 2,
+              color = "red"
+            )
+          )
+      }
+      
+      output$map <- renderLeaflet({
+        leaflet() %>%
+          setView(lng = -89.7, lat = 44.8, zoom = 7) %>%
+          addProviderTiles(providers$CartoDB.PositronNoLabels) %>%
+          addGrids(isolate(map_data()))
+      })
+      
+      observe({
+        leafletProxy("map") %>%
+          clearGroup("grids") %>%
+          addGrids(map_data())
+      })
+      
     }
   )
 }
