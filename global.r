@@ -432,3 +432,7 @@ bee_totals <- surveys_long |>
       pct_count
     )
   )
+
+# Source files -----------------------------------------------------------------
+
+lapply(list.files("src", "\\.R$", full.names = TRUE), source)
