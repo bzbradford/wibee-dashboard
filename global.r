@@ -1,4 +1,16 @@
-# global.R
+## WIBEE DASHBOARD ##
+# Ben Bradford, UW-Madison
+# Requires data prep in separate RProj
+
+#- Renv for pkg management -#
+
+if (FALSE) {
+  renv::init() # initiate renv if not already
+  renv::dependencies() # show project dependencies
+  renv::update() # update project libraries
+  renv::snapshot() # save updated lock file to project
+}
+
 
 # Required packages ----
 
@@ -71,9 +83,9 @@ get_surveys <- function(force = FALSE) {
         {
           max_date <- as.Date(max(existing_surveys$ended_at))
           new_surveys <- fetch_remote(max_date - 7)
-          updated_surveys <- existing_surveys %>%
-            bind_rows(new_surveys) %>%
-            distinct(id, .keep_all = TRUE) %>%
+          updated_surveys <- existing_surveys |>
+            bind_rows(new_surveys) |>
+            distinct(id, .keep_all = TRUE) |>
             arrange(ended_at)
           survey_count <- nrow(updated_surveys)
           new_survey_count <- survey_count - nrow(existing_surveys)
@@ -111,7 +123,7 @@ get_surveys <- function(force = FALSE) {
       )
     }
   } else {
-    updated_surveys <- fetch_remote() %>%
+    updated_surveys <- fetch_remote() |>
       arrange(ended_at)
     write_csv(updated_surveys, "surveys.csv.gz")
     status <- sprintf(
@@ -133,7 +145,7 @@ raw_surveys <- get_surveys()
 # Load/create helper data ------------------------------------------------------
 
 # bee names and colors
-bees <- read_csv("data/bees.csv", show_col_types = F) %>%
+bees <- read_csv("data/bees.csv", show_col_types = F) |>
   mutate_all(fct_inorder)
 
 # formatted bee names for ungrouped
@@ -193,7 +205,7 @@ user_ids <- sort(unique(raw_surveys$user_id))
 
 # Process survey data ----------------------------------------------------------
 
-processed_surveys <- raw_surveys %>%
+processed_surveys <- raw_surveys |>
   mutate(
     bumble_bee = bumble_bee_amended,
     honeybee = honeybee_amended,
@@ -201,15 +213,16 @@ processed_surveys <- raw_surveys %>%
     small_dark_bee = small_dark_bee_amended,
     greenbee = greenbee_amended,
     non_bee = non_bee_amended
-  ) %>%
-  arrange(created_at) %>%
-  mutate(remote_id = id, id = 1:length(id)) %>%
-  select(all_of(c(keep_cols, bee_cols))) %>%
+  ) |>
+  arrange(created_at) |>
+  mutate(remote_id = id, id = numeric_id) |>
+  select(-numeric_id) |>
+  select(all_of(c(keep_cols, bee_cols))) |>
   rename(
     date = ended_at,
     habitat = site_type,
     management = management_type
-  ) %>%
+  ) |>
   mutate(
     date = as.Date(date),
     year = lubridate::year(date),
@@ -218,20 +231,20 @@ processed_surveys <- raw_surveys %>%
     day = lubridate::day(date),
     doy = lubridate::yday(date),
     .after = "date"
-  ) %>%
+  ) |>
 
   # remove incomplete surveys except the apple surveys in 2023 by IPM
-  filter(date >= "2020-04-01") %>%
+  filter(date >= "2020-04-01") |>
   filter(
     duration == "5 minutes" |
       ((user_id %in% c(2631, 2647, 2655, 2656)) &
         (year == 2023) &
         (crop == "apple"))
-  ) %>%
+  ) |>
 
-  mutate(across(all_of(bee_cols), ~ replace_na(.x, 0))) %>%
-  mutate(wild_bee = bumble_bee + large_dark_bee + small_dark_bee + greenbee) %>%
-  mutate(total_visits = honeybee + wild_bee + non_bee) %>%
+  mutate(across(all_of(bee_cols), ~ replace_na(.x, 0))) |>
+  mutate(wild_bee = bumble_bee + large_dark_bee + small_dark_bee + greenbee) |>
+  mutate(total_visits = honeybee + wild_bee + non_bee) |>
   mutate(
     habitat = replace_na(habitat, "other"),
     habitat = case_when(
@@ -240,11 +253,11 @@ processed_surveys <- raw_surveys %>%
       T ~ "other"
     ),
     habitat = factor(habitat, levels = habitat_list$type)
-  ) %>%
+  ) |>
   left_join(
     rename(habitat_list, habitat = type, habitat_name = label),
     by = "habitat"
-  ) %>%
+  ) |>
   mutate(
     management = replace_na(management, "none"),
     management = case_when(
@@ -257,53 +270,53 @@ processed_surveys <- raw_surveys %>%
       T ~ "other"
     ),
     management = factor(management, levels = management_list$type)
-  ) %>%
+  ) |>
   left_join(
     rename(management_list, management = type, management_name = label),
     by = "management"
-  ) %>%
+  ) |>
   mutate(
     lat_rnd = round(lat, 1),
     lng_rnd = round(lng, 1),
     grid_pt = sprintf("%.1f, %.1f", lat_rnd, lng_rnd),
     inwi = between(lat, 42.49, 47.08) & between(lng, -92.89, -86.80)
-  ) %>%
-  left_join(plant_replace, by = "crop") %>%
-  mutate(crop = ifelse(is.na(new_crop), crop, new_crop)) %>%
-  left_join(plant_list, by = "crop") %>%
+  ) |>
+  left_join(plant_replace, by = "crop") |>
+  mutate(crop = ifelse(is.na(new_crop), crop, new_crop)) |>
+  left_join(plant_list, by = "crop") |>
   mutate(
     focal = new_crop %in% focal_plant_list$new_crop,
     plant_group = ifelse(focal, "non-crop focal", plant_group)
-  ) %>%
+  ) |>
   droplevels()
 
 
 # Get habitat/management/plant lists -------------------------------------------
 
 # make ranked list of habitat types
-habitats <- processed_surveys %>%
-  group_by(habitat, habitat_name) %>%
-  summarise(surveys = n(), .groups = "drop") %>%
-  arrange(desc(surveys)) %>%
-  rename(type = habitat, label = habitat_name) %>%
-  mutate(label = fct_inorder(label)) %>%
+habitats <- processed_surveys |>
+  group_by(habitat, habitat_name) |>
+  summarise(surveys = n(), .groups = "drop") |>
+  arrange(desc(surveys)) |>
+  rename(type = habitat, label = habitat_name) |>
+  mutate(label = fct_inorder(label)) |>
   drop_na()
 
 # make ranked list of management types
-managements <- processed_surveys %>%
-  group_by(management, management_name) %>%
-  summarise(surveys = n(), .groups = "drop") %>%
-  arrange(desc(surveys)) %>%
-  rename(type = management, label = management_name) %>%
-  mutate(label = fct_inorder(label)) %>%
+managements <- processed_surveys |>
+  group_by(management, management_name) |>
+  summarise(surveys = n(), .groups = "drop") |>
+  arrange(desc(surveys)) |>
+  rename(type = management, label = management_name) |>
+  mutate(label = fct_inorder(label)) |>
   drop_na()
 
 # make ranked list of plants and reclass low-frequency ones
-plant_ranks <- processed_surveys %>%
-  group_by(plant_group, plant_id, plant_label) %>%
-  summarise(surveys = n(), .groups = "drop") %>%
-  group_by(plant_group) %>%
-  arrange(plant_group, desc(surveys)) %>%
+plant_ranks <- processed_surveys |>
+  group_by(plant_group, plant_id, plant_label) |>
+  summarise(surveys = n(), .groups = "drop") |>
+  group_by(plant_group) |>
+  arrange(plant_group, desc(surveys)) |>
   mutate(
     plant_rank = row_number(),
     plant_type = case_when(
@@ -317,14 +330,14 @@ plant_ranks <- processed_surveys %>%
       plant_type == "other-non-crop" ~ "Other/Unknown non-crop plant",
       T ~ plant_label
     )
-  ) %>%
+  ) |>
   drop_na()
 
 
 # Merge plant data and save final surveys --------------------------------------
 
-surveys <- processed_surveys %>%
-  select(-c(remote_id, picture_url, plant_label)) %>%
+surveys <- processed_surveys |>
+  select(-c(remote_id, picture_url, plant_label)) |>
   left_join(
     select(plant_ranks, -"surveys"),
     by = c("plant_id", "plant_group")
@@ -333,43 +346,43 @@ surveys <- processed_surveys %>%
 
 # Get final plant lists based on survey data -----------------------------------
 
-plants <- surveys %>%
-  group_by(plant_group, plant_type, plant_label) %>%
-  summarise(surveys = n(), .groups = "drop") %>%
+plants <- surveys |>
+  group_by(plant_group, plant_type, plant_label) |>
+  summarise(surveys = n(), .groups = "drop") |>
   arrange(plant_group, desc(surveys))
 
-select_crops <- plants %>%
-  filter(plant_group == "crop") %>%
-  rename(type = plant_type, label = plant_label) %>%
-  mutate(label = fct_inorder(label)) %>%
+select_crops <- plants |>
+  filter(plant_group == "crop") |>
+  rename(type = plant_type, label = plant_label) |>
+  mutate(label = fct_inorder(label)) |>
   drop_na()
 
-focal_noncrops <- plants %>%
-  filter(plant_group == "non-crop focal") %>%
-  rename(type = plant_type, label = plant_label) %>%
-  mutate(label = fct_inorder(label)) %>%
+focal_noncrops <- plants |>
+  filter(plant_group == "non-crop focal") |>
+  rename(type = plant_type, label = plant_label) |>
+  mutate(label = fct_inorder(label)) |>
   drop_na()
 
-select_noncrops <- plants %>%
-  filter(plant_group == "non-crop") %>%
-  rename(type = plant_type, label = plant_label) %>%
-  mutate(label = fct_inorder(label)) %>%
+select_noncrops <- plants |>
+  filter(plant_group == "non-crop") |>
+  rename(type = plant_type, label = plant_label) |>
+  mutate(label = fct_inorder(label)) |>
   drop_na()
 
 
 # Create long-form dataset -----------------------------------------------------
 
-bee_join <- bees %>%
+bee_join <- bees |>
   rename(bee = type, bee_name = label, bee_color = color, bee_group = group)
 
-surveys_long <- surveys %>%
-  pivot_longer(cols = bees$type, names_to = "bee", values_to = "count") %>%
+surveys_long <- surveys |>
+  pivot_longer(cols = bees$type, names_to = "bee", values_to = "count") |>
   left_join(bee_join, by = "bee")
 
 
 # Map data and other summaries -------------------------------------------------
 
-map_pts_wi <- surveys %>% filter(inwi) %>% pull(grid_pt) %>% unique() %>% sort()
+map_pts_wi <- surveys |> filter(inwi) |> pull(grid_pt) |> unique() |> sort()
 
 
 # get date range of data
@@ -381,14 +394,14 @@ years <- unique(format(surveys$date, "%Y"))
 date_slider_min <- as.Date(format(Sys.Date(), "%Y-01-01"))
 date_slider_max <- as.Date(format(Sys.Date(), "%Y-12-31"))
 
-year_summary <- surveys %>%
-  group_by(year) %>%
+year_summary <- surveys |>
+  group_by(year) |>
   summarise(
     surveys = n(),
     users = n_distinct(user_id),
     first_date = min(date),
     last_date = max(date)
-  ) %>%
+  ) |>
   mutate(
     label = paste0(
       "<b>",
@@ -407,10 +420,10 @@ year_summary <- surveys %>%
 
 
 # total counts for project summary
-bee_totals <- surveys_long %>%
-  filter(bee_name %in% wildbee_names) %>%
-  summarise(tot_count = sum(count), .by = bee_name) %>%
-  mutate(pct_count = sprintf("%1.1f%%", tot_count / sum(.$tot_count) * 100)) %>%
+bee_totals <- surveys_long |>
+  filter(bee_name %in% wildbee_names) |>
+  summarise(tot_count = sum(count), .by = bee_name) |>
+  mutate(pct_count = sprintf("%1.1f%%", tot_count / sum(tot_count) * 100)) |>
   mutate(
     label = sprintf(
       "%s: %s (%s)",
