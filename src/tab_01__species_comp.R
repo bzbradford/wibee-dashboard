@@ -65,7 +65,7 @@ make_pie <- function(df, title, id) {
     div(
       class = "pie",
       h4(class = "plot-title", plot_title),
-      renderPlotly(plt),
+      plt,
       div(
         align = "right",
         tags$span(
@@ -93,21 +93,13 @@ speciesCompServer <- function(cur_surveys_long) {
         filter(bee_name != "Wild bees") |>
         droplevels()
 
-      pinned_plots <- reactiveVal(list())
+      initial_plots <- list(`_all` = make_pie(all_surveys, "All surveys", "_all"))
+      pinned_plots <- reactiveVal(initial_plots)
       plot_num <- reactiveVal(0)
       show_current <- reactiveVal(TRUE)
-      first_run <- reactiveVal(TRUE)
       msg <- reactiveVal()
 
       output$pinnedPlots <- renderUI({
-        if (length(pinned_plots()) == 0 & first_run()) {
-          plots <- list()
-          plot_id <- "_all"
-          plots[[plot_id]] <- make_pie(all_surveys, "All surveys", plot_id)
-          pinned_plots(plots)
-          first_run(FALSE)
-        }
-
         plots <- pinned_plots()
         if (show_current() & nrow(cur_surveys_long()) > 0) {
           cur_plot <- make_pie(
@@ -147,7 +139,10 @@ speciesCompServer <- function(cur_surveys_long) {
       })
 
       observeEvent(input$addPlot, {
-        if (nrow(cur_surveys_long()) == 0) {
+        surveys <- cur_surveys_long()
+        plots <- pinned_plots()
+
+        if (nrow(surveys) == 0) {
           msg("There aren't any surveys currently selected.")
           return()
         }
@@ -163,10 +158,9 @@ speciesCompServer <- function(cur_surveys_long) {
         }
 
         msg(NULL)
-        plots <- pinned_plots()
         plot_num(plot_num() + 1)
         plot_id <- paste0("plt_", plot_num())
-        plots[[plot_id]] <- make_pie(cur_surveys_long(), input$title, plot_id)
+        plots[[plot_id]] <- make_pie(surveys, input$title, plot_id)
         pinned_plots(plots)
         updateTextInput(inputId = "title", value = "")
       })
@@ -190,8 +184,7 @@ speciesCompServer <- function(cur_surveys_long) {
       })
 
       observeEvent(input$clearPlots, {
-        pinned_plots(c())
-        first_run(TRUE)
+        pinned_plots(initial_plots)
         show_current(TRUE)
         plot_num(0)
         msg(NULL)

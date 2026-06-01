@@ -78,7 +78,11 @@ get_surveys <- function(force = FALSE) {
 
   # if we already have surveys.csv, just load recent surveys and merge with stored surveys
   if (file.exists("surveys.csv.gz")) {
-    existing_surveys <- read_csv("surveys.csv.gz", show_col_types = FALSE)
+    existing_surveys <- read_csv(
+      "surveys.csv.gz",
+      guess_max = 1e6,
+      show_col_types = FALSE
+    )
 
     if ((refresh_time < Sys.time() - 60 * 60) | force) {
       tryCatch(

@@ -550,8 +550,6 @@ surveyFiltersServer <- function(data) {
             lat < bounds$north
           ) |>
           pull(grid_pt)
-        leafletProxy("map") |>
-          clearGroup("selected_grids")
         map_selection(new_pts)
       })
 
