@@ -42,33 +42,36 @@ activityByMgmtServer <- function(data_long) {
       output$plot <- renderPlotly({
         req(data_ready())
 
-        plot_data <- data_long() %>%
-          group_by(management_name, bee_name, bee_color) %>%
+        plot_data <- data_long() |>
+          group_by(management_name, bee_name, bee_color) |>
           summarise(
             visit_rate = round(mean(count), 1),
             n = n(),
             .groups = "drop"
-          ) %>%
-          droplevels() %>%
+          ) |>
+          droplevels() |>
           mutate(x = fct_inorder(paste0("(", n, ") ", management_name)))
 
-        plot_data %>%
+        plot_data |>
           plot_ly(
             type = "bar",
             x = ~x,
             y = ~visit_rate,
             color = ~bee_name,
-            colors = ~ levels(.$bee_color),
-            marker = list(line = list(color = "#ffffff", width = .25))
-          ) %>%
+            colors = ~ levels(bee_color),
+            marker = list(line = list(color = "#ffffff", width = 0.25))
+          ) |>
           layout(
             barmode = "stack",
             title = list(
               text = "<b>Pollinator visitation rates by management type</b>",
               font = list(size = 15)
             ),
-            xaxis = list(title = "", fixedrange = T),
-            yaxis = list(title = "Number of visits per survey", fixedrange = T),
+            xaxis = list(title = "", fixedrange = TRUE),
+            yaxis = list(
+              title = "Number of visits per survey",
+              fixedrange = TRUE
+            ),
             hovermode = "x unified"
           )
       })

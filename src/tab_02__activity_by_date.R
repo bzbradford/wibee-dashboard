@@ -59,24 +59,24 @@ activityByDateServer <- function(data, data_long) {
 
         # bring all dates to the same year
         cur_year <- max(df$year)
-        df <- df %>%
+        df <- df |>
           mutate(date = as.Date(paste(cur_year, month, day, sep = "-")))
-        counts <- data() %>%
+        counts <- data() |>
           mutate(date = as.Date(paste(cur_year, month, day, sep = "-")))
 
         plt <- plot_ly()
 
         # set data and plot layouts depending on grouping
         if (grouping == "Day") {
-          survey_counts <- counts %>%
+          survey_counts <- counts |>
             count(date)
-          plot_data <- df %>%
-            group_by(date, bee_name, bee_color) %>%
-            summarise(count = round(mean(count), 1), .groups = "drop") %>%
+          plot_data <- df |>
+            group_by(date, bee_name, bee_color) |>
+            summarise(count = round(mean(count), 1), .groups = "drop") |>
             droplevels()
           bee_colors <- levels(plot_data$bee_color)
 
-          plt <- plt %>%
+          plt <- plt |>
             layout(
               barmode = "stack",
               title = list(
@@ -90,19 +90,19 @@ activityByDateServer <- function(data, data_long) {
               bargap = 0
             )
         } else if (grouping == "Week") {
-          survey_counts <- counts %>%
-            count(week) %>%
+          survey_counts <- counts |>
+            count(week) |>
             mutate(date = as.Date(paste(cur_year, 1 + (week - 1) * 7), "%Y %j"))
-          plot_data <- df %>%
-            group_by(week, bee_name, bee_color) %>%
-            summarise(count = round(mean(count), 1), .groups = "drop") %>%
+          plot_data <- df |>
+            group_by(week, bee_name, bee_color) |>
+            summarise(count = round(mean(count), 1), .groups = "drop") |>
             mutate(
               date = as.Date(paste(cur_year, 1 + (week - 1) * 7), "%Y %j")
-            ) %>%
+            ) |>
             droplevels()
           bee_colors <- levels(plot_data$bee_color)
 
-          plt <- plt %>%
+          plt <- plt |>
             layout(
               barmode = "stack",
               title = list(
@@ -120,17 +120,17 @@ activityByDateServer <- function(data, data_long) {
               bargap = 0
             )
         } else if (grouping == "Month") {
-          survey_counts <- counts %>%
-            count(month) %>%
+          survey_counts <- counts |>
+            count(month) |>
             mutate(date = as.Date(paste(cur_year, month, 15, sep = "-")))
-          plot_data <- df %>%
-            group_by(month, bee_name, bee_color) %>%
-            summarise(count = round(mean(count), 1), .groups = "drop") %>%
-            mutate(date = as.Date(paste(cur_year, month, 15, sep = "-"))) %>%
+          plot_data <- df |>
+            group_by(month, bee_name, bee_color) |>
+            summarise(count = round(mean(count), 1), .groups = "drop") |>
+            mutate(date = as.Date(paste(cur_year, month, 15, sep = "-"))) |>
             droplevels()
           bee_colors <- levels(plot_data$bee_color)
 
-          plt <- plt %>%
+          plt <- plt |>
             layout(
               barmode = "stack",
               title = list(
@@ -154,7 +154,7 @@ activityByDateServer <- function(data, data_long) {
         }
 
         # add the bee counts and dummy survey count data for legend
-        plt %>%
+        plt |>
           add_trace(
             data = survey_counts,
             x = ~date,
@@ -165,7 +165,7 @@ activityByDateServer <- function(data, data_long) {
             colors = bee_colors,
             hovertemplate = "<i>Surveys: %{text}</i><extra></extra>",
             showlegend = F
-          ) %>%
+          ) |>
           add_trace(
             data = plot_data,
             x = ~date,

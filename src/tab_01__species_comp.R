@@ -25,12 +25,12 @@ make_pie <- function(df, title, id) {
   ns <- NS("speciesComp")
   n_surveys <- length(unique(df$id))
 
-  plot_data <- df %>%
-    group_by(bee_name, bee_color) %>%
-    summarise(mean_count = round(mean(count), 1), .groups = "drop") %>%
+  plot_data <- df |>
+    group_by(bee_name, bee_color) |>
+    summarise(mean_count = round(mean(count), 1), .groups = "drop") |>
     droplevels()
 
-  plt <- plot_data %>%
+  plt <- plot_data |>
     plot_ly(
       labels = ~bee_name,
       values = ~mean_count,
@@ -45,7 +45,7 @@ make_pie <- function(df, title, id) {
       ),
       sort = F,
       direction = "clockwise"
-    ) %>%
+    ) |>
     layout(
       showlegend = F,
       margin = list(l = 0, r = 0),
@@ -89,8 +89,8 @@ speciesCompServer <- function(cur_surveys_long) {
     function(input, output, session) {
       ns <- session$ns
 
-      all_surveys <- surveys_long %>%
-        filter(bee_name != "Wild bees") %>%
+      all_surveys <- surveys_long |>
+        filter(bee_name != "Wild bees") |>
         droplevels()
 
       pinned_plots <- reactiveVal(list())

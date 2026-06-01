@@ -42,17 +42,17 @@ userStatsServer <- function(data) {
       output$plot <- renderPlotly({
         req(data_ready())
 
-        df1 <- data() %>%
-          mutate(year = format(date, "%Y")) %>%
-          group_by(year, user_id) %>%
-          summarise(surveys_per_user = n(), .groups = "drop") %>%
-          group_by(year, surveys_per_user) %>%
+        df1 <- data() |>
+          mutate(year = format(date, "%Y")) |>
+          group_by(year, user_id) |>
+          summarise(surveys_per_user = n(), .groups = "drop") |>
+          group_by(year, surveys_per_user) |>
           summarise(
             n_users = n(),
             total_surveys = sum(surveys_per_user),
             .groups = "drop"
-          ) %>%
-          arrange(desc(total_surveys)) %>%
+          ) |>
+          arrange(desc(total_surveys)) |>
           mutate(
             parent = year,
             label = paste0(
@@ -68,12 +68,12 @@ userStatsServer <- function(data) {
             value = total_surveys
           )
 
-        df2 <- df1 %>%
-          group_by(year) %>%
+        df2 <- df1 |>
+          group_by(year) |>
           summarise(
             total_surveys = sum(total_surveys),
             total_users = sum(n_users)
-          ) %>%
+          ) |>
           mutate(
             parent = "Selected surveys",
             label = paste0(
@@ -89,11 +89,11 @@ userStatsServer <- function(data) {
             value = total_surveys
           )
 
-        df3 <- df1 %>%
-          bind_rows(df2) %>%
+        df3 <- df1 |>
+          bind_rows(df2) |>
           arrange(id)
 
-        df3 %>%
+        df3 |>
           plot_ly(
             type = "treemap",
             ids = ~id,

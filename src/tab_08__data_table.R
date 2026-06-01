@@ -76,19 +76,19 @@ dataTableServer <- function(data_long) {
       })
 
       table_data <- reactive({
-        data_long() %>%
-          mutate(date = as.character(date)) %>%
-          group_by_at(input$groups) %>%
-          group_by(bee_name, .add = T) %>%
+        data_long() |>
+          mutate(date = as.character(date)) |>
+          group_by_at(input$groups) |>
+          group_by(bee_name, .add = T) |>
           summarise(
             n = n(),
             visit_rate = round(mean(count), 1),
             .groups = "drop_last"
-          ) %>%
-          mutate("Total rate" = round(sum(visit_rate), 1)) %>%
-          ungroup() %>%
-          pivot_wider(names_from = bee_name, values_from = visit_rate) %>%
-          mutate("row" = row_number()) %>%
+          ) |>
+          mutate("Total rate" = round(sum(visit_rate), 1)) |>
+          ungroup() |>
+          pivot_wider(names_from = bee_name, values_from = visit_rate) |>
+          mutate("row" = row_number()) |>
           select("row", everything())
       })
 

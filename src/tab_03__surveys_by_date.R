@@ -42,19 +42,19 @@ surveysByDateServer <- function(data) {
       output$plot <- renderPlotly({
         req(data_ready())
 
-        plot_data <- data() %>%
-          group_by(year, week) %>%
-          summarise(n_surveys = n(), .groups = "drop_last") %>%
+        plot_data <- data() |>
+          group_by(year, week) |>
+          summarise(n_surveys = n(), .groups = "drop_last") |>
           mutate(date = as.Date(paste0(year, "-01-01")) + weeks(week - 1))
 
-        plot_data %>%
+        plot_data |>
           plot_ly(
             x = ~date,
             y = ~n_surveys,
             type = "bar",
             xperiodalignment = "left",
             marker = list(line = list(color = "#ffffff", width = .25))
-          ) %>%
+          ) |>
           layout(
             barmode = "stack",
             title = list(

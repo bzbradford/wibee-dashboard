@@ -63,22 +63,22 @@ activityMapServer <- function(data, data_long) {
         div <- as.numeric(input$size)
 
         if (input$type == "Number of surveys") {
-          df <- data() %>%
-            mutate(across(c(lat, lng), ~ round(.x / div) * div)) %>%
+          df <- data() |>
+            mutate(across(c(lat, lng), ~ round(.x / div) * div)) |>
             summarise(value = n(), .by = c(lat, lng))
         } else if (input$type == "Number of users") {
-          df <- data() %>%
-            mutate(across(c(lat, lng), ~ round(.x / div) * div)) %>%
+          df <- data() |>
+            mutate(across(c(lat, lng), ~ round(.x / div) * div)) |>
             summarise(value = n_distinct(user_id), .by = c(lat, lng))
         } else {
           # "Insect visits per survey"
-          df <- data_long() %>%
-            mutate(across(c(lat, lng), ~ round(.x / div) * div)) %>%
-            summarise(total_visits = sum(count), .by = c(lat, lng, id)) %>%
+          df <- data_long() |>
+            mutate(across(c(lat, lng), ~ round(.x / div) * div)) |>
+            summarise(total_visits = sum(count), .by = c(lat, lng, id)) |>
             summarise(value = round(mean(total_visits), 1), .by = c(lat, lng))
         }
 
-        df %>%
+        df |>
           mutate(
             lat1 = lat - div / 2,
             lat2 = lat + div / 2,
@@ -95,7 +95,7 @@ activityMapServer <- function(data, data_long) {
           reverse = F
         )
 
-        map %>%
+        map |>
           addRectangles(
             data = df,
             lat1 = ~lat1,
@@ -117,15 +117,15 @@ activityMapServer <- function(data, data_long) {
       }
 
       output$map <- renderLeaflet({
-        leaflet() %>%
-          setView(lng = -89.7, lat = 44.8, zoom = 7) %>%
-          addProviderTiles(providers$CartoDB.PositronNoLabels) %>%
+        leaflet() |>
+          setView(lng = -89.7, lat = 44.8, zoom = 7) |>
+          addProviderTiles(providers$CartoDB.PositronNoLabels) |>
           addGrids(isolate(map_data()))
       })
 
       observe({
-        leafletProxy("map") %>%
-          clearGroup("grids") %>%
+        leafletProxy("map") |>
+          clearGroup("grids") |>
           addGrids(map_data())
       })
     }

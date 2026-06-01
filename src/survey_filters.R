@@ -1,11 +1,326 @@
-## Survey filters module server ##
+## Survey filters module ##
 
+# Survey filters UI ----
+surveyFiltersUI <- function() {
+  ns <- NS("surveyFilters")
+
+  tagList(
+    bsCollapse(
+      multiple = TRUE,
+      open = "map",
+
+      ## By year ----
+
+      bsCollapsePanel(
+        value = "years",
+        style = "primary",
+        title = "Select year(s) to show",
+        tagList(
+          p(em(
+            "Select which year or years of survey data you want to see. After changing your year selections, grid point selections may have changed on the map."
+          )),
+          div(
+            class = "well",
+            style = "padding-bottom: 0px;",
+            checkboxGroupInput(
+              inputId = ns("years"),
+              label = "Surveys from year:",
+              choiceNames = lapply(year_summary$label, HTML),
+              choiceValues = year_summary$year,
+              selected = year_summary$year
+            )
+          ),
+          div(
+            style = "text-align: center; font-weight: bold;",
+            textOutput(ns("survey_count"))
+          )
+        )
+      ),
+
+      ## By map grid ----
+
+      bsCollapsePanel(
+        value = "map",
+        style = "primary",
+        title = "Select survey locations on the map",
+        tagList(
+          p(
+            style = "margin-top:.5em; margin-bottom:.5em",
+            em(
+              "Click on individual grid cell(s) to show only results from those areas. Note: some surveys are from outside Wisconsin. Click 'Select all' to see them."
+            )
+          ),
+          leafletOutput(ns("map"), height = 600),
+          div(
+            class = "flex-row map-btns",
+            div(actionButton(ns("map_select_visible"), "Select visible")),
+            div(actionButton(ns("map_zoom_all"), "Select all")),
+            div(actionButton(ns("map_clear_selection"), "Clear selection")),
+            div(actionButton(ns("map_reset"), "Reset map")),
+            div(
+              style = "max-width: 60%;",
+              strong(textOutput(ns("survey_count_loc")))
+            )
+          )
+        )
+      ),
+
+      ## By user ID ----
+
+      bsCollapsePanel(
+        value = "users",
+        style = "primary",
+        title = "Show surveys from specific user(s)",
+        tagList(
+          p(
+            style = "margin-bottom:.5em",
+            em(
+              "Filter survey data by selecting which User IDs you want to show data from. You can find your User ID in the WiBee app under Profile. Add one at a time, or separated by commas. The selected users list will show the total number of surveys submitted by that User ID."
+            )
+          ),
+          wellPanel(
+            fluidRow(
+              column(
+                6,
+                textInput(
+                  inputId = ns("user_id"),
+                  label = "User ID:",
+                  value = ""
+                ),
+                div(
+                  style = "margin-top:15px",
+                  actionButton(ns("add_user_id"), "Add ID to list"),
+                  actionButton(ns("reset_user_ids"), "Reset list of IDs"),
+                )
+              ),
+              column(
+                6,
+                p(strong("Selected users:")),
+                uiOutput(ns("selected_users_display"))
+              )
+            ),
+          ),
+          div(
+            style = "text-align: center; font-weight: bold;",
+            textOutput(ns("survey_count_users"))
+          )
+        )
+      ),
+
+      ## By date range ----
+
+      bsCollapsePanel(
+        value = "dates",
+        style = "primary",
+        title = "Select survey date range",
+        tagList(
+          p(
+            em(
+              "Filter survey data by selecting which date range you want to see data for."
+            ),
+            style = "margin-bottom:.5em"
+          ),
+          wellPanel(
+            sliderInput(
+              inputId = ns("date_range"),
+              label = "Date range (across all selected years):",
+              min = date_slider_min,
+              max = date_slider_max,
+              value = c(date_slider_min, date_slider_max),
+              width = "100%",
+              timeFormat = "%b %d"
+            ),
+            div(
+              style = "margin-top:15px",
+              actionButton(ns("set_date_spring"), "Spring"),
+              actionButton(ns("set_date_summer"), "Summer"),
+              actionButton(ns("set_date_fall"), "Fall"),
+              actionButton(ns("reset_date"), "Reset")
+            ),
+          ),
+          div(
+            style = "text-align: center; font-weight: bold;",
+            textOutput(ns("survey_count_date"))
+          )
+        )
+      ),
+
+      ## By habitat/management/pollinator ----
+
+      bsCollapsePanel(
+        value = "surveys",
+        style = "primary",
+        title = "Select surveys by habitat or management type",
+        tagList(
+          p(
+            style = "margin-bottom:.5em",
+            em(
+              "Filter survey data by selecting which habitats or management types you want to see surveys for. Number of matching surveys for each habitat or reported management practice is shown in parentheses."
+            )
+          ),
+          wellPanel(
+            fixedRow(
+              column(
+                6,
+                checkboxGroupInput(
+                  inputId = ns("which_habitat"),
+                  label = "Survey habitat:",
+                  choiceNames = levels(habitats$label),
+                  choiceValues = habitats$type,
+                  selected = habitats$type
+                ),
+                div(
+                  actionButton(ns("which_habitat_all"), "All"),
+                  style = "display:inline-block"
+                ),
+                div(
+                  actionButton(ns("which_habitat_none"), "None"),
+                  style = "display:inline-block"
+                )
+              ),
+              column(
+                6,
+                checkboxGroupInput(
+                  inputId = ns("which_mgmt"),
+                  label = "Management type:",
+                  choiceNames = levels(managements$label),
+                  choiceValues = managements$type,
+                  selected = managements$type
+                ),
+                div(
+                  actionButton(ns("which_mgmt_all"), "All"),
+                  style = "display:inline-block"
+                ),
+                div(
+                  actionButton(ns("which_mgmt_none"), "None"),
+                  style = "display:inline-block"
+                )
+              )
+            )
+          ),
+          div(
+            style = "text-align: center; font-weight: bold;",
+            textOutput(ns("survey_count_site"))
+          )
+        )
+      ),
+
+      ## By crop/plant ----
+
+      bsCollapsePanel(
+        value = "plants",
+        style = "primary",
+        title = "Select crop(s) or flowering plant(s) observed during surveys",
+        list(
+          p(
+            style = "margin-bottom:.5em",
+            em(
+              "Filter survey data by selecting which crops, focal plants (featured plants for surveys shown in the app), or other non-crop flowering plants you want to see data for. Number of matching surveys for each plant is shown in parentheses."
+            )
+          ),
+          wellPanel(
+            fixedRow(
+              column(
+                3,
+                checkboxGroupInput(
+                  inputId = ns("which_crops"),
+                  label = "Crops:",
+                  choiceNames = levels(select_crops$label),
+                  choiceValues = select_crops$type,
+                  selected = select_crops$type
+                ),
+                div(
+                  actionButton(ns("which_crops_all"), "All"),
+                  style = "display:inline-block"
+                ),
+                div(
+                  actionButton(ns("which_crops_none"), "None"),
+                  style = "display:inline-block"
+                )
+              ),
+              column(
+                4,
+                checkboxGroupInput(
+                  inputId = ns("which_focal_noncrops"),
+                  label = "Focal non-crop plants:",
+                  choiceNames = lapply(
+                    as.list(levels(focal_noncrops$label)),
+                    HTML
+                  ),
+                  choiceValues = focal_noncrops$type,
+                  selected = focal_noncrops$type
+                ),
+                div(
+                  actionButton(ns("which_focal_noncrops_all"), "All"),
+                  style = "display:inline-block"
+                ),
+                div(
+                  actionButton(ns("which_focal_noncrops_none"), "None"),
+                  style = "display:inline-block"
+                )
+              ),
+              column(
+                5,
+                checkboxGroupInput(
+                  inputId = ns("which_noncrops"),
+                  label = "Other non-crop plant:",
+                  choiceNames = lapply(
+                    as.list(levels(select_noncrops$label)),
+                    HTML
+                  ),
+                  choiceValues = select_noncrops$type,
+                  selected = select_noncrops$type
+                ),
+                div(
+                  actionButton(ns("which_noncrops_all"), "All"),
+                  style = "display:inline-block"
+                ),
+                div(
+                  actionButton(ns("which_noncrops_none"), "None"),
+                  style = "display:inline-block"
+                )
+              )
+            ),
+            fixedRow(
+              align = "center",
+              style = "margin-top: 1em;",
+              div(
+                actionButton(ns("select_all_plants"), "Select all plants"),
+                style = "display:inline-block"
+              ),
+              div(
+                actionButton(
+                  ns("select_no_plants"),
+                  "Clear all plant selections"
+                ),
+                style = "display:inline-block"
+              )
+            )
+          ),
+          div(
+            style = "text-align: center; font-weight: bold;",
+            textOutput(ns("survey_count_plant"))
+          )
+        )
+      )
+    ),
+
+    # Show final selected surveys count ----
+
+    div(
+      strong(textOutput(ns("survey_count_final"))),
+      class = "well",
+      style = "text-align: center; font-size: larger;"
+    )
+  )
+}
+
+
+# Survey filters server ----
 #' requires global vars:
 #' - surveys
 #' - map_pts_wi
-#'
 #' @return the filtered surveys data frame
-
 surveyFiltersServer <- function(data) {
   moduleServer(
     id = "surveyFilters",
@@ -20,7 +335,7 @@ surveyFiltersServer <- function(data) {
       # Filter by year ----
 
       surveys_by_year <- reactive({
-        surveys %>%
+        surveys |>
           filter(year %in% input$years)
       })
 
@@ -47,15 +362,15 @@ surveyFiltersServer <- function(data) {
       # Filter by map grid ----
 
       surveys_by_loc <- reactive({
-        surveys_by_year() %>%
+        surveys_by_year() |>
           filter(grid_pt %in% map_selection())
       })
 
       ## Initialize map ----
 
       map_grids <- reactive({
-        surveys_by_year() %>%
-          mutate(lat = lat_rnd, lng = lng_rnd) %>%
+        surveys_by_year() |>
+          mutate(lat = lat_rnd, lng = lng_rnd) |>
           summarise(
             n_surveys = n(),
             n_users = n_distinct(user_id),
@@ -64,7 +379,7 @@ surveyFiltersServer <- function(data) {
             wb = round(sum(wild_bee) / total_visits * 100),
             nb = round(sum(non_bee) / total_visits * 100),
             .by = c(lat, lng, grid_pt, inwi)
-          ) %>%
+          ) |>
           mutate(
             label = str_glue(
               "
@@ -91,11 +406,11 @@ surveyFiltersServer <- function(data) {
 
       # Initial map condition
       output$map <- renderLeaflet({
-        leaflet() %>%
-          addTiles() %>%
-          addMapPane("base_grids", zIndex = 410) %>%
-          addMapPane("selected_grids", zIndex = 420) %>%
-          setView(lng = -89.7, lat = 44.8, zoom = 7) %>%
+        leaflet() |>
+          addTiles() |>
+          addMapPane("base_grids", zIndex = 410) |>
+          addMapPane("selected_grids", zIndex = 420) |>
+          setView(lng = -89.7, lat = 44.8, zoom = 7) |>
           addEasyButtonBar(
             easyButton(
               position = "topleft",
@@ -125,8 +440,8 @@ surveyFiltersServer <- function(data) {
       })
 
       observeEvent(map_grids(), {
-        leafletProxy("map") %>%
-          clearGroup("base_grids") %>%
+        leafletProxy("map") |>
+          clearGroup("base_grids") |>
           addRectangles(
             data = map_grids(),
             lng1 = ~ lng - .05,
@@ -159,8 +474,8 @@ surveyFiltersServer <- function(data) {
 
       # reactive portion of map showing selected grids
       observeEvent(map_selection(), {
-        leafletProxy("map") %>%
-          clearGroup("selected_grids") %>%
+        leafletProxy("map") |>
+          clearGroup("selected_grids") |>
           addRectangles(
             data = filter(map_grids(), grid_pt %in% map_selection()),
             lng1 = ~ lng - .05,
@@ -198,7 +513,7 @@ surveyFiltersServer <- function(data) {
           if (setequal(map_selection(), map_pts_wi)) {
             map_selection(grid_pt)
           } else {
-            leafletProxy("map") %>%
+            leafletProxy("map") |>
               removeShape(click$id)
             old_sel <- map_selection()
             new_sel <- old_sel[old_sel != grid_pt]
@@ -214,7 +529,7 @@ surveyFiltersServer <- function(data) {
 
       # zoom to show all data
       observeEvent(input$map_zoom_all, {
-        leafletProxy("map") %>%
+        leafletProxy("map") |>
           fitBounds(
             lng1 = min(map_grids()$lng),
             lat1 = min(map_grids()$lat),
@@ -227,22 +542,22 @@ surveyFiltersServer <- function(data) {
       # select grids visible in map window
       observeEvent(input$map_select_visible, {
         bounds <- input$map_bounds
-        new_pts <- map_grids() %>%
+        new_pts <- map_grids() |>
           filter(
             lng > bounds$west,
             lng < bounds$east,
             lat > bounds$south,
             lat < bounds$north
-          ) %>%
+          ) |>
           pull(grid_pt)
-        leafletProxy("map") %>%
+        leafletProxy("map") |>
           clearGroup("selected_grids")
         map_selection(new_pts)
       })
 
       # clear selection
       observeEvent(input$map_clear_selection, {
-        leafletProxy("map") %>%
+        leafletProxy("map") |>
           clearGroup("selected_grids")
         map_selection(NULL)
       })
@@ -261,7 +576,7 @@ surveyFiltersServer <- function(data) {
       }
 
       resetMapView <- function() {
-        leafletProxy("map") %>%
+        leafletProxy("map") |>
           setView(lng = -89.7, lat = 44.8, zoom = 7)
       }
 
@@ -363,7 +678,7 @@ surveyFiltersServer <- function(data) {
       }
 
       surveys_by_date <- reactive({
-        surveys_by_user() %>%
+        surveys_by_user() |>
           filter(
             year %in% input$years,
             between(doy, yday(input$date_range[1]), yday(input$date_range[2]))
@@ -410,11 +725,11 @@ surveyFiltersServer <- function(data) {
       # Filter by survey attributes ----
 
       surveys_by_attr <- reactive({
-        surveys_by_date() %>%
+        surveys_by_date() |>
           filter(
             habitat %in% input$which_habitat,
             management %in% input$which_mgmt
-          ) %>%
+          ) |>
           droplevels()
       })
 
@@ -422,11 +737,11 @@ surveyFiltersServer <- function(data) {
 
       # Generate labels
       habitat_labels <- reactive({
-        habitats %>%
+        habitats |>
           left_join(
             count(surveys_by_user(), habitat, .drop = F),
             by = c("type" = "habitat")
-          ) %>%
+          ) |>
           mutate(
             n = replace_na(n, 0),
             box_label = paste0(label, " (", n, ")")
@@ -465,11 +780,11 @@ surveyFiltersServer <- function(data) {
 
       # Generate labels
       mgmt_labels <- reactive({
-        managements %>%
+        managements |>
           left_join(
             count(surveys_by_user(), management, .drop = F),
             by = c("type" = "management")
-          ) %>%
+          ) |>
           mutate(
             n = replace_na(n, 0),
             box_label = paste0(label, " (", n, ")")
@@ -518,7 +833,7 @@ surveyFiltersServer <- function(data) {
       # Filter by crop/plant ----
 
       surveys_by_plant <- reactive({
-        surveys_by_attr() %>%
+        surveys_by_attr() |>
           filter(
             plant_type %in%
               c(
@@ -526,7 +841,7 @@ surveyFiltersServer <- function(data) {
                 input$which_focal_noncrops,
                 input$which_noncrops
               )
-          ) %>%
+          ) |>
           droplevels()
       })
 
@@ -534,11 +849,11 @@ surveyFiltersServer <- function(data) {
 
       # Generate crop labels
       crop_labels <- reactive({
-        select_crops %>%
+        select_crops |>
           left_join(
             count(surveys_by_attr(), plant_type, .drop = F),
             by = c("type" = "plant_type")
-          ) %>%
+          ) |>
           mutate(
             n = replace_na(n, 0),
             box_label = paste0(label, " (", n, ")")
@@ -557,11 +872,11 @@ surveyFiltersServer <- function(data) {
 
       # Generate focal plant labels
       focal_noncrop_labels <- reactive({
-        focal_noncrops %>%
+        focal_noncrops |>
           left_join(
             count(surveys_by_attr(), plant_type, .drop = F),
             by = c("type" = "plant_type")
-          ) %>%
+          ) |>
           mutate(
             n = replace_na(n, 0),
             box_label = paste0(label, " (", n, ")")
@@ -580,11 +895,11 @@ surveyFiltersServer <- function(data) {
 
       # Generate non-crop plant labels
       noncrop_labels <- reactive({
-        select_noncrops %>%
+        select_noncrops |>
           left_join(
             count(surveys_by_attr(), plant_type, .drop = F),
             by = c("type" = "plant_type")
-          ) %>%
+          ) |>
           mutate(
             n = replace_na(n, 0),
             box_label = paste0(label, " (", n, ")")
@@ -709,12 +1024,12 @@ surveyFiltersServer <- function(data) {
       })
 
       filtered_surveys_long <- reactive({
-        filtered_surveys() %>%
+        filtered_surveys() |>
           pivot_longer(
             cols = bees$type,
             names_to = "bee",
             values_to = "count"
-          ) %>%
+          ) |>
           left_join(bee_join, by = "bee")
       })
 

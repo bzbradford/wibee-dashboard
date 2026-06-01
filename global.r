@@ -11,6 +11,8 @@ if (FALSE) {
   renv::snapshot() # save updated lock file to project
 }
 
+options(shiny.fullstacktrace = FALSE)
+
 
 # Required packages ----
 
