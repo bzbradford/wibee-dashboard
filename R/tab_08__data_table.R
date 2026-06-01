@@ -20,11 +20,11 @@ dataTableServer <- function(data_long) {
     id = "dataTable",
     function(input, output, session) {
       ns <- session$ns
-      
+
       data_ready <- reactive({
         nrow(data_long()) > 0
       })
-      
+
       choices <- list(
         "Survey ID" = "id",
         "User ID" = "user_id",
@@ -35,24 +35,38 @@ dataTableServer <- function(data_long) {
         "Crop/Plant" = "crop",
         "Management" = "management"
       )
-      
+
       selected <- c("habitat", "crop", "management")
-      
+
       output$ui <- renderUI({
-        if (!data_ready()) return(noSurveysMsg())
-        
+        if (!data_ready()) {
+          return(noSurveysMsg())
+        }
+
         tagList(
-          p("The table below shows the surveys you have currently selected by the filters above. Check or uncheck the grouping variables to simplify or expand the summary table. If a row shows n > 1, some surveys were averaged together. You can select all the columns to get each individual survey. Click the download button to save a copy of the table.", em("Note: this data is for personal or educational use only. Other use or use in a publication is not permitted without the consent of the team. ", a("Email us with any inquiries.", href = "mailto:pollinators@wisc.edu"))),
+          p(
+            "The table below shows the surveys you have currently selected by the filters above. Check or uncheck the grouping variables to simplify or expand the summary table. If a row shows n > 1, some surveys were averaged together. You can select all the columns to get each individual survey. Click the download button to save a copy of the table.",
+            em(
+              "Note: this data is for personal or educational use only. Other use or use in a publication is not permitted without the consent of the team. ",
+              a(
+                "Email us with any inquiries.",
+                href = "mailto:pollinators@wisc.edu"
+              )
+            )
+          ),
           fixedRow(
-            column(8,
+            column(
+              8,
               checkboxGroupInput(
                 inputId = ns("groups"),
                 label = "Select which variables to include in table:",
                 choices = choices,
                 selected = selected,
-                inline = T)
+                inline = T
+              )
             ),
-            column(4,
+            column(
+              4,
               align = "right",
               downloadButton(ns("download_data"), "Download data")
             )
@@ -60,7 +74,7 @@ dataTableServer <- function(data_long) {
           DTOutput(ns("table"))
         )
       })
-      
+
       table_data <- reactive({
         data_long() %>%
           mutate(date = as.character(date)) %>%
@@ -69,20 +83,21 @@ dataTableServer <- function(data_long) {
           summarise(
             n = n(),
             visit_rate = round(mean(count), 1),
-            .groups = "drop_last") %>%
+            .groups = "drop_last"
+          ) %>%
           mutate("Total rate" = round(sum(visit_rate), 1)) %>%
           ungroup() %>%
           pivot_wider(names_from = bee_name, values_from = visit_rate) %>%
           mutate("row" = row_number()) %>%
           select("row", everything())
       })
-      
+
       output$table <- renderDT(
         table_data(),
         rownames = F,
         options = list(pageLength = 25)
       )
-      
+
       output$download_data <- downloadHandler(
         filename = function() {
           paste0("WiBee data ", format(Sys.time(), "%Y-%m-%d %H%M%S"), ".csv")

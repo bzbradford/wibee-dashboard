@@ -9,14 +9,14 @@ suppressMessages({
   library(janitor)
   library(RColorBrewer)
   library(httr)
-  
+
   # shiny
   library(shiny)
   library(shinythemes)
   library(shinyWidgets)
   library(shinyBS)
   library(shinyjs)
-  
+
   # display
   library(DT)
   library(leaflet)
@@ -24,12 +24,14 @@ suppressMessages({
 })
 
 
-
 # Functions ---------------------------------------------------------------
 
 # UI element returned on data tabs when no surveys are selected
 noSurveysMsg <- function() {
-  div(class = "well", "No surveys selected. Change your filters above or hit 'reset filters' below.")
+  div(
+    class = "well",
+    "No surveys selected. Change your filters above or hit 'reset filters' below."
+  )
 }
 
 # Refresh surveys --------------------------------------------------------------
@@ -47,40 +49,51 @@ fetch_remote <- function(start_date = NULL) {
     ),
     show_col_types = F
   )
-  if (!is.data.frame(response)) stop("Invalid response from remote database")
+  if (!is.data.frame(response)) {
+    stop("Invalid response from remote database")
+  }
   response
 }
 
 # handle pulling or merging new surveys with stored surveys
 get_surveys <- function(force = FALSE) {
-  
   # check when last data refresh occurred
-  if (!exists("refresh_time")) refresh_time <- as.Date("2020-1-1")
-  
+  if (!exists("refresh_time")) {
+    refresh_time <- as.Date("2020-1-1")
+  }
+
   # if we already have surveys.csv, just load recent surveys and merge with stored surveys
   if (file.exists("surveys.csv.gz")) {
     existing_surveys <- read_csv("surveys.csv.gz", show_col_types = FALSE)
-    
+
     if ((refresh_time < Sys.time() - 60 * 60) | force) {
-      tryCatch({
-        max_date <- as.Date(max(existing_surveys$ended_at))
-        new_surveys <- fetch_remote(max_date - 7)
-        updated_surveys <- existing_surveys %>%
-          bind_rows(new_surveys) %>%
-          distinct(id, .keep_all = TRUE) %>%
-          arrange(ended_at)
-        survey_count <- nrow(updated_surveys)
-        new_survey_count <- survey_count - nrow(existing_surveys)
-        
-        # only rewrite csv if there are new surveys
-        if (new_survey_count > 0) {
-          write_csv(updated_surveys, "surveys.csv.gz", na = "")
-        }
-        
-        status <- sprintf("Survey data refreshed from remote database. %s total surveys found (%s since last refresh).", survey_count, new_survey_count)
-      },
+      tryCatch(
+        {
+          max_date <- as.Date(max(existing_surveys$ended_at))
+          new_surveys <- fetch_remote(max_date - 7)
+          updated_surveys <- existing_surveys %>%
+            bind_rows(new_surveys) %>%
+            distinct(id, .keep_all = TRUE) %>%
+            arrange(ended_at)
+          survey_count <- nrow(updated_surveys)
+          new_survey_count <- survey_count - nrow(existing_surveys)
+
+          # only rewrite csv if there are new surveys
+          if (new_survey_count > 0) {
+            write_csv(updated_surveys, "surveys.csv.gz", na = "")
+          }
+
+          status <- sprintf(
+            "Survey data refreshed from remote database. %s total surveys found (%s since last refresh).",
+            survey_count,
+            new_survey_count
+          )
+        },
         error = function(e) {
-          status <- sprintf("Unable to refresh surveys from remote database. Reason: %s.", e)
+          status <- sprintf(
+            "Unable to refresh surveys from remote database. Reason: %s.",
+            e
+          )
           updated_surveys <- existing_surveys
         }
       )
@@ -89,16 +102,24 @@ get_surveys <- function(force = FALSE) {
       status <- sprintf(
         "Skipped data refresh, last query < 1 hr ago. %s total surveys in database, most recent completed on %s.",
         nrow(existing_surveys),
-        format(max(existing_surveys$ended_at), format = "%Y-%m-%d %H:%M:%S", tz = "America/Chicago", usetz = TRUE)
+        format(
+          max(existing_surveys$ended_at),
+          format = "%Y-%m-%d %H:%M:%S",
+          tz = "America/Chicago",
+          usetz = TRUE
+        )
       )
     }
   } else {
     updated_surveys <- fetch_remote() %>%
       arrange(ended_at)
     write_csv(updated_surveys, "surveys.csv.gz")
-    status <- sprintf("Survey data refreshed from remote database. %s total surveys found.", nrow(updated_surveys))
+    status <- sprintf(
+      "Survey data refreshed from remote database. %s total surveys found.",
+      nrow(updated_surveys)
+    )
   }
-  
+
   # save data to global env
   assign("refresh_time", Sys.time(), envir = .GlobalEnv)
   assign("status", status, envir = .GlobalEnv)
@@ -107,7 +128,6 @@ get_surveys <- function(force = FALSE) {
 }
 
 raw_surveys <- get_surveys()
-
 
 
 # Load/create helper data ------------------------------------------------------
@@ -130,8 +150,14 @@ management_list <- read_csv("data/managements.csv", show_col_types = F)
 
 ## load plant lists ----
 plant_list <- read_csv("data/plants/known-plant-list.csv", show_col_types = F)
-legacy_plant_list <- read_csv("data/plants/legacy-plant-list.csv", show_col_types = F)
-focal_plant_list <- read_csv("data/plants/focal-plant-list.csv", show_col_types = F)
+legacy_plant_list <- read_csv(
+  "data/plants/legacy-plant-list.csv",
+  show_col_types = F
+)
+focal_plant_list <- read_csv(
+  "data/plants/focal-plant-list.csv",
+  show_col_types = F
+)
 plant_replace <- bind_rows(legacy_plant_list, focal_plant_list)
 
 
@@ -147,7 +173,8 @@ keep_cols <- c(
   "site_type",
   "crop",
   "management_type",
-  "picture_url")
+  "picture_url"
+)
 
 
 ## bee column names ----
@@ -157,7 +184,8 @@ bee_cols <- c(
   "large_dark_bee",
   "small_dark_bee",
   "greenbee",
-  "non_bee")
+  "non_bee"
+)
 
 ## Get user IDs ----
 user_ids <- sort(unique(raw_surveys$user_id))
@@ -180,7 +208,8 @@ processed_surveys <- raw_surveys %>%
   rename(
     date = ended_at,
     habitat = site_type,
-    management = management_type) %>%
+    management = management_type
+  ) %>%
   mutate(
     date = as.Date(date),
     year = lubridate::year(date),
@@ -188,12 +217,18 @@ processed_surveys <- raw_surveys %>%
     week = lubridate::week(date),
     day = lubridate::day(date),
     doy = lubridate::yday(date),
-    .after = "date") %>%
-  
+    .after = "date"
+  ) %>%
+
   # remove incomplete surveys except the apple surveys in 2023 by IPM
   filter(date >= "2020-04-01") %>%
-  filter(duration == "5 minutes" | ((user_id %in% c(2631, 2647, 2655, 2656)) & (year == 2023) & (crop == "apple"))) %>%
-  
+  filter(
+    duration == "5 minutes" |
+      ((user_id %in% c(2631, 2647, 2655, 2656)) &
+        (year == 2023) &
+        (crop == "apple"))
+  ) %>%
+
   mutate(across(all_of(bee_cols), ~ replace_na(.x, 0))) %>%
   mutate(wild_bee = bumble_bee + large_dark_bee + small_dark_bee + greenbee) %>%
   mutate(total_visits = honeybee + wild_bee + non_bee) %>%
@@ -202,11 +237,14 @@ processed_surveys <- raw_surveys %>%
     habitat = case_when(
       habitat %in% habitat_list$type ~ habitat,
       grepl("lawn", habitat) | grepl("garden", habitat) ~ "lawn-and-garden",
-      T ~ "other"),
-    habitat = factor(habitat, levels = habitat_list$type)) %>%
+      T ~ "other"
+    ),
+    habitat = factor(habitat, levels = habitat_list$type)
+  ) %>%
   left_join(
     rename(habitat_list, habitat = type, habitat_name = label),
-    by = "habitat") %>%
+    by = "habitat"
+  ) %>%
   mutate(
     management = replace_na(management, "none"),
     management = case_when(
@@ -216,24 +254,28 @@ processed_surveys <- raw_surveys %>%
       grepl("ipm", management) ~ "ipm",
       grepl("spray", management) & grepl("low", management) ~ "low spray",
       grepl("spray", management) & grepl("no", management) ~ "no spray",
-      T ~ "other"),
-    management = factor(management, levels = management_list$type)) %>%
+      T ~ "other"
+    ),
+    management = factor(management, levels = management_list$type)
+  ) %>%
   left_join(
     rename(management_list, management = type, management_name = label),
-    by = "management") %>%
+    by = "management"
+  ) %>%
   mutate(
     lat_rnd = round(lat, 1),
     lng_rnd = round(lng, 1),
     grid_pt = sprintf("%.1f, %.1f", lat_rnd, lng_rnd),
-    inwi = between(lat, 42.49, 47.08) & between(lng, -92.89, -86.80)) %>%
+    inwi = between(lat, 42.49, 47.08) & between(lng, -92.89, -86.80)
+  ) %>%
   left_join(plant_replace, by = "crop") %>%
   mutate(crop = ifelse(is.na(new_crop), crop, new_crop)) %>%
   left_join(plant_list, by = "crop") %>%
   mutate(
     focal = new_crop %in% focal_plant_list$new_crop,
-    plant_group = ifelse(focal, "non-crop focal", plant_group)) %>%
+    plant_group = ifelse(focal, "non-crop focal", plant_group)
+  ) %>%
   droplevels()
-
 
 
 # Get habitat/management/plant lists -------------------------------------------
@@ -268,11 +310,14 @@ plant_ranks <- processed_surveys %>%
       plant_id == "species:other" ~ "other-non-crop",
       plant_rank >= 15 & plant_group == "crop" ~ "other-crop",
       plant_rank >= 15 & plant_group == "non-crop" ~ "other-non-crop",
-      T ~ plant_id),
+      T ~ plant_id
+    ),
     plant_label = case_when(
       plant_type == "other-crop" ~ "Other crop",
       plant_type == "other-non-crop" ~ "Other/Unknown non-crop plant",
-      T ~ plant_label)) %>%
+      T ~ plant_label
+    )
+  ) %>%
   drop_na()
 
 
@@ -284,7 +329,6 @@ surveys <- processed_surveys %>%
     select(plant_ranks, -"surveys"),
     by = c("plant_id", "plant_group")
   )
-
 
 
 # Get final plant lists based on survey data -----------------------------------
@@ -313,7 +357,6 @@ select_noncrops <- plants %>%
   drop_na()
 
 
-
 # Create long-form dataset -----------------------------------------------------
 
 bee_join <- bees %>%
@@ -322,7 +365,6 @@ bee_join <- bees %>%
 surveys_long <- surveys %>%
   pivot_longer(cols = bees$type, names_to = "bee", values_to = "count") %>%
   left_join(bee_join, by = "bee")
-
 
 
 # Map data and other summaries -------------------------------------------------
@@ -347,12 +389,21 @@ year_summary <- surveys %>%
     first_date = min(date),
     last_date = max(date)
   ) %>%
-  mutate(label = paste0(
-    "<b>", year, ":</b> ",
-    format(surveys, big.mark = ","), " surveys by ",
-    format(users, big.mark = ","), " contributors. ",
-    format(first_date, "%b %d"), " - ",
-    format(last_date, "%b %d"), "."))
+  mutate(
+    label = paste0(
+      "<b>",
+      year,
+      ":</b> ",
+      format(surveys, big.mark = ","),
+      " surveys by ",
+      format(users, big.mark = ","),
+      " contributors. ",
+      format(first_date, "%b %d"),
+      " - ",
+      format(last_date, "%b %d"),
+      "."
+    )
+  )
 
 
 # total counts for project summary
@@ -360,5 +411,11 @@ bee_totals <- surveys_long %>%
   filter(bee_name %in% wildbee_names) %>%
   summarise(tot_count = sum(count), .by = bee_name) %>%
   mutate(pct_count = sprintf("%1.1f%%", tot_count / sum(.$tot_count) * 100)) %>%
-  mutate(label = sprintf("%s: %s (%s)", bee_name, format(tot_count, big.mark = ","), pct_count))
-
+  mutate(
+    label = sprintf(
+      "%s: %s (%s)",
+      bee_name,
+      format(tot_count, big.mark = ","),
+      pct_count
+    )
+  )

@@ -20,49 +20,61 @@ activityByHabitatServer <- function(data_long) {
     id = "activityByHabitat",
     function(input, output, session) {
       ns <- session$ns
-      
+
       data_ready <- reactive({
         nrow(data_long()) > 0
       })
-      
+
       output$ui <- renderUI({
-        if (!data_ready()) return(noSurveysMsg())
-        
+        if (!data_ready()) {
+          return(noSurveysMsg())
+        }
+
         tagList(
           plotlyOutput(ns("plot")),
-          div(class = "plot-caption", "This chart compares total pollinator visitation rates across different habitat types. The number of surveys represented by each habitat is shown in parentheses in the labels.")
+          div(
+            class = "plot-caption",
+            "This chart compares total pollinator visitation rates across different habitat types. The number of surveys represented by each habitat is shown in parentheses in the labels."
+          )
         )
       })
-      
+
       output$plot <- renderPlotly({
         req(data_ready())
-        
+
         plot_data <- data_long() %>%
           group_by(habitat_name, bee_name, bee_color) %>%
           summarise(
             visit_rate = round(mean(count), 1),
             n = n(),
-            .groups = "drop") %>%
+            .groups = "drop"
+          ) %>%
           droplevels() %>%
           mutate(x = fct_inorder(paste0("(", n, ") ", habitat_name)))
-        
+
         plot_data %>%
           plot_ly(
             type = "bar",
-            x = ~ x,
-            y = ~ visit_rate,
-            color = ~ bee_name,
+            x = ~x,
+            y = ~visit_rate,
+            color = ~bee_name,
             colors = ~ levels(.$bee_color),
-            marker = list(line = list(color = "#ffffff", width = .25))) %>%
+            marker = list(line = list(color = "#ffffff", width = .25))
+          ) %>%
           layout(
             barmode = "stack",
-            title = list(text = "<b>Pollinator visitation rates by habitat type</b>", font = list(size = 15)),
+            title = list(
+              text = "<b>Pollinator visitation rates by habitat type</b>",
+              font = list(size = 15)
+            ),
             xaxis = list(title = "", fixedrange = T),
-            yaxis = list(title = "Number of insect visits per survey", fixedrange = T),
+            yaxis = list(
+              title = "Number of insect visits per survey",
+              fixedrange = T
+            ),
             hovermode = "x unified"
           )
       })
     }
   )
 }
-

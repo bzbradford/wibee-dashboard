@@ -2,9 +2,7 @@
 # Ben Bradford, UW-Madison
 # Requires data prep in separate RProj
 
-
 shiny::shinyApp(ui, server)
-
 
 #- Dependencies -#
 
@@ -13,7 +11,6 @@ shiny::shinyApp(ui, server)
 #' - ui.R
 #' - server.R
 #' - modules in ./R
-
 
 #- Renv for pkg management -#
 

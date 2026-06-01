@@ -3,7 +3,7 @@
 #' requires global vars:
 #' - surveys
 #' - map_pts_wi
-#' 
+#'
 #' @return the filtered surveys data frame
 
 surveyFiltersServer <- function(data) {
@@ -11,50 +11,48 @@ surveyFiltersServer <- function(data) {
     id = "surveyFilters",
     function(input, output, session) {
       ns <- session$ns
-      
-      
-    # Reactive values ----
-      
+
+      # Reactive values ----
+
       map_selection <- reactiveVal(map_pts_wi)
       selected_users <- reactiveVal()
-      
-      
-    # Filter by year ----
-      
+
+      # Filter by year ----
+
       surveys_by_year <- reactive({
         surveys %>%
           filter(year %in% input$years)
       })
-      
+
       observeEvent(input$years, {
         resetMap()
       })
-      
+
       output$year_survey_count <- renderText({
         paste(
-          nrow(surveys_by_year()), "out of",
-          nrow(surveys), "surveys selected."
+          nrow(surveys_by_year()),
+          "out of",
+          nrow(surveys),
+          "surveys selected."
         )
       })
-      
+
       resetYears <- function() {
         updateCheckboxGroupInput(
           inputId = "years",
           selected = year_summary$year
         )
       }
-      
-      
-    # Filter by map grid ----
-      
+
+      # Filter by map grid ----
+
       surveys_by_loc <- reactive({
         surveys_by_year() %>%
           filter(grid_pt %in% map_selection())
       })
-      
-      
+
       ## Initialize map ----
-      
+
       map_grids <- reactive({
         surveys_by_year() %>%
           mutate(lat = lat_rnd, lng = lng_rnd) %>%
@@ -68,25 +66,29 @@ surveyFiltersServer <- function(data) {
             .by = c(lat, lng, grid_pt, inwi)
           ) %>%
           mutate(
-            label = str_glue("
+            label = str_glue(
+              "
               <strong>Grid point [{grid_pt}]</strong><br>
               {n_surveys} surveys by {n_users} users<br>
               {total_visits} total pollinators
-            "),
+            "
+            ),
             label = if_else(
               total_visits > 0,
-              str_glue("
+              str_glue(
+                "
                 {label}<br>
                 {hb}% honeybees<br>
                 {wb}% wild bees<br>
                 {nb}% non-bees
-              "),
+              "
+              ),
               label
             ),
             label = lapply(label, shiny::HTML)
           )
       })
-      
+
       # Initial map condition
       output$map <- renderLeaflet({
         leaflet() %>%
@@ -99,7 +101,8 @@ surveyFiltersServer <- function(data) {
               position = "topleft",
               icon = "fa-crosshairs",
               title = "Get my location",
-              onClick = JS("
+              onClick = JS(
+                "
                 function(btn, map) {
                   map.locate({
                     setView: true,
@@ -107,72 +110,88 @@ surveyFiltersServer <- function(data) {
                     maxZoom: 12
                   })
                 }
-              ")
+              "
+              )
             ),
             easyButton(
               position = "topleft",
               icon = "fa-globe",
               title = "Reset map view",
-              onClick = JS("function(btn, map) { map.setView([44.8, -89.7], 7) }")
+              onClick = JS(
+                "function(btn, map) { map.setView([44.8, -89.7], 7) }"
+              )
             )
           )
       })
-      
+
       observeEvent(map_grids(), {
         leafletProxy("map") %>%
           clearGroup("base_grids") %>%
           addRectangles(
             data = map_grids(),
-            lng1 = ~ lng - .05, lng2 = ~ lng + .05,
-            lat1 = ~ lat - .05, lat2 = ~ lat + .05,
-            layerId = ~ grid_pt,
+            lng1 = ~ lng - .05,
+            lng2 = ~ lng + .05,
+            lat1 = ~ lat - .05,
+            lat2 = ~ lat + .05,
+            layerId = ~grid_pt,
             group = "base_grids",
-            label = ~ label,
-            color = "orange", weight = 1, opacity = 1,
-            fillColor = "yellow", fillOpacity = .25,
+            label = ~label,
+            color = "orange",
+            weight = 1,
+            opacity = 1,
+            fillColor = "yellow",
+            fillOpacity = .25,
             highlight = highlightOptions(
-              weight = 3, color = "red",
-              fillColor = "orange", fillOpacity = 0.7
+              weight = 3,
+              color = "red",
+              fillColor = "orange",
+              fillOpacity = 0.7
             ),
             options = pathOptions(pane = "base_grids")
           )
       })
-      
+
       # deselect grids that are no longer available
       observeEvent(map_grids(), {
         new_selection <- intersect(map_selection(), map_grids()$grid_pt)
         map_selection(new_selection)
       })
-      
+
       # reactive portion of map showing selected grids
       observeEvent(map_selection(), {
         leafletProxy("map") %>%
           clearGroup("selected_grids") %>%
           addRectangles(
             data = filter(map_grids(), grid_pt %in% map_selection()),
-            lng1 = ~ lng - .05, lng2 = ~ lng + .05,
-            lat1 = ~ lat - .05, lat2 = ~ lat + .05,
+            lng1 = ~ lng - .05,
+            lng2 = ~ lng + .05,
+            lat1 = ~ lat - .05,
+            lat2 = ~ lat + .05,
             layerId = ~ paste(grid_pt, "selected"),
             group = "selected_grids",
-            label = ~ label,
-            color = "red", weight = 1, opacity = 1,
-            fillColor = "orange", fillOpacity = .25,
+            label = ~label,
+            color = "red",
+            weight = 1,
+            opacity = 1,
+            fillColor = "orange",
+            fillOpacity = .25,
             highlight = highlightOptions(
-              color = "red", weight = 3,
-              fillColor = "orange", fillOpacity = 0.7
+              color = "red",
+              weight = 3,
+              fillColor = "orange",
+              fillOpacity = 0.7
             ),
             options = pathOptions(pane = "selected_grids")
           )
       })
-      
-      
+
       ## Handle map interactions ----
-      
+
       # handle adding and subtracting grids from selection
       observeEvent(input$map_shape_click, {
         click <- input$map_shape_click
         grid_pt <- str_remove(click$id, " selected")
-        
+
         # clicked on a selected grid
         if (grepl("selected", click$id, fixed = T)) {
           # on first click, select only that grid
@@ -190,21 +209,21 @@ surveyFiltersServer <- function(data) {
           map_selection(new_sel)
         }
       })
-      
-      
+
       ## Handle map buttons ----
-      
+
       # zoom to show all data
       observeEvent(input$map_zoom_all, {
-        leafletProxy("map") %>% 
+        leafletProxy("map") %>%
           fitBounds(
             lng1 = min(map_grids()$lng),
             lat1 = min(map_grids()$lat),
             lng2 = max(map_grids()$lng),
-            lat2 = max(map_grids()$lat))
+            lat2 = max(map_grids()$lat)
+          )
         map_selection(map_grids()$grid_pt)
       })
-      
+
       # select grids visible in map window
       observeEvent(input$map_select_visible, {
         bounds <- input$map_bounds
@@ -220,49 +239,49 @@ surveyFiltersServer <- function(data) {
           clearGroup("selected_grids")
         map_selection(new_pts)
       })
-      
+
       # clear selection
       observeEvent(input$map_clear_selection, {
         leafletProxy("map") %>%
           clearGroup("selected_grids")
         map_selection(NULL)
       })
-      
+
       observeEvent(input$map_reset, resetMap())
-      
+
       # reset view to show and select Wisconsin points
       resetMap <- function() {
         resetMapGrids()
         resetMapView()
       }
-      
+
       resetMapGrids <- function() {
         new_sel <- filter(map_grids(), inwi)$grid_pt
         map_selection(new_sel)
       }
-      
+
       resetMapView <- function() {
         leafletProxy("map") %>%
           setView(lng = -89.7, lat = 44.8, zoom = 7)
       }
-      
-      
+
       ## Survey count text ----
-      
+
       output$survey_count_loc <- renderText({
         if (is.null(map_selection())) {
           "0 zones and 0 surveys selected on the map."
         } else {
           paste(
-            length(map_selection()), "zones and ",
-            nrow(surveys_by_loc()), " surveys selected on the map.")
+            length(map_selection()),
+            "zones and ",
+            nrow(surveys_by_loc()),
+            " surveys selected on the map."
+          )
         }
       })
-      
-      
-      
-    # Filter by user id ----
-      
+
+      # Filter by user id ----
+
       surveys_by_user <- reactive({
         if (is.null(selected_users())) {
           surveys_by_loc()
@@ -270,10 +289,9 @@ surveyFiltersServer <- function(data) {
           filter(surveys_by_loc(), user_id %in% selected_users())
         }
       })
-      
-      
+
       ## UI ----
-      
+
       output$selected_users_display <- renderUI({
         if (is.null(selected_users())) {
           p(em("No users selected, showing surveys by all users."))
@@ -289,10 +307,15 @@ surveyFiltersServer <- function(data) {
           )
         }
       })
-      
+
       observeEvent(input$add_user_id, {
         tryCatch(
-          {ids <- suppressWarnings(parse_number(unlist(strsplit(input$user_id, ","))))},
+          {
+            ids <- suppressWarnings(parse_number(unlist(strsplit(
+              input$user_id,
+              ","
+            ))))
+          },
           error = function(cond) {
             updateTextInput(inputId = "user_id", value = "")
             return()
@@ -310,26 +333,27 @@ surveyFiltersServer <- function(data) {
         }
         updateTextInput(inputId = "user_id", value = "")
       })
-      
-      
+
       ## Reset ----
-      
+
       observeEvent(input$reset_user_ids, resetUserIds())
-      
+
       resetUserIds <- function() {
         updateTextInput(inputId = "user_id", value = "")
         selected_users(NULL)
       }
-      
+
       output$survey_count_users <- renderText({
         paste(
-          nrow(surveys_by_user()), "out of",
-          nrow(surveys_by_loc()), "surveys match your user selections.")
+          nrow(surveys_by_user()),
+          "out of",
+          nrow(surveys_by_loc()),
+          "surveys match your user selections."
+        )
       })
-      
-      
-    # Filter by date of survey ----
-      
+
+      # Filter by date of survey ----
+
       resetDate <- function(min = date_slider_min, max = date_slider_max) {
         updateSliderInput(
           inputId = "date_range",
@@ -337,7 +361,7 @@ surveyFiltersServer <- function(data) {
           timeFormat = "%b %d"
         )
       }
-      
+
       surveys_by_date <- reactive({
         surveys_by_user() %>%
           filter(
@@ -345,41 +369,46 @@ surveyFiltersServer <- function(data) {
             between(doy, yday(input$date_range[1]), yday(input$date_range[2]))
           )
       })
-      
-      
-      ## Action buttons ----
-      
-      observeEvent(input$set_date_spring, resetDate(
-        max = as.Date(format(Sys.Date(), "%Y-05-31"))
-      ))
-      
-      observeEvent(input$set_date_summer, resetDate(
-        min = as.Date(format(Sys.Date(), "%Y-06-01")),
-        max = as.Date(format(Sys.Date(), "%Y-08-31"))
-      ))
-      
-      observeEvent(input$set_date_fall, resetDate(
-        min = as.Date(format(Sys.Date(), "%Y-09-01"))
-      ))
-      
-      observeEvent(input$reset_date, resetDate())
-      
 
-      
-      
+      ## Action buttons ----
+
+      observeEvent(
+        input$set_date_spring,
+        resetDate(
+          max = as.Date(format(Sys.Date(), "%Y-05-31"))
+        )
+      )
+
+      observeEvent(
+        input$set_date_summer,
+        resetDate(
+          min = as.Date(format(Sys.Date(), "%Y-06-01")),
+          max = as.Date(format(Sys.Date(), "%Y-08-31"))
+        )
+      )
+
+      observeEvent(
+        input$set_date_fall,
+        resetDate(
+          min = as.Date(format(Sys.Date(), "%Y-09-01"))
+        )
+      )
+
+      observeEvent(input$reset_date, resetDate())
+
       ## Survey count text ----
-      
+
       output$survey_count_date <- renderText({
         paste(
-          nrow(surveys_by_date()), "out of",
-          nrow(surveys_by_user()), "surveys match your date selections.")
+          nrow(surveys_by_date()),
+          "out of",
+          nrow(surveys_by_user()),
+          "surveys match your date selections."
+        )
       })
-      
-      
-      
-      
-    # Filter by survey attributes ----
-      
+
+      # Filter by survey attributes ----
+
       surveys_by_attr <- reactive({
         surveys_by_date() %>%
           filter(
@@ -388,175 +417,192 @@ surveyFiltersServer <- function(data) {
           ) %>%
           droplevels()
       })
-      
-      
+
       ## Habitats ----
-      
+
       # Generate labels
       habitat_labels <- reactive({
         habitats %>%
           left_join(
             count(surveys_by_user(), habitat, .drop = F),
-            by = c("type" = "habitat")) %>%
+            by = c("type" = "habitat")
+          ) %>%
           mutate(
             n = replace_na(n, 0),
-            box_label = paste0(label, " (", n, ")"))
+            box_label = paste0(label, " (", n, ")")
+          )
       })
-      
+
       # Update labels on checkbox
-      observeEvent(habitat_labels(),{
+      observeEvent(habitat_labels(), {
         updateCheckboxGroupInput(
           inputId = "which_habitat",
           choiceNames = habitat_labels()$box_label,
           choiceValues = habitat_labels()$type,
-          selected = input$which_habitat)
+          selected = input$which_habitat
+        )
       })
-      
+
       # Buttons
       observeEvent(input$which_habitat_all, selectAllHabitats())
       observeEvent(input$which_habitat_none, selectNoHabitats())
-      
+
       selectAllHabitats <- function() {
         updateCheckboxGroupInput(
           inputId = "which_habitat",
           selected = habitats$type
         )
       }
-      
+
       selectNoHabitats <- function() {
         updateCheckboxGroupInput(
           inputId = "which_habitat",
           selected = ""
         )
       }
-      
-      
+
       ## Managements ----
-      
+
       # Generate labels
       mgmt_labels <- reactive({
         managements %>%
           left_join(
             count(surveys_by_user(), management, .drop = F),
-            by = c("type" = "management")) %>%
+            by = c("type" = "management")
+          ) %>%
           mutate(
             n = replace_na(n, 0),
-            box_label = paste0(label, " (", n, ")"))
+            box_label = paste0(label, " (", n, ")")
+          )
       })
-      
+
       # Update labels
       observeEvent(mgmt_labels(), {
         updateCheckboxGroupInput(
           inputId = "which_mgmt",
           choiceNames = mgmt_labels()$box_label,
           choiceValues = mgmt_labels()$type,
-          selected = input$which_mgmt)
+          selected = input$which_mgmt
+        )
       })
-      
+
       # Buttons
       observeEvent(input$which_mgmt_all, selectAllMgmts())
       observeEvent(input$which_mgmt_none, selectNoMgmts())
-      
+
       selectAllMgmts <- function() {
         updateCheckboxGroupInput(
           inputId = "which_mgmt",
           selected = managements$type
         )
       }
-      
+
       selectNoMgmts <- function() {
         updateCheckboxGroupInput(
           inputId = "which_mgmt",
           selected = ""
         )
       }
-      
-      
-      
+
       ## Survey count text ----
-      
+
       output$survey_count_site <- renderText({
         paste(
-          nrow(surveys_by_attr()), "out of",
-          nrow(surveys_by_date()), "surveys match your habitat and management selections.")
+          nrow(surveys_by_attr()),
+          "out of",
+          nrow(surveys_by_date()),
+          "surveys match your habitat and management selections."
+        )
       })
-      
-      
-      
-    # Filter by crop/plant ----
-      
+
+      # Filter by crop/plant ----
+
       surveys_by_plant <- reactive({
         surveys_by_attr() %>%
-          filter(plant_type %in% c(input$which_crops, input$which_focal_noncrops, input$which_noncrops)) %>%
+          filter(
+            plant_type %in%
+              c(
+                input$which_crops,
+                input$which_focal_noncrops,
+                input$which_noncrops
+              )
+          ) %>%
           droplevels()
       })
-      
-      
+
       ## Checkboxes ----
-      
+
       # Generate crop labels
       crop_labels <- reactive({
         select_crops %>%
           left_join(
             count(surveys_by_attr(), plant_type, .drop = F),
-            by = c("type" = "plant_type")) %>%
+            by = c("type" = "plant_type")
+          ) %>%
           mutate(
             n = replace_na(n, 0),
-            box_label = paste0(label, " (", n, ")"))
+            box_label = paste0(label, " (", n, ")")
+          )
       })
-      
+
       # Update labels
       observeEvent(crop_labels(), {
         updateCheckboxGroupInput(
           inputId = "which_crops",
           choiceNames = crop_labels()$box_label,
           choiceValues = crop_labels()$type,
-          selected = input$which_crops)
+          selected = input$which_crops
+        )
       })
-      
+
       # Generate focal plant labels
       focal_noncrop_labels <- reactive({
         focal_noncrops %>%
           left_join(
             count(surveys_by_attr(), plant_type, .drop = F),
-            by = c("type" = "plant_type")) %>%
+            by = c("type" = "plant_type")
+          ) %>%
           mutate(
             n = replace_na(n, 0),
-            box_label = paste0(label, " (", n, ")"))
+            box_label = paste0(label, " (", n, ")")
+          )
       })
-      
+
       # Update labels
       observeEvent(focal_noncrop_labels(), {
         updateCheckboxGroupInput(
           inputId = "which_focal_noncrops",
           choiceNames = lapply(as.list(focal_noncrop_labels()$box_label), HTML),
           choiceValues = focal_noncrop_labels()$type,
-          selected = input$which_focal_noncrops)
+          selected = input$which_focal_noncrops
+        )
       })
-      
+
       # Generate non-crop plant labels
       noncrop_labels <- reactive({
         select_noncrops %>%
           left_join(
             count(surveys_by_attr(), plant_type, .drop = F),
-            by = c("type" = "plant_type")) %>%
+            by = c("type" = "plant_type")
+          ) %>%
           mutate(
             n = replace_na(n, 0),
-            box_label = paste0(label, " (", n, ")"))
+            box_label = paste0(label, " (", n, ")")
+          )
       })
-      
+
       # Update labels
       observeEvent(noncrop_labels(), {
         updateCheckboxGroupInput(
           inputId = "which_noncrops",
           choiceNames = lapply(as.list(noncrop_labels()$box_label), HTML),
           choiceValues = noncrop_labels()$type,
-          selected = input$which_noncrops)
+          selected = input$which_noncrops
+        )
       })
-      
-      
+
       ## Action buttons ----
-      
+
       observeEvent(
         input$which_crops_all,
         updateCheckboxGroupInput(
@@ -564,7 +610,7 @@ surveyFiltersServer <- function(data) {
           selected = select_crops$type
         )
       )
-      
+
       observeEvent(
         input$which_crops_none,
         updateCheckboxGroupInput(
@@ -572,7 +618,7 @@ surveyFiltersServer <- function(data) {
           selected = ""
         )
       )
-      
+
       observeEvent(
         input$which_focal_noncrops_all,
         updateCheckboxGroupInput(
@@ -580,7 +626,7 @@ surveyFiltersServer <- function(data) {
           selected = focal_noncrops$type
         )
       )
-      
+
       observeEvent(
         input$which_focal_noncrops_none,
         updateCheckboxGroupInput(
@@ -588,7 +634,7 @@ surveyFiltersServer <- function(data) {
           selected = ""
         )
       )
-      
+
       observeEvent(
         input$which_noncrops_all,
         updateCheckboxGroupInput(
@@ -596,7 +642,7 @@ surveyFiltersServer <- function(data) {
           selected = select_noncrops$type
         )
       )
-      
+
       observeEvent(
         input$which_noncrops_none,
         updateCheckboxGroupInput(
@@ -604,17 +650,17 @@ surveyFiltersServer <- function(data) {
           selected = ""
         )
       )
-      
+
       observeEvent(
         input$select_all_plants,
         selectAllPlants()
       )
-      
+
       observeEvent(
         input$select_no_plants,
         selectNoPlants()
       )
-      
+
       selectAllPlants <- function() {
         updateCheckboxGroupInput(
           inputId = "which_crops",
@@ -629,7 +675,7 @@ surveyFiltersServer <- function(data) {
           selected = select_noncrops$type
         )
       }
-      
+
       selectNoPlants <- function() {
         updateCheckboxGroupInput(
           inputId = "which_crops",
@@ -644,38 +690,45 @@ surveyFiltersServer <- function(data) {
           selected = ""
         )
       }
-      
-      
+
       ## Survey count text ----
-      
+
       output$survey_count_plant <- renderText({
         paste(
-          nrow(surveys_by_plant()), "out of",
-          nrow(surveys_by_attr()), "surveys match your plant selections.")
+          nrow(surveys_by_plant()),
+          "out of",
+          nrow(surveys_by_attr()),
+          "surveys match your plant selections."
+        )
       })
-      
-      
-    # Final survey count ----
-      
+
+      # Final survey count ----
+
       filtered_surveys <- reactive({
         surveys_by_plant()
       })
-      
+
       filtered_surveys_long <- reactive({
         filtered_surveys() %>%
-          pivot_longer(cols = bees$type, names_to = "bee", values_to = "count") %>%
+          pivot_longer(
+            cols = bees$type,
+            names_to = "bee",
+            values_to = "count"
+          ) %>%
           left_join(bee_join, by = "bee")
       })
-      
+
       output$survey_count_final <- renderText({
         paste(
-          nrow(filtered_surveys()), "out of",
-          nrow(surveys), "total surveys match all of your criteria.")
+          nrow(filtered_surveys()),
+          "out of",
+          nrow(surveys),
+          "total surveys match all of your criteria."
+        )
       })
-      
-      
-    # Master reset button ----
-      
+
+      # Master reset button ----
+
       observeEvent(input$reset, {
         selectAllPlants()
         selectAllHabitats()
@@ -685,14 +738,17 @@ surveyFiltersServer <- function(data) {
         resetMap()
         resetYears()
       })
-      
-      
-    # Final return values ----
-      
+
+      # Final return values ----
+
       return(
         list(
-          wide = reactive({filtered_surveys()}),
-          long = reactive({filtered_surveys_long()})
+          wide = reactive({
+            filtered_surveys()
+          }),
+          long = reactive({
+            filtered_surveys_long()
+          })
         )
       )
     }

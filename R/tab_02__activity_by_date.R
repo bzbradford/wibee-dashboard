@@ -21,17 +21,18 @@ activityByDateServer <- function(data, data_long) {
     id = "activityByDate",
     function(input, output, session) {
       ns <- session$ns
-      
+
       data_ready <- reactive({
         nrow(data()) > 0
       })
-      
-      
+
       ## Plot UI ----
-      
+
       output$ui <- renderUI({
-        if (!data_ready()) return(noSurveysMsg())
-        
+        if (!data_ready()) {
+          return(noSurveysMsg())
+        }
+
         tagList(
           radioButtons(
             inputId = ns("grouping"),
@@ -40,29 +41,31 @@ activityByDateServer <- function(data, data_long) {
             inline = T
           ),
           plotlyOutput(ns("plot")),
-          div(class = "plot-caption", "This chart shows seasonal trends in pollinator activity by showing the average activity by pollinator group across all surveys conducted on a given day, week, or month. The date range and year(s) can be selected in the survey filters above. All selected years are combined in this plot to highlight seasonal trends.")
+          div(
+            class = "plot-caption",
+            "This chart shows seasonal trends in pollinator activity by showing the average activity by pollinator group across all surveys conducted on a given day, week, or month. The date range and year(s) can be selected in the survey filters above. All selected years are combined in this plot to highlight seasonal trends."
+          )
         )
       })
-      
-      
+
       ## Plot Output ----
-      
+
       output$plot <- renderPlotly({
         req(input$grouping)
         req(data_ready())
-        
+
         grouping <- input$grouping
         df <- data_long()
-        
+
         # bring all dates to the same year
         cur_year <- max(df$year)
         df <- df %>%
           mutate(date = as.Date(paste(cur_year, month, day, sep = "-")))
         counts <- data() %>%
           mutate(date = as.Date(paste(cur_year, month, day, sep = "-")))
-        
+
         plt <- plot_ly()
-        
+
         # set data and plot layouts depending on grouping
         if (grouping == "Day") {
           survey_counts <- counts %>%
@@ -72,11 +75,14 @@ activityByDateServer <- function(data, data_long) {
             summarise(count = round(mean(count), 1), .groups = "drop") %>%
             droplevels()
           bee_colors <- levels(plot_data$bee_color)
-          
+
           plt <- plt %>%
             layout(
               barmode = "stack",
-              title = list(text = "<b>Daily average pollinator visits per survey</b>", font = list(size = 15)),
+              title = list(
+                text = "<b>Daily average pollinator visits per survey</b>",
+                font = list(size = 15)
+              ),
               xaxis = list(title = "", type = "date", tickformat = "%B %d"),
               yaxis = list(title = "Insect visits per survey"),
               hovermode = "x unified",
@@ -90,18 +96,24 @@ activityByDateServer <- function(data, data_long) {
           plot_data <- df %>%
             group_by(week, bee_name, bee_color) %>%
             summarise(count = round(mean(count), 1), .groups = "drop") %>%
-            mutate(date = as.Date(paste(cur_year, 1 + (week - 1) * 7), "%Y %j")) %>%
+            mutate(
+              date = as.Date(paste(cur_year, 1 + (week - 1) * 7), "%Y %j")
+            ) %>%
             droplevels()
           bee_colors <- levels(plot_data$bee_color)
-          
+
           plt <- plt %>%
             layout(
               barmode = "stack",
-              title = list(text = "<b>Weekly average pollinator visits per survey</b>", font = list(size = 15)),
+              title = list(
+                text = "<b>Weekly average pollinator visits per survey</b>",
+                font = list(size = 15)
+              ),
               xaxis = list(
                 title = "",
                 type = "date",
-                tickformat = "%b %d"),
+                tickformat = "%b %d"
+              ),
               yaxis = list(title = "Insect visits per survey"),
               hovermode = "x unified",
               legend = list(orientation = "h"),
@@ -117,27 +129,30 @@ activityByDateServer <- function(data, data_long) {
             mutate(date = as.Date(paste(cur_year, month, 15, sep = "-"))) %>%
             droplevels()
           bee_colors <- levels(plot_data$bee_color)
-          
+
           plt <- plt %>%
             layout(
               barmode = "stack",
               title = list(
                 text = "<b>Monthly average pollinator visits per survey</b>",
-                font = list(size = 15)),
+                font = list(size = 15)
+              ),
               xaxis = list(
                 title = "",
                 type = "date",
                 tickformat = "%B",
                 dtick = "M1",
-                ticklabelmode = "period"),
+                ticklabelmode = "period"
+              ),
               yaxis = list(
-                title = "Insect visits per survey"),
+                title = "Insect visits per survey"
+              ),
               hovermode = "x unified",
               legend = list(orientation = "h"),
               bargap = 0
             )
         }
-        
+
         # add the bee counts and dummy survey count data for legend
         plt %>%
           add_trace(
@@ -156,7 +171,7 @@ activityByDateServer <- function(data, data_long) {
             x = ~date,
             y = ~count,
             type = "bar",
-            color = ~ bee_name,
+            color = ~bee_name,
             colors = bee_colors,
             marker = list(line = list(color = "#ffffff", width = .25))
           )
