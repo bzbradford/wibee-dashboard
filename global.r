@@ -9,6 +9,7 @@ if (FALSE) {
   renv::dependencies() # show project dependencies
   renv::update() # update project libraries
   renv::snapshot() # save updated lock file to project
+  renv::install("sf@1.0-24")
 }
 
 options(shiny.fullstacktrace = FALSE)
@@ -23,6 +24,7 @@ suppressMessages({
   library(janitor)
   library(RColorBrewer)
   library(httr)
+  library(sf)
 
   # shiny
   library(shiny)
