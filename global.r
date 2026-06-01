@@ -23,7 +23,7 @@ suppressMessages({
   library(lubridate)
   library(janitor)
   library(RColorBrewer)
-  library(httr)
+  library(httr2)
   library(sf)
 
   # shiny
@@ -54,21 +54,30 @@ noSurveysMsg <- function() {
 
 # pull data from remote db
 fetch_remote <- function(start_date = NULL) {
-  endpoint <- "https://wibee.caracal.tech/api/data/survey-summaries"
+  # Build the base request
+  req <- request("https://wibee.caracal.tech/api/data/survey-summaries") |>
+    req_headers(Authorization = Sys.getenv("caracal_token"))
+
+  # Add query parameter if start_date is provided
   if (!is.null(start_date)) {
-    endpoint <- sprintf("%s?start_date=%s", endpoint, start_date)
+    req <- req |> req_url_query(start_date = start_date)
   }
-  response <- content(
-    GET(
-      url = endpoint,
-      config = add_headers(Authorization = Sys.getenv("caracal_token"))
-    ),
-    show_col_types = F
-  )
-  if (!is.data.frame(response)) {
-    stop("Invalid response from remote database")
+
+  # Perform the request and extract the response
+  resp <- req |>
+    req_perform() |>
+    resp_body_string()
+
+  # try to convert to csv
+  parsed_resp <- read_csv(I(resp), show_col_types = FALSE, guess_max = 1e6)
+
+  # Check if response is a data frame (or can be converted to one)
+  if (!is.data.frame(parsed_resp)) {
+    print(parsed_resp)
+    stop("Invalid response from remote database. See above!")
   }
-  response
+
+  parsed_resp
 }
 
 # handle pulling or merging new surveys with stored surveys
