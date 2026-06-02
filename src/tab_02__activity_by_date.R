@@ -37,8 +37,8 @@ activityByDateServer <- function(data, data_long) {
           radioButtons(
             inputId = ns("grouping"),
             label = "Choose time period for grouping:",
-            choices = c("Day", "Week", "Month"),
-            inline = T
+            choices = c("Day", "Week", "Month", "Year"),
+            inline = TRUE
           ),
           plotlyOutput(ns("plot")),
           div(
@@ -142,6 +142,38 @@ activityByDateServer <- function(data, data_long) {
                 type = "date",
                 tickformat = "%B",
                 dtick = "M1",
+                ticklabelmode = "period"
+              ),
+              yaxis = list(
+                title = "Insect visits per survey"
+              ),
+              hovermode = "x unified",
+              legend = list(orientation = "h"),
+              bargap = 0
+            )
+        } else if (grouping == "Year") {
+          survey_counts <- counts |>
+            count(year) |>
+            mutate(date = as.Date(paste(year, 7, 1, sep = "-")))
+          plot_data <- df |>
+            group_by(year, bee_name, bee_color) |>
+            summarise(count = round(mean(count), 1), .groups = "drop") |>
+            mutate(date = as.Date(paste(year, 7, 1, sep = "-"))) |>
+            droplevels()
+          bee_colors <- levels(plot_data$bee_color)
+
+          plt <- plt |>
+            layout(
+              barmode = "stack",
+              title = list(
+                text = "<b>Annual average pollinator visits per survey</b>",
+                font = list(size = 15)
+              ),
+              xaxis = list(
+                title = "",
+                type = "date",
+                tickformat = "%Y",
+                dtick = "M12",
                 ticklabelmode = "period"
               ),
               yaxis = list(
