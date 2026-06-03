@@ -1,48 +1,48 @@
 ## Survey filters module ##
 
+# Filter type identifiers, shared between the bsCollapsePanel `value`s (so panel
+# styling can target the right panel) and the names of the row-mask reactives.
+filter_names <- c("years", "map", "users", "dates", "surveys", "plants")
+
 # Survey filters UI ----
 surveyFiltersUI <- function() {
   ns <- NS("surveyFilters")
 
+  # A collapse panel title with a reactive "(selected/total)" suffix that shows
+  # how much of the filter is currently in use.
+  panel_title <- function(text, suffix_id, icon = NULL) {
+    span(
+      if (!is.null(icon)) {
+        span(
+          # class = "panel-title-icon",
+          style = "display: inline-block; margin-right: 5px;",
+          shiny::icon(icon),
+        )
+      },
+      text,
+      " ",
+      span(
+        class = "filter-suffix",
+        textOutput(ns(suffix_id), inline = TRUE)
+      )
+    )
+  }
+
   tagList(
     bsCollapse(
+      id = ns("collapse"),
       multiple = TRUE,
       open = "map",
-
-      ## By year ----
-
-      bsCollapsePanel(
-        value = "years",
-        style = "primary",
-        title = "Select year(s) to show",
-        tagList(
-          p(em(
-            "Select which year or years of survey data you want to see. After changing your year selections, grid point selections may have changed on the map."
-          )),
-          div(
-            class = "well",
-            style = "padding-bottom: 0px;",
-            checkboxGroupInput(
-              inputId = ns("years"),
-              label = "Surveys from year:",
-              choiceNames = lapply(year_summary$label, HTML),
-              choiceValues = year_summary$year,
-              selected = year_summary$year
-            )
-          ),
-          div(
-            style = "text-align: center; font-weight: bold;",
-            textOutput(ns("survey_count"))
-          )
-        )
-      ),
 
       ## By map grid ----
 
       bsCollapsePanel(
         value = "map",
-        style = "primary",
-        title = "Select survey locations on the map",
+        title = panel_title(
+          "Filter by survey location",
+          "suffix_map",
+          icon = "map"
+        ),
         tagList(
           p(
             style = "margin-top:.5em; margin-bottom:.5em",
@@ -69,8 +69,11 @@ surveyFiltersUI <- function() {
 
       bsCollapsePanel(
         value = "users",
-        style = "primary",
-        title = "Show surveys from specific user(s)",
+        title = panel_title(
+          "Filter by user ID",
+          "suffix_users",
+          icon = "person"
+        ),
         tagList(
           p(
             style = "margin-bottom:.5em",
@@ -107,18 +110,52 @@ surveyFiltersUI <- function() {
         )
       ),
 
+      ## By year ----
+
+      bsCollapsePanel(
+        value = "years",
+        title = panel_title(
+          "Filter by year",
+          "suffix_years",
+          icon = "clock"
+        ),
+        tagList(
+          p(em(
+            "Select which year or years of survey data you want to see. After changing your year selections, grid point selections may have changed on the map."
+          )),
+          div(
+            class = "well",
+            style = "padding-bottom: 0px;",
+            checkboxGroupInput(
+              inputId = ns("years"),
+              label = "Surveys from year:",
+              choiceNames = lapply(year_summary$label, HTML),
+              choiceValues = year_summary$year,
+              selected = year_summary$year
+            )
+          ),
+          div(
+            style = "text-align: center; font-weight: bold;",
+            textOutput(ns("survey_count"))
+          )
+        )
+      ),
+
       ## By date range ----
 
       bsCollapsePanel(
         value = "dates",
-        style = "primary",
-        title = "Select survey date range",
+        title = panel_title(
+          "Filter by survey date range",
+          "suffix_dates",
+          icon = "calendar"
+        ),
         tagList(
           p(
+            style = "margin-bottom: 0.5em;",
             em(
               "Filter survey data by selecting which date range you want to see data for."
-            ),
-            style = "margin-bottom:.5em"
+            )
           ),
           wellPanel(
             sliderInput(
@@ -131,7 +168,7 @@ surveyFiltersUI <- function() {
               timeFormat = "%b %d"
             ),
             div(
-              style = "margin-top:15px",
+              style = "margin-top: 15px;",
               actionButton(ns("set_date_spring"), "Spring"),
               actionButton(ns("set_date_summer"), "Summer"),
               actionButton(ns("set_date_fall"), "Fall"),
@@ -149,8 +186,11 @@ surveyFiltersUI <- function() {
 
       bsCollapsePanel(
         value = "surveys",
-        style = "primary",
-        title = "Select surveys by habitat or management type",
+        title = panel_title(
+          "Filter by habitat or management type",
+          "suffix_surveys",
+          icon = "tree-city"
+        ),
         tagList(
           p(
             style = "margin-bottom:.5em",
@@ -209,8 +249,11 @@ surveyFiltersUI <- function() {
 
       bsCollapsePanel(
         value = "plants",
-        style = "primary",
-        title = "Select crop(s) or flowering plant(s) observed during surveys",
+        title = panel_title(
+          "Filter by crop or flowering plant observed",
+          "suffix_plants",
+          icon = "seedling"
+        ),
         list(
           p(
             style = "margin-bottom:.5em",
@@ -320,6 +363,7 @@ surveyFiltersUI <- function() {
 #' requires global vars:
 #' - surveys
 #' - map_pts_wi
+#' - filter_names
 #' @return the filtered surveys data frame
 surveyFiltersServer <- function(data) {
   moduleServer(
@@ -329,26 +373,195 @@ surveyFiltersServer <- function(data) {
 
       # Reactive values ----
 
-      map_selection <- reactiveVal(map_pts_wi)
-      selected_users <- reactiveVal()
+      rv <- reactiveValues(
+        sel_grids = map_pts_wi,
+        sel_users = NULL
+      )
+
+      # Static geometry for every grid point in the data. Used to draw selected
+      # grids that are currently precluded by other filters (so they can show as
+      # grey placeholders and stay in the selection until they reappear).
+      all_grid_geo <- distinct(
+        surveys,
+        grid_pt,
+        lat = lat_rnd,
+        lng = lng_rnd,
+        inwi
+      )
+
+      # Filter row masks ----
+      #
+      # Each filter is a logical vector aligned to the rows of the full `surveys`
+      # table. Because every mask spans the same rows, combining them (and
+      # leaving one out for per-option counts) is just `&`-ing the vectors. All
+      # filters always apply at once; "how restrictive" a filter is drives its
+      # panel style and title suffix, not whether it applies.
+
+      mask_years <- reactive({
+        surveys$year %in% input$years
+      })
+
+      mask_map <- reactive({
+        surveys$grid_pt %in% rv$sel_grids
+      })
+
+      mask_users <- reactive({
+        if (is.null(rv$sel_users)) {
+          rep(TRUE, nrow(surveys))
+        } else {
+          surveys$user_id %in% rv$sel_users
+        }
+      })
+
+      mask_dates <- reactive({
+        between(
+          surveys$doy,
+          yday(input$date_range[1]),
+          yday(input$date_range[2])
+        )
+      })
+
+      mask_surveys <- reactive({
+        surveys$habitat %in%
+          input$which_habitat &
+          surveys$management %in% input$which_mgmt
+      })
+
+      mask_plants <- reactive({
+        surveys$plant_type %in%
+          c(
+            input$which_crops,
+            input$which_focal_noncrops,
+            input$which_noncrops
+          )
+      })
+
+      all_masks <- list(
+        years = mask_years,
+        map = mask_map,
+        users = mask_users,
+        dates = mask_dates,
+        surveys = mask_surveys,
+        plants = mask_plants
+      )
+
+      # Combine all masks, optionally leaving one filter out (used to compute the
+      # per-option "if I changed only this filter" counts). Reads reactives, so
+      # must be called inside a reactive context.
+      combined_mask <- function(exclude = NULL) {
+        use <- setdiff(filter_names, exclude)
+        masks <- lapply(use, function(f) all_masks[[f]]())
+        Reduce(`&`, masks)
+      }
+
+      # Final filtered surveys (all filters applied at once)
+      filtered_surveys <- reactive({
+        droplevels(surveys[combined_mask(), ])
+      })
+
+      # Leave-one-out bases: surveys matching every filter EXCEPT the named one.
+      # Used as the denominator and per-option counts for that filter's panel.
+      # Kept un-droplevels'd so count(.drop = FALSE) still shows zero counts.
+      base_years <- reactive(surveys[combined_mask(exclude = "years"), ])
+      base_map <- reactive(surveys[combined_mask(exclude = "map"), ])
+      base_users <- reactive(surveys[combined_mask(exclude = "users"), ])
+      base_dates <- reactive(surveys[combined_mask(exclude = "dates"), ])
+      base_surveys <- reactive(surveys[combined_mask(exclude = "surveys"), ])
+      base_plants <- reactive(surveys[combined_mask(exclude = "plants"), ])
+
+      # Panel styling + title suffixes ----
+      #
+      # A panel turns "primary" (highlighted) when its filter is actually
+      # narrowing the data, and shows a "(selected/total)" suffix in its title.
+
+      n_sel <- function(vals, valid) {
+        length(intersect(vals, as.character(valid)))
+      }
+
+      output$suffix_years <- renderText({
+        sprintf("[%d/%d selected]", length(input$years), nrow(year_summary))
+      })
+
+      output$suffix_map <- renderText({
+        grids <- map_grids()
+        sprintf(
+          "[%d/%d zones selected]",
+          length(intersect(rv$sel_grids, grids$grid_pt)),
+          nrow(grids)
+        )
+      })
+
+      output$suffix_users <- renderText({
+        n <- length(rv$sel_users)
+        if (n == 0) {
+          "[all users selected]"
+        } else {
+          sprintf("[%d user%s selected]", n, if (n == 1) "" else "s")
+        }
+      })
+
+      output$suffix_dates <- renderText({
+        if (dates_full()) {
+          "[all dates selected]"
+        } else {
+          sprintf(
+            "[%s - %s]",
+            format(input$date_range[1], "%b %d"),
+            format(input$date_range[2], "%b %d")
+          )
+        }
+      })
+
+      output$suffix_surveys <- renderText({
+        sel <- n_sel(input$which_habitat, habitats$type) +
+          n_sel(input$which_mgmt, managements$type)
+        sprintf("[%d/%d selected]", sel, nrow(habitats) + nrow(managements))
+      })
+
+      output$suffix_plants <- renderText({
+        sel <- n_sel(input$which_crops, select_crops$type) +
+          n_sel(input$which_focal_noncrops, focal_noncrops$type) +
+          n_sel(input$which_noncrops, select_noncrops$type)
+        tot <- nrow(select_crops) + nrow(focal_noncrops) + nrow(select_noncrops)
+        sprintf("[%d/%d selected]", sel, tot)
+      })
+
+      dates_full <- reactive({
+        input$date_range[1] <= date_slider_min &&
+          input$date_range[2] >= date_slider_max
+      })
+
+      # Whether each filter is actively restricting results -> panel style
+      panel_styles <- reactive({
+        grids <- map_grids()
+        applied <- c(
+          years = length(input$years) < nrow(year_summary),
+          map = length(intersect(rv$sel_grids, grids$grid_pt)) < nrow(grids),
+          users = length(rv$sel_users) > 0,
+          dates = !dates_full(),
+          surveys = n_sel(input$which_habitat, habitats$type) <
+            nrow(habitats) ||
+            n_sel(input$which_mgmt, managements$type) < nrow(managements),
+          plants = (n_sel(input$which_crops, select_crops$type) +
+            n_sel(input$which_focal_noncrops, focal_noncrops$type) +
+            n_sel(input$which_noncrops, select_noncrops$type)) <
+            (nrow(select_crops) + nrow(focal_noncrops) + nrow(select_noncrops))
+        )
+        lapply(applied, function(a) if (isTRUE(a)) "primary" else "default")
+      })
+
+      observeEvent(panel_styles(), {
+        updateCollapse(session, "collapse", style = panel_styles())
+      })
 
       # Filter by year ----
 
-      surveys_by_year <- reactive({
-        surveys |>
-          filter(year %in% input$years)
-      })
-
-      observeEvent(input$years, {
-        resetMap()
-      })
-
-      output$year_survey_count <- renderText({
+      output$survey_count <- renderText({
         paste(
-          nrow(surveys_by_year()),
+          nrow(filtered_surveys()),
           "out of",
-          nrow(surveys),
-          "surveys selected."
+          nrow(base_years()),
+          "surveys match your year selections."
         )
       })
 
@@ -361,15 +574,14 @@ surveyFiltersServer <- function(data) {
 
       # Filter by map grid ----
 
-      surveys_by_loc <- reactive({
-        surveys_by_year() |>
-          filter(grid_pt %in% map_selection())
-      })
-
       ## Initialize map ----
 
+      # Map grid stats reflect every other filter (leave-one-out), debounced so
+      # the rectangles don't redraw on every keystroke/slider tick.
+      base_map_d <- debounce(base_map, 300)
+
       map_grids <- reactive({
-        surveys_by_year() |>
+        base_map_d() |>
           mutate(lat = lat_rnd, lng = lng_rnd) |>
           summarise(
             n_surveys = n(),
@@ -408,8 +620,11 @@ surveyFiltersServer <- function(data) {
       output$map <- renderLeaflet({
         leaflet() |>
           addTiles() |>
-          addMapPane("base_grids", zIndex = 410) |>
-          addMapPane("selected_grids", zIndex = 420) |>
+          # one pane per grid state so z-order is fixed
+          addMapPane("grids_s1", zIndex = 413) |>
+          addMapPane("grids_s2", zIndex = 412) |>
+          addMapPane("grids_s3", zIndex = 411) |>
+          addMapPane("grids_s4", zIndex = 410) |>
           setView(lng = -89.7, lat = 44.8, zoom = 7) |>
           addEasyButtonBar(
             easyButton(
@@ -439,89 +654,154 @@ surveyFiltersServer <- function(data) {
           )
       })
 
-      observeEvent(map_grids(), {
-        leafletProxy("map") |>
-          clearGroup("base_grids") |>
-          addRectangles(
-            data = map_grids(),
-            lng1 = ~ lng - .05,
-            lng2 = ~ lng + .05,
-            lat1 = ~ lat - .05,
-            lat2 = ~ lat + .05,
-            layerId = ~grid_pt,
-            group = "base_grids",
-            label = ~label,
-            color = "orange",
-            weight = 1,
-            opacity = 1,
-            fillColor = "yellow",
-            fillOpacity = .25,
-            highlight = highlightOptions(
-              weight = 3,
-              color = "red",
-              fillColor = "orange",
-              fillOpacity = 0.7
+      # Per-grid render table: one row for every grid in the data, carrying the
+      # fill/border/label that reflect its current availability and selection.
+      #   available + selected -> orange fill, red border
+      #   available            -> yellow fill, orange border
+      #   precluded + selected -> grey fill, grey border
+      #   precluded            -> light grey fill, grey border
+      grid_render <- reactive({
+        grids <- map_grids()
+        sel <- rv$sel_grids
+
+        available <- grids |>
+          mutate(
+            grid_pt,
+            lat,
+            lng,
+            label,
+            available = TRUE,
+            selected = grid_pt %in% sel,
+            .keep = "none"
+          )
+
+        precluded <- all_grid_geo |>
+          filter(!grid_pt %in% grids$grid_pt) |>
+          mutate(
+            grid_pt,
+            lat,
+            lng,
+            selected = grid_pt %in% sel,
+            label = lapply(
+              paste(
+                sprintf("Grid point [%s]<br>", grid_pt),
+                if_else(
+                  selected,
+                  "Selected, but no surveys<br>match the current filters",
+                  "No surveys match the current filters"
+                )
+              ),
+              shiny::HTML
             ),
-            options = pathOptions(pane = "base_grids")
+            available = FALSE,
+            .keep = "none"
+          )
+
+        bind_rows(available, precluded) |>
+          mutate(
+            #' draw priority / pane:
+            #'  1 = available + selected (top)
+            #'  2 = available
+            #'  3 = precluded + selected
+            #'  4 = precluded + unselected (bottom)
+            state = case_when(
+              available & selected ~ 1L,
+              available ~ 2L,
+              selected ~ 3L,
+              TRUE ~ 4L
+            ),
+            fill = c("orange", "yellow", "grey", "lightgrey")[state],
+            fill_opacity = c(0.35, 0.3, 0.25, 0.25)[state],
+            border = c("red", "orange", "grey", "grey")[state],
+            weight = c(1.25, 1, 0.75, 0.5)[state],
+            # a per-grid appearance signature, to detect what needs redrawing
+            sig = paste(
+              state,
+              fill,
+              border,
+              weight,
+              fill_opacity,
+              vapply(
+                label,
+                function(x) paste0(as.character(x), collapse = ""),
+                character(1)
+              )
+            )
           )
       })
 
-      # deselect grids that are no longer available
-      observeEvent(map_grids(), {
-        new_selection <- intersect(map_selection(), map_grids()$grid_pt)
-        map_selection(new_selection)
-      })
+      # Incremental draw: only (re)draw grids whose appearance changed since the
+      # last render. grid_pt is the layerId, and re-adding a layer with an
+      # existing layerId replaces it in place, so map clicks redraw one grid.
+      prev_grid_sig <- reactiveVal(NULL)
 
-      # reactive portion of map showing selected grids
-      observeEvent(map_selection(), {
-        leafletProxy("map") |>
-          clearGroup("selected_grids") |>
-          addRectangles(
-            data = filter(map_grids(), grid_pt %in% map_selection()),
-            lng1 = ~ lng - .05,
-            lng2 = ~ lng + .05,
-            lat1 = ~ lat - .05,
-            lat2 = ~ lat + .05,
-            layerId = ~ paste(grid_pt, "selected"),
-            group = "selected_grids",
-            label = ~label,
-            color = "red",
-            weight = 1,
-            opacity = 1,
-            fillColor = "orange",
-            fillOpacity = .25,
-            highlight = highlightOptions(
-              color = "red",
-              weight = 3,
-              fillColor = "orange",
-              fillOpacity = 0.7
-            ),
-            options = pathOptions(pane = "selected_grids")
-          )
+      observe({
+        gr <- grid_render()
+        old <- prev_grid_sig()
+        new <- setNames(gr$sig, gr$grid_pt)
+        prev_grid_sig(new)
+
+        if (is.null(old)) {
+          changed <- gr$grid_pt
+        } else {
+          prev <- old[gr$grid_pt]
+          changed <- gr$grid_pt[is.na(prev) | prev != new]
+        }
+        if (length(changed) == 0) {
+          return()
+        }
+
+        to_draw <- filter(gr, grid_pt %in% changed)
+        proxy <- leafletProxy("map")
+
+        # one addRectangles call per state, each into its own pane so the
+        # z-order is fixed regardless of which grids were redrawn
+        for (s in sort(unique(to_draw$state))) {
+          proxy <- proxy |>
+            addRectangles(
+              data = filter(to_draw, state == s),
+              lng1 = ~ lng - 0.05,
+              lng2 = ~ lng + 0.05,
+              lat1 = ~ lat - 0.05,
+              lat2 = ~ lat + 0.05,
+              layerId = ~grid_pt,
+              group = "grids",
+              label = ~label,
+              color = ~border,
+              weight = ~weight,
+              opacity = 1,
+              fillColor = ~fill,
+              fillOpacity = ~fill_opacity,
+              highlight = highlightOptions(
+                weight = 3,
+                color = "red",
+                fillColor = "red",
+                fillOpacity = 0.5
+                # bringToFront = TRUE # this introduced visual bugs in leaflet
+              ),
+              options = pathOptions(pane = paste0("grids_s", s))
+            )
+        }
       })
 
       ## Handle map interactions ----
 
-      # handle adding and subtracting grids from selection
+      # toggle a grid in/out of the selection (works for available and grey grids
+      # alike, since every grid shares its grid_pt as its layerId)
       observeEvent(input$map_shape_click, {
-        click <- input$map_shape_click
-        grid_pt <- str_remove(click$id, " selected")
+        gp <- input$map_shape_click$id
+        cur_grids <- rv$sel_grids
 
-        # clicked on a selected grid
-        if (grepl("selected", click$id, fixed = T)) {
-          # on first click, select only that grid
-          if (setequal(map_selection(), map_pts_wi)) {
-            map_selection(grid_pt)
+        rv$sel_grids <- if (gp %in% cur_grids) {
+          # first click from the all-Wisconsin default narrows to just this grid,
+          # otherwise toggle it off
+          if (setequal(cur_grids, map_pts_wi)) {
+            gp
           } else {
-            leafletProxy("map") |>
-              removeShape(click$id)
-            old_sel <- map_selection()
-            new_sel <- old_sel[old_sel != grid_pt]
-            map_selection(new_sel)
+            setdiff(cur_grids, gp)
           }
         } else {
-          new_sel <- c(map_selection(), grid_pt)
-          map_selection(new_sel)
+          union(cur_grids, gp)
         }
       })
 
@@ -529,20 +809,25 @@ surveyFiltersServer <- function(data) {
 
       # zoom to show all data
       observeEvent(input$map_zoom_all, {
+        grids <- map_grids()
+        if (nrow(grids) == 0) {
+          return()
+        }
         leafletProxy("map") |>
           fitBounds(
-            lng1 = min(map_grids()$lng),
-            lat1 = min(map_grids()$lat),
-            lng2 = max(map_grids()$lng),
-            lat2 = max(map_grids()$lat)
+            lng1 = min(grids$lng),
+            lat1 = min(grids$lat),
+            lng2 = max(grids$lng),
+            lat2 = max(grids$lat)
           )
-        map_selection(map_grids()$grid_pt)
+        rv$sel_grids <- grids$grid_pt
       })
 
-      # select grids visible in map window
+      # select every grid visible in the map window, including precluded (grey)
+      # ones, so they are staged to reactivate when other filters are relaxed
       observeEvent(input$map_select_visible, {
         bounds <- input$map_bounds
-        new_pts <- map_grids() |>
+        new_pts <- all_grid_geo |>
           filter(
             lng > bounds$west,
             lng < bounds$east,
@@ -550,14 +835,12 @@ surveyFiltersServer <- function(data) {
             lat < bounds$north
           ) |>
           pull(grid_pt)
-        map_selection(new_pts)
+        rv$sel_grids <- new_pts
       })
 
-      # clear selection
+      # clear selection (overlay observer redraws the empty selection)
       observeEvent(input$map_clear_selection, {
-        leafletProxy("map") |>
-          clearGroup("selected_grids")
-        map_selection(NULL)
+        rv$sel_grids <- NULL
       })
 
       observeEvent(input$map_reset, resetMap())
@@ -569,8 +852,9 @@ surveyFiltersServer <- function(data) {
       }
 
       resetMapGrids <- function() {
-        new_sel <- filter(map_grids(), inwi)$grid_pt
-        map_selection(new_sel)
+        # restore the default Wisconsin selection; precluded grids stay selected
+        # (shown grey) and reactivate as other filters are relaxed
+        rv$sel_grids <- map_pts_wi
       }
 
       resetMapView <- function() {
@@ -581,36 +865,24 @@ surveyFiltersServer <- function(data) {
       ## Survey count text ----
 
       output$survey_count_loc <- renderText({
-        if (is.null(map_selection())) {
-          "0 zones and 0 surveys selected on the map."
-        } else {
-          paste(
-            length(map_selection()),
-            "zones and ",
-            nrow(surveys_by_loc()),
-            " surveys selected on the map."
-          )
-        }
+        paste0(
+          length(rv$sel_grids),
+          " zones and ",
+          nrow(filtered_surveys()),
+          " surveys selected on the map."
+        )
       })
 
       # Filter by user id ----
 
-      surveys_by_user <- reactive({
-        if (is.null(selected_users())) {
-          surveys_by_loc()
-        } else {
-          filter(surveys_by_loc(), user_id %in% selected_users())
-        }
-      })
-
       ## UI ----
 
       output$selected_users_display <- renderUI({
-        if (is.null(selected_users())) {
+        if (is.null(rv$sel_users)) {
           p(em("No users selected, showing surveys by all users."))
         } else {
           p(
-            lapply(selected_users(), function(i) {
+            lapply(rv$sel_users, function(i) {
               list(
                 strong(i),
                 paste(":", sum(surveys$user_id == i), "surveys"),
@@ -636,12 +908,10 @@ surveyFiltersServer <- function(data) {
         )
         valid_ids <- sort(intersect(ids, user_ids))
         if (length(valid_ids) > 0) {
-          if (is.null(selected_users())) {
-            selected_users(valid_ids)
+          rv$sel_users <- if (is.null(rv$sel_users)) {
+            valid_ids
           } else {
-            selected_users(
-              sort(union(selected_users(), valid_ids))
-            )
+            sort(union(rv$sel_users, valid_ids))
           }
         }
         updateTextInput(inputId = "user_id", value = "")
@@ -653,14 +923,14 @@ surveyFiltersServer <- function(data) {
 
       resetUserIds <- function() {
         updateTextInput(inputId = "user_id", value = "")
-        selected_users(NULL)
+        rv$sel_users <- NULL
       }
 
       output$survey_count_users <- renderText({
         paste(
-          nrow(surveys_by_user()),
+          nrow(filtered_surveys()),
           "out of",
-          nrow(surveys_by_loc()),
+          nrow(base_users()),
           "surveys match your user selections."
         )
       })
@@ -674,14 +944,6 @@ surveyFiltersServer <- function(data) {
           timeFormat = "%b %d"
         )
       }
-
-      surveys_by_date <- reactive({
-        surveys_by_user() |>
-          filter(
-            year %in% input$years,
-            between(doy, yday(input$date_range[1]), yday(input$date_range[2]))
-          )
-      })
 
       ## Action buttons ----
 
@@ -713,23 +975,14 @@ surveyFiltersServer <- function(data) {
 
       output$survey_count_date <- renderText({
         paste(
-          nrow(surveys_by_date()),
+          nrow(filtered_surveys()),
           "out of",
-          nrow(surveys_by_user()),
+          nrow(base_dates()),
           "surveys match your date selections."
         )
       })
 
       # Filter by survey attributes ----
-
-      surveys_by_attr <- reactive({
-        surveys_by_date() |>
-          filter(
-            habitat %in% input$which_habitat,
-            management %in% input$which_mgmt
-          ) |>
-          droplevels()
-      })
 
       ## Habitats ----
 
@@ -737,7 +990,7 @@ surveyFiltersServer <- function(data) {
       habitat_labels <- reactive({
         habitats |>
           left_join(
-            count(surveys_by_user(), habitat, .drop = F),
+            count(base_surveys(), habitat, .drop = F),
             by = c("type" = "habitat")
           ) |>
           mutate(
@@ -780,7 +1033,7 @@ surveyFiltersServer <- function(data) {
       mgmt_labels <- reactive({
         managements |>
           left_join(
-            count(surveys_by_user(), management, .drop = F),
+            count(base_surveys(), management, .drop = F),
             by = c("type" = "management")
           ) |>
           mutate(
@@ -821,27 +1074,14 @@ surveyFiltersServer <- function(data) {
 
       output$survey_count_site <- renderText({
         paste(
-          nrow(surveys_by_attr()),
+          nrow(filtered_surveys()),
           "out of",
-          nrow(surveys_by_date()),
+          nrow(base_surveys()),
           "surveys match your habitat and management selections."
         )
       })
 
       # Filter by crop/plant ----
-
-      surveys_by_plant <- reactive({
-        surveys_by_attr() |>
-          filter(
-            plant_type %in%
-              c(
-                input$which_crops,
-                input$which_focal_noncrops,
-                input$which_noncrops
-              )
-          ) |>
-          droplevels()
-      })
 
       ## Checkboxes ----
 
@@ -849,7 +1089,7 @@ surveyFiltersServer <- function(data) {
       crop_labels <- reactive({
         select_crops |>
           left_join(
-            count(surveys_by_attr(), plant_type, .drop = F),
+            count(base_plants(), plant_type, .drop = F),
             by = c("type" = "plant_type")
           ) |>
           mutate(
@@ -872,7 +1112,7 @@ surveyFiltersServer <- function(data) {
       focal_noncrop_labels <- reactive({
         focal_noncrops |>
           left_join(
-            count(surveys_by_attr(), plant_type, .drop = F),
+            count(base_plants(), plant_type, .drop = F),
             by = c("type" = "plant_type")
           ) |>
           mutate(
@@ -895,7 +1135,7 @@ surveyFiltersServer <- function(data) {
       noncrop_labels <- reactive({
         select_noncrops |>
           left_join(
-            count(surveys_by_attr(), plant_type, .drop = F),
+            count(base_plants(), plant_type, .drop = F),
             by = c("type" = "plant_type")
           ) |>
           mutate(
@@ -1008,18 +1248,14 @@ surveyFiltersServer <- function(data) {
 
       output$survey_count_plant <- renderText({
         paste(
-          nrow(surveys_by_plant()),
+          nrow(filtered_surveys()),
           "out of",
-          nrow(surveys_by_attr()),
+          nrow(base_plants()),
           "surveys match your plant selections."
         )
       })
 
       # Final survey count ----
-
-      filtered_surveys <- reactive({
-        surveys_by_plant()
-      })
 
       filtered_surveys_long <- reactive({
         filtered_surveys() |>

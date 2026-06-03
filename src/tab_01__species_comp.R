@@ -93,7 +93,9 @@ speciesCompServer <- function(cur_surveys_long) {
         filter(bee_name != "Wild bees") |>
         droplevels()
 
-      initial_plots <- list(`_all` = make_pie(all_surveys, "All surveys", "_all"))
+      initial_plots <- list(
+        `_all` = make_pie(all_surveys, "All surveys", "_all")
+      )
       pinned_plots <- reactiveVal(initial_plots)
       plot_num <- reactiveVal(0)
       show_current <- reactiveVal(TRUE)

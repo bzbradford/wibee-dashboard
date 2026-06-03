@@ -25,6 +25,22 @@ body {
   border-bottom: 4px solid #ecf0f1;
 }
 
+/* "(selected/total)" annotation in survey filter panel titles */
+.panel-title-icon {
+  display: inline-block;
+  margin-right: 5px;
+}
+
+.filter-suffix {
+  font-weight: normal;
+  font-size: 0.9em;
+  opacity: 0.8;
+}
+
+.filter-suffix .shiny-text-output {
+  display: inline;
+}
+
 .map-btns {
   margin-top: 10px;
   align-items: center;

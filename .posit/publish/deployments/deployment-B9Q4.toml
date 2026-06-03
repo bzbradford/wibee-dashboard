@@ -10,9 +10,9 @@ id = "aeef1a84-22e6-410a-895d-63de9bed4fb7"
 dashboard_url = "https://connect.doit.wisc.edu/connect/#/apps/aeef1a84-22e6-410a-895d-63de9bed4fb7"
 direct_url = "https://connect.doit.wisc.edu/content/aeef1a84-22e6-410a-895d-63de9bed4fb7/"
 logs_url = "https://connect.doit.wisc.edu/connect/#/apps/aeef1a84-22e6-410a-895d-63de9bed4fb7/logs"
-deployed_at = "2026-06-01T19:42:34.926Z"
-bundle_id = "4956"
-bundle_url = "https://connect.doit.wisc.edu/__api__/v1/content/aeef1a84-22e6-410a-895d-63de9bed4fb7/bundles/4956/download"
+deployed_at = "2026-06-03T02:56:05.048Z"
+bundle_id = "4963"
+bundle_url = "https://connect.doit.wisc.edu/__api__/v1/content/aeef1a84-22e6-410a-895d-63de9bed4fb7/bundles/4963/download"
 files = [
     ".Renviron",
     ".posit/publish/WiBee Dashboard-LSSA.toml",
