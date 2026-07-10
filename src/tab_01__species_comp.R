@@ -21,8 +21,7 @@ speciesCompUI <- function() {
 
 # Pie builder ----
 
-make_pie <- function(df, title, id) {
-  ns <- NS("speciesComp")
+make_pie <- function(df, title, onclick) {
   n_surveys <- length(unique(df$id))
 
   plot_data <- df |>
@@ -40,39 +39,30 @@ make_pie <- function(df, title, id) {
       hoverinfo = "text",
       text = ~ paste(mean_count, bee_name, "per survey"),
       marker = list(
-        colors = levels(df$bee_color),
+        colors = levels(plot_data$bee_color),
         line = list(color = "#ffffff", width = 1)
       ),
-      sort = F,
+      sort = FALSE,
       direction = "clockwise"
     ) |>
     layout(
-      showlegend = F,
+      showlegend = FALSE,
       margin = list(l = 0, r = 0),
       paper_bgcolor = "rgba(0, 0, 0, 0)"
     )
 
   plot_title <- paste0(title, " (", n_surveys, ")")
-  onclick <- paste0(
-    "Shiny.onInputChange('",
-    ns("removePlot"),
-    "', '",
-    id,
-    "', {priority: 'event'})"
-  )
 
-  tagList(
+  div(
+    class = "pie",
+    h4(class = "plot-title", plot_title),
+    plt,
     div(
-      class = "pie",
-      h4(class = "plot-title", plot_title),
-      plt,
-      div(
-        align = "right",
-        tags$span(
-          class = "plot-close",
-          onclick = onclick,
-          "close"
-        )
+      align = "right",
+      tags$span(
+        class = "plot-close",
+        onclick = onclick,
+        "close"
       )
     )
   )
@@ -89,6 +79,14 @@ speciesCompServer <- function(cur_surveys_long) {
     function(input, output, session) {
       ns <- session$ns
 
+      pie_onclick <- function(id) {
+        sprintf(
+          "Shiny.setInputValue('%s', '%s', {priority: 'event'})",
+          ns("removePlot"),
+          id
+        )
+      }
+
       rv <- reactiveValues(
         pinned_plots = NULL,
         plot_num = 0,
@@ -96,10 +94,12 @@ speciesCompServer <- function(cur_surveys_long) {
         msg = NULL
       )
 
+      # deduce if the wild bees toggle is active
       show_wild_bees <- reactive({
         "Wild bees" %in% cur_surveys_long()$bee_name
       })
 
+      # all surveys data for pie chart
       all_surveys <- reactive({
         df <- if (show_wild_bees()) {
           surveys_long |> filter(bee_name %in% wildbee_names)
@@ -109,10 +109,16 @@ speciesCompServer <- function(cur_surveys_long) {
         droplevels(df)
       })
 
+      # default all surveys pie chart
       all_surveys_plot <- reactive({
-        make_pie(all_surveys(), "All surveys", "_all")
+        make_pie(
+          all_surveys(),
+          "All surveys",
+          onclick = pie_onclick(id = "_all")
+        )
       })
 
+      # reset plots
       observe({
         if (is.null(rv$pinned_plots)) {
           rv$pinned_plots <- list(
@@ -127,9 +133,9 @@ speciesCompServer <- function(cur_surveys_long) {
           cur_plot <- make_pie(
             cur_surveys_long(),
             "Currently selected surveys",
-            "cur"
+            onclick = pie_onclick(id = "cur")
           )
-          plots <- c(plots, cur_plot)
+          plots <- c(plots, list(cur_plot))
         }
 
         div(class = "flex-row", plots)
@@ -182,7 +188,11 @@ speciesCompServer <- function(cur_surveys_long) {
         rv$msg <- NULL
         rv$plot_num <- rv$plot_num + 1
         plot_id <- paste0("plt_", rv$plot_num)
-        plots[[plot_id]] <- make_pie(surveys, input$title, plot_id)
+        plots[[plot_id]] <- make_pie(
+          surveys,
+          input$title,
+          onclick = pie_onclick(id = plot_id)
+        )
         rv$pinned_plots <- plots
         updateTextInput(inputId = "title", value = "")
       })
@@ -201,7 +211,7 @@ speciesCompServer <- function(cur_surveys_long) {
       })
 
       observeEvent(input$toggleCurrent, {
-        msg(NULL)
+        rv$msg <- NULL
         rv$show_current <- !rv$show_current
       })
 
