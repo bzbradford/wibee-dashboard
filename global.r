@@ -14,7 +14,6 @@ if (FALSE) {
 
 options(shiny.fullstacktrace = FALSE)
 
-
 # Required packages ----
 
 suppressMessages({
@@ -41,6 +40,12 @@ suppressMessages({
 
 
 # Functions ---------------------------------------------------------------
+
+# message and print an object to the console for testing
+echo <- function(x) {
+  message(deparse(substitute(x)), " <", paste(class(x), collapse = ", "), ">")
+  print(x)
+}
 
 # UI element returned on data tabs when no surveys are selected
 noSurveysMsg <- function() {
@@ -80,6 +85,12 @@ fetch_remote <- function(start_date = NULL) {
   parsed_resp
 }
 
+# Save surveys to local csv
+save_surveys <- function(surveys) {
+  write_csv(surveys, "surveys.csv.gz", na = "")
+  message(sprintf("Saved %s surveys to surveys.csv.gz", nrow(surveys)))
+}
+
 # handle pulling or merging new surveys with stored surveys
 get_surveys <- function(force = FALSE) {
   # check when last data refresh occurred
@@ -109,7 +120,7 @@ get_surveys <- function(force = FALSE) {
 
           # only rewrite csv if there are new surveys
           if (new_survey_count > 0) {
-            write_csv(updated_surveys, "surveys.csv.gz", na = "")
+            save_surveys(updated_surveys)
           }
 
           status <- sprintf(
@@ -142,7 +153,7 @@ get_surveys <- function(force = FALSE) {
   } else {
     updated_surveys <- fetch_remote() |>
       arrange(ended_at)
-    write_csv(updated_surveys, "surveys.csv.gz")
+    save_surveys(updated_surveys)
     status <- sprintf(
       "Survey data refreshed from remote database. %s total surveys found.",
       nrow(updated_surveys)
