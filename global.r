@@ -2,20 +2,6 @@
 # Ben Bradford, UW-Madison
 # Requires data prep in separate RProj
 
-#- Renv for pkg management -#
-
-if (FALSE) {
-  renv::init() # initiate renv if not already
-  renv::dependencies() # show project dependencies
-  renv::update() # update project libraries
-  renv::snapshot() # save updated lock file to project
-  renv::install("sf@1.0-24")
-}
-
-options(shiny.fullstacktrace = FALSE)
-
-# Required packages ----
-
 suppressMessages({
   # core
   library(tidyverse)
@@ -37,6 +23,19 @@ suppressMessages({
   library(leaflet)
   library(plotly)
 })
+
+#- Renv for pkg management -#
+
+if (FALSE) {
+  renv::init() # initiate renv if not already
+  renv::dependencies() # show project dependencies
+  renv::update() # update project libraries
+  renv::clean()
+  renv::snapshot() # save updated lock file to project
+  renv::install("terra@1.9-27")
+}
+
+options(shiny.fullstacktrace = FALSE)
 
 
 # Functions ---------------------------------------------------------------
